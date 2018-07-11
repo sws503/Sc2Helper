@@ -91,7 +91,7 @@ public:
         ManageUpgrades();
 
         // Control 시작
-        Defend();
+        //Defend();
         //ManageArmy();TEST!
         ManageRush();
         // Control 끝
@@ -261,7 +261,7 @@ private:
     const Unit* oracle_second = nullptr;
 
 
-    void Defend() {
+    void Defend() { // 유닛 포인터 오류
         const ObservationInterface* observation = Observation();
         Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsOracle());
         Units nexus = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
@@ -319,8 +319,8 @@ private:
         }
 
         const Unit* unit = oracle_first;
-        if (unit != nullptr) {
-            //for (const auto& unit : Oracles) { TEST
+        //if (unit != nullptr) {
+            for (const auto& unit : Oracles) {
 
             if (!unit->orders.empty()) { // 펄서광선  ON / OFF
                 float distance = std::numeric_limits<float>::max();
@@ -1709,7 +1709,7 @@ int main(int argc, char* argv[]) {
         //sc2::SleepFor(30);
     }
 
-    coordinator.SetStepSize(120); //Control
+    //coordinator.SetStepSize(15); //Control
     //게임속도 빠르게 speed faster
     return 0;
 }
