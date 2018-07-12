@@ -2038,16 +2038,17 @@ int main(int argc, char* argv[]) {
             CreateComputer(Race::Random,Difficulty::CheatVision)
             });
 
+        coordinator.SetStepSize(10); //Control
+                                      //게임속도 빠르게 speed faster
         coordinator.LaunchStarcraft();
-        coordinator.StartGame(sc2::Redshift);
+        coordinator.StartGame(sc2::LostAndFoundLE);
 
         while (coordinator.Update()) {
             // Slow down game speed for better look & feel while making experiments.
             //sc2::SleepFor(30);
         }
 
-        coordinator.SetStepSize(100); //Control
-        //게임속도 빠르게 speed faster
+       
         return 0;
     }
 }
