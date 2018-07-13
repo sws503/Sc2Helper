@@ -334,7 +334,8 @@ private:
 
             if (!EnemyCannon.empty())
             {
-                /*if (Killers.size()<8) Killers.resize(8);
+                /*
+                if (Killers.size()<8) Killers.resize(8);
                 for (int i = 0; i <= 8; i++)
                 {
                     const Unit * Killer = Killers.at(i);
@@ -360,30 +361,6 @@ private:
         }
     }
 
-    void ChooseKillers()
-    {
-        const ObservationInterface* observation = Observation();
-        Units Workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
-
-        int Killermembers = Killers.size();
-        std::cout << Killermembers;
-
-
-        if (Killermembers < 8) {
-            for (int i = 0; i <= 8; i++)
-            {
-                const Unit * Killer = Killers.at(i);
-                if (Killers.at(i) == nullptr || !Killer->is_alive)
-                {
-                    Chat("I'm Chosen!");
-                    GetRandomUnit(Killers.at(i), observation, UNIT_TYPEID::PROTOSS_PROBE);
-                }
-            }
-        }
-
-        //한번 둘러보고 죽었으면 뺀다
-
-    }
     Units Killers;
     const Unit* WorkerKiller = nullptr;
     const Unit* oracle_first = nullptr;
@@ -1283,6 +1260,7 @@ private:
                     }
                 }
             }
+            return false;
         }
     }
     // Control 끝
@@ -1406,7 +1384,11 @@ private:
         const ObservationInterface* observation = Observation();
 
         if (unit == nullptr) return false;
+        if (pylon == nullptr) return false;
         std::vector<PowerSource> power_sources = observation->GetPowerSources();
+        if (power_sources.empty()) {
+            return false;
+        }
         float radius = power_sources.front().radius;
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
@@ -1431,7 +1413,11 @@ private:
         Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 
         if (unit == nullptr) return false;
+        if (pylon == nullptr) return false;
         std::vector<PowerSource> power_sources = observation->GetPowerSources();
+        if (power_sources.empty()) {
+            return false;
+        }
         float radius = power_sources.front().radius;
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
@@ -1717,9 +1703,9 @@ private:
         }
         baselocation = base->pos;
 
-        BuildPylonEarly(pylons, probe_scout_dest);
+        //BuildPylonEarly(pylons, probe_scout_dest);
 
-        /*if (pylons.size()<1 && probe_scout != nullptr) {
+        if (pylons.size()<1 && probe_scout != nullptr) {
             if (Distance2D(probe_scout->pos, front_expansion)<5) {
                 probe_scout_dest = Point2D((double)game_info_.width / 2, (double)game_info_.height / 2);
                 Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, probe_scout_dest);
@@ -1738,7 +1724,7 @@ private:
                     pylonlocation = build_location; // Control
                 }
             }
-        }*/
+        }
 
         if (find_enemy_location == false && pylons.size()>0) {
             Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
@@ -1790,7 +1776,7 @@ private:
         }
         else if (observation->GetFoodUsed() == 15) {
             if (pylon_first == nullptr && pylons.size()>0) pylon_first = pylons.front();
-            if (observation->GetMinerals()>100) {
+            if (pylon_first != nullptr && observation->GetMinerals()>100) {
                 Actions()->UnitCommand(probe_forge, ABILITY_ID::MOVE, pylon_first->pos);
             }
             TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
@@ -1813,7 +1799,7 @@ private:
                 }
             }
             else {
-                if (observation->GetMinerals()>150 && cannon_count<4 && !probe_forge->orders.size()) {
+                if (pylon_first != nullptr && observation->GetMinerals()>150 && cannon_count<4 && !probe_forge->orders.size()) {
                     TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_PHOTONCANNON, pylon_first);
                 }
             }
@@ -1895,7 +1881,7 @@ private:
                     Chat("Oracle is Trained!");
                 }
             }
-            if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_FLEETBEACON)<1 & stargate_count > 0) {
+            if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_FLEETBEACON)<1 && stargate_count > 0) {
                 TryBuildStructureNearPylon(ABILITY_ID::BUILD_FLEETBEACON, UNIT_TYPEID::PROTOSS_PROBE);
             }
             else if (stargate_count == 0)
@@ -2012,7 +1998,7 @@ int main(int argc, char* argv[]) {
 
         bool do_break = false;
         while (!do_break) {
-            if (!coordinator.StartGame(sc2::kMap16BitLE)) {
+            if (!coordinator.StartGame(sc2::kMapDarknessSanctuaryLE)) {
                 break;
             }
             while (coordinator.Update() && !do_break) {
