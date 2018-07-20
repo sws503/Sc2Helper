@@ -2,7 +2,6 @@
 #include "sc2lib/sc2_lib.h"
 #include <sc2utils/sc2_manage_process.h>
 
-#include "bot_examples.h"
 #include <iostream>
 #include <string>
 #include <algorithm>
@@ -12,6 +11,28 @@
 #include <map>
 
 using namespace sc2;
+
+// Control 시작
+// 7.3 안좋은 효과들 목록
+enum class EFFECT_ID
+{
+	INVALID = 0,
+	PSISTORM = 1,
+	GUARDIANSHIELD = 2,
+	TEMPORALFIELDGROWING = 3,
+	TEMPORALFIELD = 4,
+	THERMALLANCES = 5,
+	SCANNERSWEEP = 6,
+	NUKEDOT = 7,
+	LIBERATORMORPHING = 8,
+	LIBERATORMORPHED = 9,
+	BLINDINGCLOUD = 10,
+	CORROSIVEBILE = 11,
+	LURKERATTACK = 12
+};
+typedef SC2Type<EFFECT_ID>  EffectID;
+// Control 끝
+
 
 class Bot : public Agent {
 public:
@@ -54,7 +75,6 @@ public:
 
         ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE, ABILITY_ID::HARVEST_GATHER, UNIT_TYPEID::PROTOSS_ASSIMILATOR);
 
-
         if (!early_strategy) {
             EarlyStrategy();
         }
@@ -63,6 +83,11 @@ public:
         }
 
         ManageUpgrades();
+		
+		// Control 시작
+		Defend();
+		//ManageArmy();
+		ManageRush();
 
 
     }
@@ -73,6 +98,10 @@ public:
             MineIdleWorkers(unit, ABILITY_ID::HARVEST_GATHER, UNIT_TYPEID::PROTOSS_ASSIMILATOR);
             break;
         }
+		case UNIT_TYPEID::PROTOSS_CARRIER: {
+			ScoutWithUnit(unit, Observation());
+			break;
+		}
         default: {
             break;
         }
@@ -108,39 +137,122 @@ private:
         Actions()->SendChat(Message);
     }
 
+	const bool isBadEffect(const EffectID id) const
+	{
+		switch (id.ToType())
+		{
+		case EFFECT_ID::BLINDINGCLOUD:
+		case EFFECT_ID::CORROSIVEBILE:
+		case EFFECT_ID::LIBERATORMORPHED:
+		case EFFECT_ID::LIBERATORMORPHING:
+		case EFFECT_ID::LURKERATTACK:
+		case EFFECT_ID::NUKEDOT:
+		case EFFECT_ID::PSISTORM:
+			//case EFFECT_ID::THERMALLANCES:
+			return true;
+		}
+		return false;
+	}
+	bool EvadeEffect(Units units)
+	{
+		bool moving = false;
+		for (const auto & unit : units)
+		{
+			moving |= EvadeEffect(unit);
+		}
+		return moving;
+	}
+
+	bool EvadeEffect(const Unit* unit)
+	{
+		bool moving = false;
+		for (const auto & effect : Observation()->GetEffects())
+		{
+			if (isBadEffect(effect.effect_id))
+			{
+				const EffectData& ed = Observation()->GetEffectData().at(effect.effect_id);
+				const float radius = ed.radius;
+				for (const auto & pos : effect.positions)
+				{
+					const float dist = Distance2D(unit->pos, pos);
+					if (dist < radius + unit->radius)
+					{
+						sc2::Point2D fleeingPos;
+						if (dist > 0)
+						{
+							Vector2D diff = unit->pos - pos; // 7.3 적 유닛과의 반대 방향으로 도망
+							Normalize2D(diff);
+							fleeingPos = unit->pos + diff * 1.0f;
+							//fleeingPos = pos + normalizeVector(rangedUnit->getPos() - pos, radius + 2.0f);
+						}
+						else
+						{
+							fleeingPos = Point2D(staging_location_);
+						}
+						Actions()->UnitCommand(unit, ABILITY_ID::MOVE, fleeingPos);
+						Chat("Enemy Skill Run~");
+						std::cout << "skill : " << ed.friendly_name << std::endl;
+						moving = true;
+						break;
+					}
+				}
+			}
+		}
+		return moving;
+	}
+
     void Defend() { // 유닛 포인터 오류
-        const ObservationInterface* observation = Observation();
-        Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsOracle());
-        Units nexus = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
-        int CurrentOracle = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ORACLE);
+		const ObservationInterface* observation = Observation();
+		Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ORACLE));
+		Units nexus = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+		int CurrentOracle = Oracles.size();
 
-        Point2D StasisLocation;
-        bool selected = false;
-
-        /*
-        if (Oracles.empty())
-        return;
-        else if (!Oracles.empty() && CurrentOracle > 1 && !selected) {
-        //Vector2D diff = pylon_first->pos - nexus.at(1)->pos; // 7.3 적 유닛과의 반대 방향으로 도망
-        //Normalize2D(diff);
-        //StasisLocation = pylon_first->pos + diff * 1.0f;
-        float rx = GetRandomScalar();
-        float ry = GetRandomScalar();
-        StasisLocation = Point2D(pylonlocation.x + rx * 5, pylonlocation.y + ry * 5);
-        Chat("HI~ I'm Second");
-        oracle_second = Oracles.at(1);
-        selected = true;
-        }
-        else if (oracle_second->energy > 51)
-        {
-        Chat("OK~");
-        Actions()->UnitCommand(oracle_second, ABILITY_ID::BUILD_STASISTRAP, StasisLocation);
-        }
-        else
-        {
-        ScoutWithUnit(oracle_second, observation);
-        }
-        */
+		// deal with nullptrs
+		// remove oracles if dead
+		if (oracle_second != nullptr && !oracle_second->is_alive) {
+			oracle_second = nullptr;
+		}
+		// oracle first is alive and second is dead -> make second to first
+		if (oracle_first != nullptr && !oracle_first->is_alive) {
+			oracle_first = nullptr;
+		}
+		// assign oracles
+		if (!Oracles.empty())
+		{
+			// find first oracle
+			if (oracle_first == nullptr) {
+				for (const auto & o : Oracles) {
+					if (oracle_second == nullptr || o->tag != oracle_second->tag) {
+						oracle_first = o;
+						break;
+					}
+				}
+			}
+			// find second oracle
+			if (oracle_second == nullptr && CurrentOracle >= 2) {
+				for (const auto & o : Oracles) {
+					if (oracle_first == nullptr || o->tag != oracle_first->tag) {
+						oracle_second = o;
+						break;
+					}
+				}
+			}
+		}
+		// oracle second goes to
+		if (oracle_second != nullptr)
+		{
+			if (oracle_second->energy > 50 &&
+				(oracle_second->orders.empty() || oracle_second->orders.front().ability_id != ABILITY_ID::BUILD_STASISTRAP)) {
+				Chat("OK~");
+				float rx = GetRandomScalar();
+				float ry = GetRandomScalar();
+				StasisLocation = Point2D(pylonlocation.x + rx * 5, pylonlocation.y + ry * 5);
+				Actions()->UnitCommand(oracle_second, ABILITY_ID::BUILD_STASISTRAP, StasisLocation);
+			}
+			else {
+				ScoutWithUnit(oracle_second, observation);
+			}
+		}
 
         Units Workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
         Units EnemyWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsWorker());
@@ -154,9 +266,6 @@ private:
 
 
         bool EnemyRush = false;
-
-
-
 
         enemyUnitsInRegion.clear();
         for (const auto & unit : enemy_units)
@@ -236,7 +345,7 @@ private:
         ReadyLocation2 = startLocation_;
     }
 
-    float OracleRange = 4.0f; // 절대적으로 생존
+    float OracleRange; // 절대적으로 생존
     float TempestRange = 3.0f;
     float CarrierRange = 1.9f;
     bool TimetoAttack = false;
@@ -249,378 +358,306 @@ private:
     const Unit* WorkerKiller = nullptr;
     const Unit* oracle_first = nullptr;
 
-    void ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
-        const ObservationInterface* observation = Observation();
-        Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
-        Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsOracle());
-        Units Tempests = observation->GetUnits(Unit::Alliance::Self, IsTempest()); //6.25 폭풍함 컨트롤 추가
-        Units Carriers = observation->GetUnits(Unit::Alliance::Self, IsCarrier());
-        Units EnemyWorker = observation->GetUnits(Unit::Alliance::Enemy, IsWorker());
-        Units AirAttackers = observation->GetUnits(Unit::Alliance::Enemy, AirAttacker()); //적 방어 유닛 및 건물
-                                                                                          //Units ProxyEnemy = observation->GetUnits(Unit::Alliance::Enemy, ExceptBuilding());
-        float rx = GetRandomScalar();
-        float ry = GetRandomScalar();
-        //StasisLocation = Point2D(baselocation.x + rx * 10, baselocation.y + ry * 10);
+	void ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
+		const ObservationInterface* observation = Observation();
+		Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
+		Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsOracle());
+		Units Tempests = observation->GetUnits(Unit::Alliance::Self, IsTempest()); //6.25 폭풍함 컨트롤 추가
+		Units Carriers = observation->GetUnits(Unit::Alliance::Self, IsCarrier());
+		Units EnemyWorker = observation->GetUnits(Unit::Alliance::Enemy, IsWorker());
+		Units AirAttackers = observation->GetUnits(Unit::Alliance::Enemy, AirAttacker()); //적 방어 유닛 및 건물
+																						  //Units ProxyEnemy = observation->GetUnits(Unit::Alliance::Enemy, ExceptBuilding());
+		float rx = GetRandomScalar();
+		float ry = GetRandomScalar();
 
-        /*
-        if (OracleTrained)
-        {
-        if (oracle_first == nullptr && !Oracles.empty())
-        {
-        Chat("HI~");
-        oracle_first = Oracles.front();
-        }
-        }*/
+		for (const auto& unit : Oracles) {
+			if (unit == oracle_second) continue;
+			if (!unit->orders.empty()) { // 펄서광선  ON / OFF
+				float distance = std::numeric_limits<float>::max();
+				for (const auto& u : EnemyWorker) {
+					float d = Distance2D(u->pos, unit->pos);
+					if (d < distance) {
+						distance = d;
+					}
+				}
+				if (unit->energy == 1)
+					OracleCanAttack = false;
+				else if (distance < 6 && unit->energy >= 50) {
+					Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMON);
+					OracleCanAttack = true;
+				}
+				else if (distance > 20) {
+					Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);
+					OracleCanAttack = false;
+				}
+			}
 
-        //const Unit* unit = oracle_first;
-        //if (unit != nullptr) {
-        for (const auto& unit : Oracles) {
+			if (find_enemy_location == 1) {
+				if (unit->energy > 50) {
+					Actions()->UnitCommand(unit, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
 
-            if (!unit->orders.empty()) { // 펄서광선  ON / OFF
-                float distance = std::numeric_limits<float>::max();
-                for (const auto& u : EnemyWorker) {
-                    float d = Distance2D(u->pos, unit->pos);
-                    if (d < distance) {
-                        distance = d;
-                    }
-                }
-                if (unit->energy == 1)
-                    OracleCanAttack = false;
-                else if (distance < 6 && unit->energy >= 50) {
-                    Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMON);
-                    OracleCanAttack = true;
-                }
-                else if (distance > 20) {
-                    Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);
-                    OracleCanAttack = false;
-                }
-            }
+				}
+				if (unit->energy <= 50 && !OracleCanAttack) {
+					ScoutWithUnit(unit, observation);
+				}
+			}
 
-            if (find_enemy_location == 1) {
-                if (unit->energy > 50) {
-                    Actions()->UnitCommand(unit, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
+			bool evade = false;
 
-                }
-                if (unit->energy <= 50 && !OracleCanAttack) {
-                    ScoutWithUnit(unit, observation);
-                }
-            }
+			float distance = std::numeric_limits<float>::max(); // 5.21 방어 건물,유닛이 근처로 가지 않는다
+			float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
+			float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
 
-            //EvadeEffect(unit);
+			for (const auto& u : AirAttackers) {
+				float d = Distance2D(u->pos, unit->pos);
+				if (d < distance) {
+					distance = d; // 가장 가까운 거리의 적을 고른다
+				}
 
-            float distance = std::numeric_limits<float>::max(); // 5.21 방어 건물,유닛이 근처로 가지 않는다
-            float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
-            float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
+				float TargetAttackRange = getAttackRange(u);
 
-            for (const auto& u : AirAttackers) {
-                float d = Distance2D(u->pos, unit->pos);
-                if (d < distance) {
-                    distance = d; // 가장 가까운 거리의 적을 고른다
-                }
+				Vector2D diff = unit->pos - u->pos; // 7.3 적 유닛과의 반대 방향으로 도망
+				Normalize2D(diff);
+				KitingLocation = unit->pos + diff * 7.0f;
 
-                float TargetAttackRange = getAttackRange(u);
+				float add = OracleRange;
 
-                Vector2D diff = unit->pos - u->pos; // 7.3 적 유닛과의 반대 방향으로 도망
-                Normalize2D(diff);
-                KitingLocation = unit->pos + diff * 7.0f;
+				if (u->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || u->unit_type == sc2::UNIT_TYPEID::ZERG_SPORECRAWLER || u->unit_type == sc2::UNIT_TYPEID::TERRAN_MISSILETURRET)
+				{
+					add = 1.0f;
+				}
 
-                if (u->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || u->unit_type == sc2::UNIT_TYPEID::ZERG_SPORECRAWLER || u->unit_type == sc2::UNIT_TYPEID::TERRAN_MISSILETURRET)
-                {
-                    TargetAttackRange = TargetAttackRange + 1.0f; // -OracleRange + 1.0f;
-                }
-                if (TargetAttackRange + OracleRange < distance) // 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-                                                                // 7.5 OracleRange 는 안전거리 (적도 나를 향해 움직이기 때문)
-                {
-                    for (const auto& Proxy1 : EnemyWorker) {
-                        //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-                        Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, Proxy1->pos);
-                        //Chat("Target Attack!"); 7.6 너무 시끄러움 ㅋㅋ
-                        break;
-                    }
-                }
-                else if (distance <= TargetAttackRange + OracleRange) {
-                    Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-                    break;
-                }
+				// 공격해야되는지 피해야 되는지 판단.
+				// 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
+				// 7.5 OracleRange 는 안전거리 (적도 나를 향해 움직이기 때문)
+				if (distance <= TargetAttackRange + add) {
+					evade = true;
+					break;
+				}
+			}
+			// 적 유닛 피하기
+			if (evade) {
+				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+			}
+			// 스킬 피하기
+			else if (EvadeEffect(unit)) {}
+			// 적 일꾼 공격
+			else
+			{
+				for (const auto& Proxy1 : EnemyWorker) {
+					//Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
+					Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, Proxy1);
+					//Chat("Target Attack!"); 7.6 너무 시끄러움 ㅋㅋ
+					break;
+				}
+			}
 
+			/*
+			if (distance < 11) {
+			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation); // 5.21 깔짝깔짝 대는걸 구현하고 싶다 // 5.24 구현이 안됨
+			} //6.25 구현됨
+			if (!EnemyWorker.empty() && OracleCanAttack && distance > 10.5) { //6.26 적
+			for (const auto& Proxy1 : EnemyWorker) {
+			//Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
+			Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, Proxy1->pos);
+			Chat("Target Attack!");
+			}
+			}
+			*/
+			/*
+			else if (!ProxyEnemy.empty() && OracleCanAttack && distance > 10.5 && distance < 20) { //6.28 예언자가 건물때리는건 불필요하다
+			for (const auto& Proxy2 : ProxyEnemy) {
+			Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, ProxyEnemy.front()->pos);
+			}
+			}
+			*/
 
-                else {
-                    for (const auto& Proxy1 : EnemyWorker) {
-                        //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-                        Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, Proxy1->pos);
-                        Chat("No AirAttacker~ Target Attack!");
-                        break;
-                    }
-                }
+			//}
+		}
 
-            }
+		for (const auto& unit : Tempests) {
+			float distance = std::numeric_limits<float>::max(); // 6.25 폭풍함은 사거리를 활용해 방어 건물,유닛 근처로 가지 않는다
+			float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
+			float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
 
+			if (EvadeEffect(unit)) continue;
 
+			for (const auto& u : AirAttackers) {
+				float d = Distance2D(u->pos, unit->pos);
+				if (d < distance) {
+					distance = d;
+				}
 
-            /*
-            if (distance < 11) {
-            Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation); // 5.21 깔짝깔짝 대는걸 구현하고 싶다 // 5.24 구현이 안됨
-            } //6.25 구현됨
-            if (!EnemyWorker.empty() && OracleCanAttack && distance > 10.5) { //6.26 적
-            for (const auto& Proxy1 : EnemyWorker) {
-            //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-            Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, Proxy1->pos);
-            Chat("Target Attack!");
-            }
-            }
-            */
-            /*
-            else if (!ProxyEnemy.empty() && OracleCanAttack && distance > 10.5 && distance < 20) { //6.28 예언자가 건물때리는건 불필요하다
-            for (const auto& Proxy2 : ProxyEnemy) {
-            Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, ProxyEnemy.front()->pos);
-            }
-            }
-            */
+				float TargetAttackRange = getAttackRange(u);
 
-            //}
-        }
+				Vector2D diff = unit->pos - u->pos; // 7.3 적 유닛과의 반대 방향으로 도망
+				Normalize2D(diff);
+				KitingLocation = unit->pos + diff * 7.0f;
 
+				if (unit->weapon_cooldown == 0.0f || TargetAttackRange + TempestRange < distance) // 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
+				{
 
+					for (const auto& Proxy2 : AirAttackers) {
+						//Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
+						Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
 
+						break; // 타겟할 유닛을 찾고 찾으면 공격하는 걸로
+					}
 
+				}
+				else if (distance <= TargetAttackRange + TempestRange) {
+					Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+					break;
+				}
+				else
+				{
+					for (const auto& Proxy1 : EnemyWorker) {
+						//Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
+						Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, Proxy1->pos);
 
-        for (const auto& unit : Tempests) {
-            float distance = std::numeric_limits<float>::max(); // 6.25 폭풍함은 사거리를 활용해 방어 건물,유닛 근처로 가지 않는다
-            float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
-            float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
-
-            //EvadeEffect(unit);
-
-            for (const auto& u : AirAttackers) {
-                float d = Distance2D(u->pos, unit->pos);
-                if (d < distance) {
-                    distance = d;
-                }
-
-                float TargetAttackRange = getAttackRange(u);
-
-                Vector2D diff = unit->pos - u->pos; // 7.3 적 유닛과의 반대 방향으로 도망
-                Normalize2D(diff);
-                KitingLocation = unit->pos + diff * 7.0f;
-
-                if (unit->weapon_cooldown == 0.0f || TargetAttackRange + TempestRange < distance) // 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-                {
-
-                    for (const auto& Proxy2 : AirAttackers) {
-                        //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-                        Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
-
-                        break; // 타겟할 유닛을 찾고 찾으면 공격하는 걸로
-                    }
-
-                }
-                else if (distance <= TargetAttackRange + TempestRange) {
-                    Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-                    break;
-                }
-                else
-                {
-                    for (const auto& Proxy1 : EnemyWorker) {
-                        //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-                        Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, Proxy1->pos);
-
-                        break;
-                    }
-                }
-            }
+						break;
+					}
+				}
+			}
 
 
-            /*
-            for (const auto& u : AirAttackers) {
-            float d = Distance2D(u->pos, unit->pos);
-            if (d < distance) {
-            distance = d;
-            }
-            Vector2D diff = unit->pos - u->pos;
-            Normalize2D(diff);
-            KitingLocation = unit->pos + diff * 7.0f;
-            }
-            if (distance < 10) {
-            Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-            }
-            if (!AirAttackers.empty() && distance > 10) { //6.26 적
-            for (const auto& Proxy2 : AirAttackers) {
-            Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
-            }
-            }
-            else if (!EnemyWorker.empty() && distance > 10 && distance < 20) { //6.26 적
-            for (const auto& Proxy1 : EnemyWorker) {
-            Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-            }
-            }*/
+			/*
+			for (const auto& u : AirAttackers) {
+			float d = Distance2D(u->pos, unit->pos);
+			if (d < distance) {
+			distance = d;
+			}
+			Vector2D diff = unit->pos - u->pos;
+			Normalize2D(diff);
+			KitingLocation = unit->pos + diff * 7.0f;
+			}
+			if (distance < 10) {
+			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+			}
+			if (!AirAttackers.empty() && distance > 10) { //6.26 적
+			for (const auto& Proxy2 : AirAttackers) {
+			Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
+			}
+			}
+			else if (!EnemyWorker.empty() && distance > 10 && distance < 20) { //6.26 적
+			for (const auto& Proxy1 : EnemyWorker) {
+			Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
+			}
+			}*/
 
-        }
+		}
 
-        for (const auto& unit : Carriers) {
-            float distance = std::numeric_limits<float>::max(); // 6.25 캐리어 거리유지
-            float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
-            float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
+		int CurrentCarrier = CountUnitType(observation, UNIT_TYPEID::PROTOSS_CARRIER);
 
-            int CurrentCarrier = CountUnitType(observation, UNIT_TYPEID::PROTOSS_CARRIER);
+		if (CurrentCarrier <= 3) {
+			OracleRange = 5.5f;
+		}
+		else {
+			OracleRange = 4.0f;
+			TimetoAttack = true;
+		}
 
-            //EvadeEffect(unit);
+		for (const auto& unit : Carriers) {
+			float distance = std::numeric_limits<float>::max(); // 6.25 캐리어 거리유지
+			float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
+			float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
+
+			if (EvadeEffect(unit)) continue;
+
+			bool enemiesnear = false;
+			for (const auto& u : AirAttackers) {
+				if (!u->is_alive)
+				{
+					continue;
+				}
+
+				float d = Distance2D(u->pos, unit->pos);
+				if (d < distance) {
+					distance = d;
+				}
+
+				float TargetAttackRange = getAttackRange(u);
+
+				Vector2D diff = unit->pos - u->pos; // 7.3 적 유닛과의 반대 방향으로 도망
+				Normalize2D(diff);
+				KitingLocation = unit->pos + diff * 7.0f;
+
+				unit->weapon_cooldown == 0.0f;
+
+				float RealCarrierRange = (unit->shield < 10)? 4.5 : CarrierRange;
+
+				// 하나라도 가까이 있는 경우.
+				if (distance <= TargetAttackRange + RealCarrierRange) // 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
+				{
+					enemiesnear = true;
+					break;
+				}
+			}
 
 
-            if (CurrentCarrier <= 3) {
-                for (const auto& u : AirAttackers) {
-                    if (!u->is_alive)
-                    {
-                        continue;
-                    }
+			if (CurrentCarrier <= 3) {
 
-                    float d = Distance2D(u->pos, unit->pos);
-                    if (d < distance) {
-                        distance = d;
-                    }
-
-                    float TargetAttackRange = getAttackRange(u);
-
-                    Vector2D diff = unit->pos - u->pos; // 7.3 적 유닛과의 반대 방향으로 도망
-                    Normalize2D(diff);
-                    KitingLocation = unit->pos + diff * 7.0f;
-                    if (unit->shield < 10)
-                    {
-                        if (unit->weapon_cooldown == 0.0f || distance > TargetAttackRange + 4.5) // 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-                        {
-                            if (unit->orders.empty())
-                                RetreatWithCarrier(unit);
-                            break;
-                        }
-                        else if (distance <= TargetAttackRange + 4.5) {
-                            Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-                            break;
-                        }
-                    }
-                    else
-                    {
-
-                        if (unit->weapon_cooldown == 0.0f || distance > TargetAttackRange + CarrierRange) // 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-                        {
-                            if (unit->orders.empty())
-                                RetreatWithCarrier(unit);
-                            break;
-                        }
-                        else if (distance <= TargetAttackRange + CarrierRange) {
-                            Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-                            break;
-                        }
-                    }
-                }
-
-            }
-            else {
-                OracleRange = 2.5f;
-                TimetoAttack = true;
-                if (AirAttackers.empty())
-                {
-                    AttackWithUnit(unit, observation);
-                }
-                else if (!enemy_units.empty()) {
-                    for (const auto& u : AirAttackers) {
-                        if (!u->is_alive)
-                        {
-                            continue;
-                        }
-
-                        float d = Distance2D(u->pos, unit->pos);
-                        if (d < distance) {
-                            distance = d;
-                        }
-
-                        float TargetAttackRange = getAttackRange(u);
-
-                        Vector2D diff = unit->pos - u->pos; // 7.3 적 유닛과의 반대 방향으로 도망
-                        Normalize2D(diff);
-                        KitingLocation = unit->pos + diff * 7.0f;
-                        if (unit->shield < 10)
-                        {
-                            if (unit->weapon_cooldown == 0.0f || distance > TargetAttackRange + 4.5) // 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-                            {
-                                for (const auto& Proxy2 : AirAttackers) {
-                                    //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-                                    Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
-                                    break;
-                                }
-
-                            }
-                            else if (distance <= TargetAttackRange + 4.5) {
-                                Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-                                break;
-                            }
-                            else {
-                                for (const auto& Proxy1 : EnemyWorker) {
-                                    //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-                                    Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-                                    break;
-                                }
-                            }
-                        }
-                        else
-                        {
-
-                            if (unit->weapon_cooldown == 0.0f || distance > TargetAttackRange + CarrierRange) // 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-                            {
-                                for (const auto& Proxy2 : AirAttackers) {
-                                    //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-                                    Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
-                                    break;
-                                }
-
-                            }
-                            else if (distance <= TargetAttackRange + CarrierRange) {
-                                Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-                                break;
-                            }
-                            else {
-                                for (const auto& Proxy1 : EnemyWorker) {
-                                    //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-                                    Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                else // 지도상에 적 유닛이 아예 없는 상황에선 캐리어가 주도적으로 탐색해야함
-                {
-                    ScoutWithUnit(unit, observation);
-                    scoutprobe();
-                }
-            }
-            /*
-            for (const auto& u : AirAttackers) {
-            float d = Distance2D(u->pos, unit->pos);
-            if (d < distance) {
-            distance = d;
-            }
-            Vector2D diff = unit->pos - u->pos;
-            Normalize2D(diff);
-            KitingLocation = unit->pos + diff * 7.0f;
-            }
-            if (distance < 10) {
-            Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-            }
-            if (!AirAttackers.empty() && distance > 10) { //6.29
-            for (const auto& Proxy2 : AirAttackers) {
-            Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
-            }
-            }
-            else if (!EnemyWorker.empty() && distance >= 10 && distance < 20) { //6.29
-            for (const auto& Proxy1 : EnemyWorker) {
-            Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-            }
-            }
-            */
-        }
-    }
+				// 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
+				if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
+					if (unit->orders.empty())
+						RetreatWithCarrier(unit);
+				}
+				// 가까우면 도망간다.
+				else {
+					Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+				}
+			}
+			else { //if (CurrentCarrier > 3)
+				if (AirAttackers.empty())
+				{
+					AttackWithUnit(unit, observation);
+				}
+				else if (!enemy_units.empty()) {
+					// 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
+					if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
+						Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
+					}
+					// 가까우면 도망간다.
+					else {
+						Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+					}
+				}
+				else // 지도상에 적 유닛이 아예 없는 상황에선 캐리어가 주도적으로 탐색해야함
+				{
+					ScoutWithUnit(unit, observation);
+					scoutprobe();
+				}
+			}
+			/*
+			for (const auto& u : AirAttackers) {
+			float d = Distance2D(u->pos, unit->pos);
+			if (d < distance) {
+			distance = d;
+			}
+			Vector2D diff = unit->pos - u->pos;
+			Normalize2D(diff);
+			KitingLocation = unit->pos + diff * 7.0f;
+			}
+			if (distance < 10) {
+			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+			}
+			if (!AirAttackers.empty() && distance > 10) { //6.29
+			for (const auto& Proxy2 : AirAttackers) {
+			Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
+			}
+			}
+			else if (!EnemyWorker.empty() && distance >= 10 && distance < 20) { //6.29
+			for (const auto& Proxy1 : EnemyWorker) {
+			Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
+			}
+			}
+			*/
+		}
+	}
 
     void RetreatWithCarrier(const Unit* unit) {
-        Actions()->UnitCommand(unit, ABILITY_ID::PATROL, pylonlocation);
+		if (pylonlocation != Point2D(0, 0))
+			Actions()->UnitCommand(unit, ABILITY_ID::PATROL, pylonlocation);
 
         /*Location();
         float dist = Distance2D(unit->pos, CarrierLocation);
@@ -646,6 +683,19 @@ private:
         sc2::Weapon groundWeapons;
         sc2::Weapon AirWeapons;
 
+		if (target->unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_CYCLONE)
+		{
+			return 7.5f;
+		}
+		if (target->unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_VIPER)
+		{
+			return 9.0f;
+		}
+		if (target->unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_INFESTOR)
+		{
+			return 9.0f;
+		}
+		
         for (const auto & Weapon : Observation()->GetUnitTypeData()[target->unit_type].weapons)
         {
             if (Weapon.type == sc2::Weapon::TargetType::Air || Weapon.type == sc2::Weapon::TargetType::Any)
@@ -1058,25 +1108,35 @@ private:
         return false;
     }
 
-    const Unit* FindNearestMineralPatch(const Point2D& start) {
-        Units units = Observation()->GetUnits(Unit::Alliance::Neutral);
-        float distance = std::numeric_limits<float>::max();
-        const Unit* target = nullptr;
-        for (const auto& u : units) {
-            if (u->unit_type == UNIT_TYPEID::NEUTRAL_MINERALFIELD) {
-                float d = DistanceSquared2D(u->pos, start);
-                if (d < distance) {
-                    distance = d;
-                    target = u;
-                }
-            }
-        }
-        //If we never found one return false;
-        if (distance == std::numeric_limits<float>::max()) {
-            return target;
-        }
-        return target;
-    }
+	const Unit* FindNearestMineralPatch(const Point2D& start) {
+		Units units = Observation()->GetUnits(Unit::Alliance::Neutral);
+		float distance = std::numeric_limits<float>::max();
+		const Unit* target = nullptr;
+		for (const auto& u : units) {
+			if ([](const Unit& unit) {
+				return unit.unit_type == UNIT_TYPEID::NEUTRAL_MINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_MINERALFIELD750 ||
+					unit.unit_type == UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD750 ||
+					unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD750 ||
+					unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD750 ||
+					unit.unit_type == UNIT_TYPEID::NEUTRAL_LABMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_LABMINERALFIELD750 ||
+					unit.unit_type == UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD750 ||
+					unit.unit_type == UNIT_TYPEID::NEUTRAL_VESPENEGEYSER || unit.unit_type == UNIT_TYPEID::NEUTRAL_PROTOSSVESPENEGEYSER ||
+					unit.unit_type == UNIT_TYPEID::NEUTRAL_SPACEPLATFORMGEYSER || unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERVESPENEGEYSER ||
+					unit.unit_type == UNIT_TYPEID::NEUTRAL_SHAKURASVESPENEGEYSER || unit.unit_type == UNIT_TYPEID::NEUTRAL_RICHVESPENEGEYSER;
+			}(*u)) {
+				float d = DistanceSquared2D(u->pos, start);
+				if (d < distance) {
+					distance = d;
+					target = u;
+				}
+			}
+		}
+		//If we never found one return false;
+		if (distance == std::numeric_limits<float>::max()) {
+			return target;
+		}
+		return target;
+	}
 
     bool TryBuildUnit(AbilityID ability_type_for_unit, UnitTypeID unit_type) {
         const ObservationInterface* observation = Observation();
@@ -1125,7 +1185,7 @@ private:
         // If no worker is already building one, get a random worker to build one
         const Unit* unit = nullptr;
         for (const auto& worker : workers) {
-            //���� ���κ�� ����
+            //전진 프로브는 제외
             if (worker == probe_scout) continue;
             for (const auto& order : worker->orders) {
                 if (order.ability_id == ABILITY_ID::HARVEST_GATHER) {
@@ -1242,15 +1302,16 @@ private:
     }
 
     bool TryBuildStructureNearPylonWithUnit(const Unit* unit, AbilityID ability_type_for_structure, const Unit* pylon) {
-
+		if (unit == nullptr) return false;
+		if (pylon == nullptr) return false;
+		
         const ObservationInterface* observation = Observation();
         std::vector<PowerSource> power_sources = observation->GetPowerSources();
 
         if (power_sources.empty()) {
             return false;
         }
-        if (unit == nullptr) return false;
-
+		
         float radius = power_sources.front().radius;
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
@@ -1271,10 +1332,11 @@ private:
 
     bool TryBuildForge(const Unit* unit, const Unit* pylon) {
 
+		if (unit == nullptr) return false;
+		if (pylon == nullptr) return false;
         const ObservationInterface* observation = Observation();
         Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 
-        if (unit == nullptr) return false;
         std::vector<PowerSource> power_sources = observation->GetPowerSources();
         if (power_sources.empty()) {
             return false;
@@ -1354,51 +1416,32 @@ private:
         Point2D build_location = Point2D(staging_location_.x + rx * 15, staging_location_.y + ry * 15);
         return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
     }
-    bool TryBuildPylon(Point2D location) {
-        const ObservationInterface* observation = Observation();
+	bool TryBuildPylon(Point2D location, int radius = 3) {
+		const ObservationInterface* observation = Observation();
 
-        if (observation->GetMinerals() < 100) {
-            return false;
-        }
+		if (observation->GetMinerals() < 100) {
+			return false;
+		}
 
-        //check to see if there is already on building
-        Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
+		//check to see if there is already on building
+		Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
 
-        for (const auto& unit : units) {
-            if (unit->build_progress != 1) {
-                return false;
-            }
-        }
+		for (const auto& unit : units) {
+			if (unit->build_progress != 1) {
+				return false;
+			}
+		}
 
 
-        // Try and build a pylon. Find a random Probe and give it the order.
-        float rx = GetRandomScalar();
-        float ry = GetRandomScalar();
-        Point2D build_location = Point2D(location.x + rx * 3, location.y + ry * 3);
-        return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
-    }
+		// Try and build a pylon. Find a random Probe and give it the order.
+		float rx = GetRandomScalar();
+		float ry = GetRandomScalar();
+		Point2D build_location = Point2D(location.x + rx * radius, location.y + ry * radius);
+		return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+	}
+
     bool TryBuildPylonWide(Point2D location) {
-        const ObservationInterface* observation = Observation();
-
-        if (observation->GetMinerals() < 100) {
-            return false;
-        }
-
-        //check to see if there is already on building
-        Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
-
-        for (const auto& unit : units) {
-            if (unit->build_progress != 1) {
-                return false;
-            }
-        }
-
-
-        // Try and build a pylon. Find a random Probe and give it the order.
-        float rx = GetRandomScalar();
-        float ry = GetRandomScalar();
-        Point2D build_location = Point2D(location.x + rx * 8, location.y + ry * 8);
-        return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+        return TryBuildPylon(location, 8);
     }
 
     void MineIdleWorkers(const Unit* worker, AbilityID worker_gather_command, UnitTypeID vespene_building_type) {
@@ -1670,7 +1713,7 @@ private:
             break;
         default:
             if (observation->GetFoodWorkers()<25) {
-                TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+                TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
             }
             else {
                 if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) > observation->GetFoodWorkers() && observation->GetFoodWorkers() < max_worker_count_) {
@@ -1693,7 +1736,7 @@ private:
             }
 
             if (stage_number>18) {
-                TryBuildUnit(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE);
+                TryBuildUnitChrono(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE);
             }
 
             if (stage_number>26) {
@@ -1722,11 +1765,11 @@ private:
                 base = bases.front();
             }//본진 넥서스 지정
 
-            if (probe_scout == nullptr) {
+            if (probe_scout == nullptr || !probe_scout->is_alive) {
                 probe_scout_dest = front_expansion;
                 GetRandomUnit(probe_scout, observation, UNIT_TYPEID::PROTOSS_PROBE);
             }//정찰 프로브 지정
-            if (probe_forge == nullptr) {
+            if (probe_forge == nullptr || !probe_forge->is_alive) {
                 GetRandomUnit(probe_forge, observation, UNIT_TYPEID::PROTOSS_PROBE);
                 if (probe_scout == probe_forge) probe_forge = nullptr;
             }//건물 지을 프로브 지정
@@ -1762,8 +1805,12 @@ private:
                 stage_number++;
                 return false;
             }
+			if (pylon_first != nullptr && !pylon_first->is_alive) {
+				pylon_first = nullptr;
+			}
             if (pylon_first == nullptr && !pylons.empty()) {
                 pylon_first = pylons.front();
+				pylonlocation = pylon_first->pos;
             }
             if (pylon_first != nullptr && observation->GetMinerals()>100) {
                 Actions()->UnitCommand(probe_forge, ABILITY_ID::MOVE, pylon_first->pos);
@@ -1856,7 +1903,7 @@ private:
             }
             return false;
         case 11:
-            if (TryBuildUnit(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
+            if (TryBuildUnitChrono(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
                 OracleTrained = true;
                 stage_number++;
             }
@@ -1886,7 +1933,7 @@ private:
             }
             return false;
         case 15:
-            if (TryBuildUnit(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
+            if (TryBuildUnitChrono(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
                 stage_number++;
             }
             return false;
@@ -2011,21 +2058,26 @@ private:
         return false;
     }
 
-    void scoutprobe() {
-        const ObservationInterface* observation = Observation();
-        if (observation->GetFoodUsed() < 15) return;
+	void scoutprobe() {
+		const ObservationInterface* observation = Observation();
+		if (observation->GetFoodUsed() < 15) return;
 
-        Point2D tag_pos = FindNearestMineralPatch(*iter_exp)->pos;
-        if (Distance2D(game_info_.enemy_start_locations.front(), tag_pos)<7 || Distance2D(enemy_expansion, tag_pos)<7) {
-            iter_exp++;
-            return;
-        }
-        Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, tag_pos);
-        if (Distance2D(probe_scout->pos, tag_pos)<1) {
-            iter_exp++;
-        }
+		const Unit* mineralp = FindNearestMineralPatch(*iter_exp);
+		if (mineralp == nullptr) {
+			return;
+		}
+		Point2D tag_pos = mineralp->pos;
 
-    }
+		if (Distance2D(game_info_.enemy_start_locations.front(), tag_pos)<7 || Distance2D(enemy_expansion, tag_pos)<7) {
+			iter_exp++;
+			return;
+		}
+		Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, tag_pos);
+		if (Distance2D(probe_scout->pos, tag_pos)<1) {
+			iter_exp++;
+		}
+
+	}
 
     bool early_strategy = false;
     const Unit* probe_scout = nullptr;
@@ -2084,7 +2136,7 @@ int main(int argc, char* argv[])
 
         bool do_break = false;
         while (!do_break) {
-            if (!coordinator.StartGame("C:/Program Files (x86)/StarCraft II/Maps/Redshift.SC2Map")) {
+            if (!coordinator.StartGame("(2)LostandFoundLE.sc2map")) {
                 break;
             }
             while (coordinator.Update() && !do_break) {
@@ -2113,7 +2165,7 @@ int main(int argc, char* argv[])
         coordinator.SetStepSize(10); //Control
                                      //게임속도 빠르게 speed faster
         coordinator.LaunchStarcraft();
-        coordinator.StartGame("C:/Program Files (x86)/StarCraft II/Maps/DarknessSanctuary.SC2Map");
+        coordinator.StartGame("(2)LostandFoundLE.sc2map");
 
         while (coordinator.Update()) {
             // Slow down game speed for better look & feel while making experiments.
