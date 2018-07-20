@@ -1,8 +1,8 @@
-#include <sc2api/sc2_api.h>
+Ôªø#include <sc2api/sc2_api.h>
 #include "sc2lib/sc2_lib.h"
 #include <sc2utils/sc2_manage_process.h>
 
-//#include "bot_examples.h"
+#include "bot_examples.h"
 #include <iostream>
 #include <string>
 #include <algorithm>
@@ -13,124 +13,21 @@
 
 using namespace sc2;
 
-// Control Ω√¿€
-namespace sc2 // 7.3 æ»¡¡¿∫ »ø∞˙µÈ ∏Ò∑œ
-{
-
-    enum class EFFECT_ID;
-    typedef SC2Type<EFFECT_ID>  EffectID;
-    enum class EFFECT_ID
-    {
-        INVALID = 0,
-        PSISTORM = 1,
-        GUARDIANSHIELD = 2,
-        TEMPORALFIELDGROWING = 3,
-        TEMPORALFIELD = 4,
-        THERMALLANCES = 5,
-        SCANNERSWEEP = 6,
-        NUKEDOT = 7,
-        LIBERATORMORPHING = 8,
-        LIBERATORMORPHED = 9,
-        BLINDINGCLOUD = 10,
-        CORROSIVEBILE = 11,
-        LURKERATTACK = 12
-    };
-}
-// Control ≥°
-
 class Bot : public Agent {
 public:
-    bool TryBuildExpansionNexus() {
-        const ObservationInterface* observation = Observation();
-
-        //Don't have more active bases than we can provide workers for
-        if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) > max_worker_count_) {
-            return false;
-        }
-        // If we have extra workers around, try and build another nexus.
-        if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) < observation->GetFoodWorkers() - 16) {
-            return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
-        }
-        //Only build another nexus if we are floating extra minerals
-        if (observation->GetMinerals() > CountUnitType(observation, UNIT_TYPEID::PROTOSS_NEXUS) * 400) {
-            return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
-        }
-        return false;
-    }
-
-    int GetExpectedWorkers(UNIT_TYPEID vespene_building_type) {
-        const ObservationInterface* observation = Observation();
-        Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
-        Units geysers = observation->GetUnits(Unit::Alliance::Self, IsUnit(vespene_building_type));
-        int expected_workers = 0;
-        for (const auto& base : bases) {
-            if (base->build_progress != 1) {
-                continue;
-            }
-            expected_workers += base->ideal_harvesters;
-        }
-
-        for (const auto& geyser : geysers) {
-            if (geyser->vespene_contents > 0) {
-                if (geyser->build_progress != 1) {
-                    continue;
-                }
-                expected_workers += geyser->ideal_harvesters;
-            }
-        }
-
-        return expected_workers;
-    }
-
-    bool TryExpand(AbilityID build_ability, UnitTypeID worker_type) {
-        const ObservationInterface* observation = Observation();
-        float minimum_distance = std::numeric_limits<float>::max();
-        Point3D closest_expansion;
-        for (const auto& expansion : expansions_) {
-            float current_distance = Distance2D(startLocation_, expansion);
-            if (current_distance < .01f) {
-                continue;
-            }
-
-            if (current_distance < minimum_distance) {
-                if (Query()->Placement(build_ability, expansion)) {
-                    closest_expansion = expansion;
-                    minimum_distance = current_distance;
-                }
-            }
-        }
-        //only update staging location up till 3 bases.
-        if (TryBuildStructure(build_ability, worker_type, closest_expansion, true) && observation->GetUnits(Unit::Self, IsTownHall()).size() < 4) {
-            staging_location_ = Point3D(((staging_location_.x + closest_expansion.x) / 2), ((staging_location_.y + closest_expansion.y) / 2),
-                ((staging_location_.z + closest_expansion.z) / 2));
-            return true;
-        }
-        return false;
-
-    }
-
-    void PrintPoint3D(Point3D& p) {
-        std::cout << "(" << p.x << ", " << p.y << ", " << p.z << ")" << std::endl;
-    }
     virtual void OnGameStart() final {
         game_info_ = Observation()->GetGameInfo();
         std::cout << "Game started!" << std::endl;
         expansions_ = search::CalculateExpansionLocations(Observation(), Query());
-
         iter_exp = expansions_.begin();
 
         //Temporary, we can replace this with observation->GetStartLocation() once implemented
         startLocation_ = Observation()->GetStartLocation();
         staging_location_ = startLocation_;
 
-        std::cout << "startlocation: " << std::endl;
-        PrintPoint3D(startLocation_);
         if (game_info_.enemy_start_locations.size() == 1) find_enemy_location = true;
 
-        std::cout << "expansion: " << std::endl;
-        for (auto& e : expansions_) {
-            PrintPoint3D(e);
-        }
+
 
         float minimum_distance = std::numeric_limits<float>::max();
         for (const auto& expansion : expansions_) {
@@ -151,6 +48,7 @@ public:
     }
 
     virtual void OnStep() final {
+
         const ObservationInterface* observation = Observation();
         Units units = observation->GetUnits(Unit::Self, IsArmy(observation));
 
@@ -166,23 +64,13 @@ public:
 
         ManageUpgrades();
 
-        // Control Ω√¿€
-        Defend();
-        //ManageArmy();
-        ManageRush();
-        // Control ≥°
+
     }
 
     virtual void OnUnitIdle(const Unit* unit) override {
-        const ObservationInterface* observation = Observation();
-
         switch (unit->unit_type.ToType()) {
         case UNIT_TYPEID::PROTOSS_PROBE: {
             MineIdleWorkers(unit, ABILITY_ID::HARVEST_GATHER, UNIT_TYPEID::PROTOSS_ASSIMILATOR);
-            break;
-        }
-        case UNIT_TYPEID::PROTOSS_CARRIER: {
-            ScoutWithUnit(unit, observation);
             break;
         }
         default: {
@@ -199,20 +87,6 @@ public:
 
     Point3D front_expansion;
 
-    // Control Ω√¿€
-    int max_worker_count_ = 70;
-
-    //When to start building attacking units
-    int target_worker_count_ = 15;
-
-    bool warpgate_reasearched_ = false;
-    bool blink_reasearched_ = false;
-    bool Carrier_researched = false;
-    int max_colossus_count_ = 5;
-    int max_sentry_count_ = 2;
-    int max_stalker_count_ = 20;
-    int Rushtime = 0;
-
     sc2::Point2D RushLocation;
     sc2::Point2D EnemyLocation;
     sc2::Point2D ReadyLocation1;
@@ -226,124 +100,15 @@ public:
     int TempestCount = 0;
     int OracleStop = 0;
     int CarrierCount = 0;
-    // Control ≥°
 
 private:
-    // Control Ω√¿€
-    void Chat(std::string Message) // 6.29 √§∆√ «‘ºˆ
+
+    void Chat(std::string Message) // 6.29 Ï±ÑÌåÖ Ìï®Ïàò
     {
         Actions()->SendChat(Message);
     }
 
-    const std::vector<sc2::Effect> effects = Observation()->GetEffects();
-
-    const bool isBadEffect(const sc2::EffectID id)
-    {
-        switch (id.ToType())
-        {
-        case sc2::EFFECT_ID::BLINDINGCLOUD:
-        case sc2::EFFECT_ID::CORROSIVEBILE:
-        case sc2::EFFECT_ID::LIBERATORMORPHED:
-        case sc2::EFFECT_ID::LIBERATORMORPHING:
-        case sc2::EFFECT_ID::LURKERATTACK:
-        case sc2::EFFECT_ID::NUKEDOT:
-        case sc2::EFFECT_ID::PSISTORM:
-            //case sc2::EFFECT_ID::THERMALLANCES:
-            return true;
-        }
-        return false;
-    }
-
-    void EvadeEffect(Units unit)
-    {
-        for (auto & unit : unit)
-        {
-            for (const auto & effect : effects)
-            {
-                if (isBadEffect(effect.effect_id))
-                {
-                    const float radius = Observation()->GetEffectData()[effect.effect_id].radius;
-                    for (const auto & pos : effect.positions)
-                    {
-                        const float dist = Distance2D(unit->pos, pos);
-                        if (dist < radius + 2.0f)
-                        {
-                            sc2::Point2D fleeingPos;
-                            if (dist > 0)
-                            {
-                                Vector2D diff = unit->pos - pos; // 7.3 ¿˚ ¿Ø¥÷∞˙¿« π›¥Î πÊ«‚¿∏∑Œ µµ∏¡
-                                Normalize2D(diff);
-                                fleeingPos = unit->pos + diff * radius;
-                                //fleeingPos = pos + normalizeVector(rangedUnit->getPos() - pos, radius + 2.0f);
-                            }
-                            else
-                            {
-                                fleeingPos = pos + sc2::Point2D(0.1f, 0.1f);
-                            }
-                            Actions()->UnitCommand(unit, ABILITY_ID::MOVE, fleeingPos);
-                            Chat("Enemy Skill Run~");
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    void EvadeEffect(const Unit* unit)
-    {
-        for (const auto & effect : effects)
-        {
-            if (isBadEffect(effect.effect_id))
-            {
-                const float radius = Observation()->GetEffectData()[effect.effect_id].radius;
-                for (const auto & pos : effect.positions)
-                {
-                    const float dist = Distance2D(unit->pos, pos);
-                    if (dist < radius + 2.0f)
-                    {
-                        sc2::Point2D fleeingPos;
-                        if (dist > 0)
-                        {
-                            Vector2D diff = unit->pos - pos; // 7.3 ¿˚ ¿Ø¥÷∞˙¿« π›¥Î πÊ«‚¿∏∑Œ µµ∏¡
-                            Normalize2D(diff);
-                            fleeingPos = unit->pos + diff * radius;
-                            //fleeingPos = pos + normalizeVector(rangedUnit->getPos() - pos, radius + 2.0f);
-                        }
-                        else
-                        {
-                            fleeingPos = pos + sc2::Point2D(0.1f, 0.1f);
-                        }
-                        Actions()->UnitCommand(unit, ABILITY_ID::MOVE, fleeingPos);
-                        Chat("Enemy Skill Run~");
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    void SetupRushLocation(const ObservationInterface *observation)
-    {
-        if (find_enemy_location) {
-            ReadyLocation1 = game_info_.enemy_start_locations.front() + Point2D(30.0f, 0.0f);
-            ReadyLocation2 = game_info_.enemy_start_locations.front() + Point2D(0.0f, 30.0f);
-        }
-        else
-            ReadyLocation1 = startLocation_;
-        ReadyLocation2 = startLocation_;
-    }
-
-    float OracleRange = 2.5f; // ¿˝¥Î¿˚¿∏∑Œ ª˝¡∏
-    float TempestRange = 3.0f;
-    float CarrierRange = 1.9f;
-    bool TimetoAttack = false;
-    bool OracleTrained = false;
-    Point2D pylonlocation;
-    const Unit* oracle_second = nullptr;
-    Point2D StasisLocation;
-
-    void Defend() { // ¿Ø¥÷ ∆˜¿Œ≈Õ ø¿∑˘
+    void Defend() { // Ïú†Îãõ Ìè¨Ïù∏ÌÑ∞ Ïò§Î•ò
         const ObservationInterface* observation = Observation();
         Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsOracle());
         Units nexus = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
@@ -356,7 +121,7 @@ private:
         if (Oracles.empty())
         return;
         else if (!Oracles.empty() && CurrentOracle > 1 && !selected) {
-        //Vector2D diff = pylon_first->pos - nexus.at(1)->pos; // 7.3 ¿˚ ¿Ø¥÷∞˙¿« π›¥Î πÊ«‚¿∏∑Œ µµ∏¡
+        //Vector2D diff = pylon_first->pos - nexus.at(1)->pos; // 7.3 Ï†Å Ïú†ÎãõÍ≥ºÏùò Î∞òÎåÄ Î∞©Ìñ•ÏúºÎ°ú ÎèÑÎßù
         //Normalize2D(diff);
         //StasisLocation = pylon_first->pos + diff * 1.0f;
         float rx = GetRandomScalar();
@@ -384,87 +149,134 @@ private:
         Units EnemyCannon = observation->GetUnits(Unit::Alliance::Enemy, Rusher());
 
 
-        bool killscouter = false;
-        if (!OracleTrained)            killscouter = true;
-        else                             killscouter = false;
+        Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
+        Units enemyUnitsInRegion;
 
 
-        if (killscouter)
+        bool EnemyRush = false;
+
+
+
+
+        enemyUnitsInRegion.clear();
+        for (const auto & unit : enemy_units)
         {
-            if (EnemyWorkercount >= 1)
+            if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_OVERLORD)
             {
-                if (WorkerKiller == nullptr || !WorkerKiller->is_alive) {
-                    GetRandomUnit(WorkerKiller, observation, UNIT_TYPEID::PROTOSS_PROBE);
-                    if (WorkerKiller == probe_scout || WorkerKiller == probe_forge) WorkerKiller = nullptr;
-                }
-                Actions()->UnitCommand(WorkerKiller, ABILITY_ID::ATTACK, EnemyWorkers.front()->pos);
-                Chat("I want chase enemy scout worker~ *^^*");
-            }
-            else if (EnemyWorkercount > 1)
-            {
-                for (int i = 0; i < EnemyWorkercount + 1; i++) {
-                    Actions()->UnitCommand(Workers.at(i), ABILITY_ID::ATTACK, EnemyWorkers.front()->pos);
-                }
-                Chat("Enemy's Cheese Rush~!!!! ^0^");
+                continue;
             }
 
-            if (!EnemyCannon.empty())
+            if (Distance2D(startLocation_, unit->pos) < 25 + getAttackRangeGround(unit))
             {
-                /*
-                if (Killers.size()<8) Killers.resize(8);
-                for (int i = 0; i <= 8; i++)
-                {
-                const Unit * Killer = Killers.at(i);
-                if (Killers.at(i) == nullptr || !Killer->is_alive)
-                {
-                Chat("I'm Chosen!");
-                GetRandomUnit(Killers.at(i), observation, UNIT_TYPEID::PROTOSS_PROBE);
-                }
-                }
-                for(const auto& unit : Killers)
-                Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyCannon.front()->pos);
-                for (int i = 0; i < 8; i++) {
-                Actions()->UnitCommand(Workers.at(i), ABILITY_ID::ATTACK, EnemyCannon.front()->pos);
-                }*/
-
-                for (const auto& worker : Workers) {
-                    Actions()->UnitCommand(worker, ABILITY_ID::ATTACK, EnemyCannon.front()->pos);
-                }
+                Chat("Enemy Captured 1");
+                enemyUnitsInRegion.push_back(unit);
             }
         }
+
+        if (!OracleTrained)
+        {
+            if (Killers.size() < enemyUnitsInRegion.size()) {
+                Killers.resize(enemyUnitsInRegion.size(), nullptr);
+            }
+
+            if (enemyUnitsInRegion.size() > 0)
+            {
+                for (int i = 0; i<Killers.size();)
+                {
+                    auto& Killer = Killers.at(i);
+
+                    if (Killer == nullptr || !Killer->is_alive)
+                    {
+                        Chat("Killer Captured 2");
+                        GetRandomUnit(Killer, observation, UNIT_TYPEID::PROTOSS_PROBE);
+                        if (Killer == probe_scout || Killer == probe_forge)
+                            continue;
+                    }
+                    i++;
+                }
+                Chat("Killer Captured 2");
+                Actions()->UnitCommand(Killers, ABILITY_ID::SMART, enemyUnitsInRegion.front());
+            }
+            else //enemyUnitsInRegion.size() == 0
+            {
+                //
+            }
+        }
+
+        if (!EnemyCannon.empty())
+        {
+            int PhotonRush = 1;
+            for (const auto& worker : Workers) {
+                Actions()->UnitCommand(worker, ABILITY_ID::ATTACK, EnemyCannon.front()->pos);
+            }
+        }
+        else if (PhotonRush == 1)
+        {
+            for (const auto& worker : Workers) {
+                Actions()->UnitCommand(worker, ABILITY_ID::STOP, EnemyCannon.front()->pos);
+            }
+            int PhotonRush = 0;
+        }
+
+        if (enemyUnitsInRegion.size() > 5)
+        {
+            EnemyRush = true;
+        }
     }
+    int PhotonRush = 0;
+
+    void SetupRushLocation(const ObservationInterface *observation)
+    {
+        if (find_enemy_location) {
+            ReadyLocation1 = game_info_.enemy_start_locations.front() + Point2D(30.0f, 0.0f);
+            ReadyLocation2 = game_info_.enemy_start_locations.front() + Point2D(0.0f, 30.0f);
+        }
+        else
+            ReadyLocation1 = startLocation_;
+        ReadyLocation2 = startLocation_;
+    }
+
+    float OracleRange = 4.0f; // Ï†àÎåÄÏ†ÅÏúºÎ°ú ÏÉùÏ°¥
+    float TempestRange = 3.0f;
+    float CarrierRange = 1.9f;
+    bool TimetoAttack = false;
+    bool OracleTrained = false;
+    Point2D pylonlocation;
+    const Unit* oracle_second = nullptr;
+    Point2D StasisLocation;
 
     Units Killers;
     const Unit* WorkerKiller = nullptr;
     const Unit* oracle_first = nullptr;
 
-    void ManageRush() { // 5.17 ø¿∂Û≈¨ ¿Ø¥÷ ∞¸∏Æ +6.25 ∆¯«≥«‘ ¿Ø¥÷ ∞¸∏Æ
+    void ManageRush() { // 5.17 Ïò§ÎùºÌÅ¥ Ïú†Îãõ Í¥ÄÎ¶¨ +6.25 Ìè≠ÌíçÌï® Ïú†Îãõ Í¥ÄÎ¶¨
         const ObservationInterface* observation = Observation();
         Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
         Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsOracle());
-        Units Tempests = observation->GetUnits(Unit::Alliance::Self, IsTempest()); //6.25 ∆¯«≥«‘ ƒ¡∆Æ∑— √ﬂ∞°
+        Units Tempests = observation->GetUnits(Unit::Alliance::Self, IsTempest()); //6.25 Ìè≠ÌíçÌï® Ïª®Ìä∏Î°§ Ï∂îÍ∞Ä
         Units Carriers = observation->GetUnits(Unit::Alliance::Self, IsCarrier());
         Units EnemyWorker = observation->GetUnits(Unit::Alliance::Enemy, IsWorker());
-        Units AirAttackers = observation->GetUnits(Unit::Alliance::Enemy, AirAttacker()); //¿˚ πÊæÓ ¿Ø¥÷ π◊ ∞«π∞
+        Units AirAttackers = observation->GetUnits(Unit::Alliance::Enemy, AirAttacker()); //Ï†Å Î∞©Ïñ¥ Ïú†Îãõ Î∞è Í±¥Î¨º
                                                                                           //Units ProxyEnemy = observation->GetUnits(Unit::Alliance::Enemy, ExceptBuilding());
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
-        StasisLocation = Point2D(baselocation.x + rx * 10, baselocation.y + ry * 10);
+        //StasisLocation = Point2D(baselocation.x + rx * 10, baselocation.y + ry * 10);
 
+        /*
         if (OracleTrained)
         {
-            if (oracle_first == nullptr && !Oracles.empty())
-            {
-                Chat("HI~");
-                oracle_first = Oracles.front();
-            }
+        if (oracle_first == nullptr && !Oracles.empty())
+        {
+        Chat("HI~");
+        oracle_first = Oracles.front();
         }
+        }*/
 
         //const Unit* unit = oracle_first;
         //if (unit != nullptr) {
         for (const auto& unit : Oracles) {
 
-            if (!unit->orders.empty()) { // ∆ﬁº≠±§º±  ON / OFF
+            if (!unit->orders.empty()) { // ÌéÑÏÑúÍ¥ëÏÑ†  ON / OFF
                 float distance = std::numeric_limits<float>::max();
                 for (const auto& u : EnemyWorker) {
                     float d = Distance2D(u->pos, unit->pos);
@@ -494,21 +306,21 @@ private:
                 }
             }
 
-            EvadeEffect(unit);
+            //EvadeEffect(unit);
 
-            float distance = std::numeric_limits<float>::max(); // 5.21 πÊæÓ ∞«π∞,¿Ø¥÷¿Ã ±Ÿ√≥∑Œ ∞°¡ˆ æ ¥¬¥Ÿ
-            float UnitAttackRange = getAttackRange(unit); // 7.3 ¿Ã ¿Ø¥÷¿« ∞¯∞›ªÁ¡§∞≈∏Æ
-            float TargetAttackRange = 0.0f; // 7.3 ≥™∏¶ ∞¯∞›«“ ºˆ ¿÷¥¬ ¿Ø¥÷¿« ∞¯∞› ªÁ¡§∞≈∏Æ
+            float distance = std::numeric_limits<float>::max(); // 5.21 Î∞©Ïñ¥ Í±¥Î¨º,Ïú†ÎãõÏù¥ Í∑ºÏ≤òÎ°ú Í∞ÄÏßÄ ÏïäÎäîÎã§
+            float UnitAttackRange = getAttackRange(unit); // 7.3 Ïù¥ Ïú†ÎãõÏùò Í≥µÍ≤©ÏÇ¨Ï†ïÍ±∞Î¶¨
+            float TargetAttackRange = 0.0f; // 7.3 ÎÇòÎ•º Í≥µÍ≤©Ìï† Ïàò ÏûàÎäî Ïú†ÎãõÏùò Í≥µÍ≤© ÏÇ¨Ï†ïÍ±∞Î¶¨
 
             for (const auto& u : AirAttackers) {
                 float d = Distance2D(u->pos, unit->pos);
                 if (d < distance) {
-                    distance = d; // ∞°¿Â ∞°±ÓøÓ ∞≈∏Æ¿« ¿˚¿ª ∞Ì∏•¥Ÿ
+                    distance = d; // Í∞ÄÏû• Í∞ÄÍπåÏö¥ Í±∞Î¶¨Ïùò Ï†ÅÏùÑ Í≥†Î•∏Îã§
                 }
 
                 float TargetAttackRange = getAttackRange(u);
 
-                Vector2D diff = unit->pos - u->pos; // 7.3 ¿˚ ¿Ø¥÷∞˙¿« π›¥Î πÊ«‚¿∏∑Œ µµ∏¡
+                Vector2D diff = unit->pos - u->pos; // 7.3 Ï†Å Ïú†ÎãõÍ≥ºÏùò Î∞òÎåÄ Î∞©Ìñ•ÏúºÎ°ú ÎèÑÎßù
                 Normalize2D(diff);
                 KitingLocation = unit->pos + diff * 7.0f;
 
@@ -516,13 +328,13 @@ private:
                 {
                     TargetAttackRange = TargetAttackRange + 1.0f; // -OracleRange + 1.0f;
                 }
-                if (TargetAttackRange + OracleRange < distance) // ≥ª∞° ∞¯∞›«“ ºˆ ¿÷∞Ì ¿˚ ªÁ∞≈∏Æ∫∏¥Ÿ ∏÷∏Æ ¿÷¿ª ∂ß ∞¯∞›«—¥Ÿ
-                                                                // 7.5 OracleRange ¥¬ æ»¿¸∞≈∏Æ (¿˚µµ ≥™∏¶ «‚«ÿ øÚ¡˜¿Ã±‚ ∂ßπÆ)
+                if (TargetAttackRange + OracleRange < distance) // ÎÇ¥Í∞Ä Í≥µÍ≤©Ìï† Ïàò ÏûàÍ≥† Ï†Å ÏÇ¨Í±∞Î¶¨Î≥¥Îã§ Î©ÄÎ¶¨ ÏûàÏùÑ Îïå Í≥µÍ≤©ÌïúÎã§
+                                                                // 7.5 OracleRange Îäî ÏïàÏ†ÑÍ±∞Î¶¨ (Ï†ÅÎèÑ ÎÇòÎ•º Ìñ•Ìï¥ ÏõÄÏßÅÏù¥Í∏∞ ÎïåÎ¨∏)
                 {
                     for (const auto& Proxy1 : EnemyWorker) {
                         //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
                         Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, Proxy1->pos);
-                        //Chat("Target Attack!"); 7.6 ≥ π´ Ω√≤Ù∑ØøÚ §ª§ª
+                        //Chat("Target Attack!"); 7.6 ÎÑàÎ¨¥ ÏãúÎÅÑÎü¨ÏõÄ „Öã„Öã
                         break;
                     }
                 }
@@ -547,9 +359,9 @@ private:
 
             /*
             if (distance < 11) {
-            Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation); // 5.21 ±Ú¬¶±Ú¬¶ ¥Î¥¬∞… ±∏«ˆ«œ∞Ì ΩÕ¥Ÿ // 5.24 ±∏«ˆ¿Ã æ»µ 
-            } //6.25 ±∏«ˆµ 
-            if (!EnemyWorker.empty() && OracleCanAttack && distance > 10.5) { //6.26 ¿˚
+            Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation); // 5.21 ÍπîÏßùÍπîÏßù ÎåÄÎäîÍ±∏ Íµ¨ÌòÑÌïòÍ≥† Ïã∂Îã§ // 5.24 Íµ¨ÌòÑÏù¥ ÏïàÎê®
+            } //6.25 Íµ¨ÌòÑÎê®
+            if (!EnemyWorker.empty() && OracleCanAttack && distance > 10.5) { //6.26 Ï†Å
             for (const auto& Proxy1 : EnemyWorker) {
             //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
             Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, Proxy1->pos);
@@ -558,7 +370,7 @@ private:
             }
             */
             /*
-            else if (!ProxyEnemy.empty() && OracleCanAttack && distance > 10.5 && distance < 20) { //6.28 øπæ¿⁄∞° ∞«π∞∂ß∏Æ¥¬∞« ∫“« ø‰«œ¥Ÿ
+            else if (!ProxyEnemy.empty() && OracleCanAttack && distance > 10.5 && distance < 20) { //6.28 ÏòàÏñ∏ÏûêÍ∞Ä Í±¥Î¨ºÎïåÎ¶¨ÎäîÍ±¥ Î∂àÌïÑÏöîÌïòÎã§
             for (const auto& Proxy2 : ProxyEnemy) {
             Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, ProxyEnemy.front()->pos);
             }
@@ -573,11 +385,11 @@ private:
 
 
         for (const auto& unit : Tempests) {
-            float distance = std::numeric_limits<float>::max(); // 6.25 ∆¯«≥«‘¿∫ ªÁ∞≈∏Æ∏¶ »∞øÎ«ÿ πÊæÓ ∞«π∞,¿Ø¥÷ ±Ÿ√≥∑Œ ∞°¡ˆ æ ¥¬¥Ÿ
-            float UnitAttackRange = getAttackRange(unit); // 7.3 ¿Ã ¿Ø¥÷¿« ∞¯∞›ªÁ¡§∞≈∏Æ
-            float TargetAttackRange = 0.0f; // 7.3 ≥™∏¶ ∞¯∞›«“ ºˆ ¿÷¥¬ ¿Ø¥÷¿« ∞¯∞› ªÁ¡§∞≈∏Æ
+            float distance = std::numeric_limits<float>::max(); // 6.25 Ìè≠ÌíçÌï®ÏùÄ ÏÇ¨Í±∞Î¶¨Î•º ÌôúÏö©Ìï¥ Î∞©Ïñ¥ Í±¥Î¨º,Ïú†Îãõ Í∑ºÏ≤òÎ°ú Í∞ÄÏßÄ ÏïäÎäîÎã§
+            float UnitAttackRange = getAttackRange(unit); // 7.3 Ïù¥ Ïú†ÎãõÏùò Í≥µÍ≤©ÏÇ¨Ï†ïÍ±∞Î¶¨
+            float TargetAttackRange = 0.0f; // 7.3 ÎÇòÎ•º Í≥µÍ≤©Ìï† Ïàò ÏûàÎäî Ïú†ÎãõÏùò Í≥µÍ≤© ÏÇ¨Ï†ïÍ±∞Î¶¨
 
-            EvadeEffect(unit);
+            //EvadeEffect(unit);
 
             for (const auto& u : AirAttackers) {
                 float d = Distance2D(u->pos, unit->pos);
@@ -587,18 +399,18 @@ private:
 
                 float TargetAttackRange = getAttackRange(u);
 
-                Vector2D diff = unit->pos - u->pos; // 7.3 ¿˚ ¿Ø¥÷∞˙¿« π›¥Î πÊ«‚¿∏∑Œ µµ∏¡
+                Vector2D diff = unit->pos - u->pos; // 7.3 Ï†Å Ïú†ÎãõÍ≥ºÏùò Î∞òÎåÄ Î∞©Ìñ•ÏúºÎ°ú ÎèÑÎßù
                 Normalize2D(diff);
                 KitingLocation = unit->pos + diff * 7.0f;
 
-                if (unit->weapon_cooldown == 0.0f || TargetAttackRange + TempestRange < distance) // ≥ª∞° ∞¯∞›«“ ºˆ ¿÷∞Ì ¿˚ ªÁ∞≈∏Æ∫∏¥Ÿ ∏÷∏Æ ¿÷¿ª ∂ß ∞¯∞›«—¥Ÿ
+                if (unit->weapon_cooldown == 0.0f || TargetAttackRange + TempestRange < distance) // ÎÇ¥Í∞Ä Í≥µÍ≤©Ìï† Ïàò ÏûàÍ≥† Ï†Å ÏÇ¨Í±∞Î¶¨Î≥¥Îã§ Î©ÄÎ¶¨ ÏûàÏùÑ Îïå Í≥µÍ≤©ÌïúÎã§
                 {
 
                     for (const auto& Proxy2 : AirAttackers) {
                         //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
                         Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
 
-                        break; // ≈∏∞Ÿ«“ ¿Ø¥÷¿ª √£∞Ì √£¿∏∏È ∞¯∞›«œ¥¬ ∞…∑Œ
+                        break; // ÌÉÄÍ≤üÌï† Ïú†ÎãõÏùÑ Ï∞æÍ≥† Ï∞æÏúºÎ©¥ Í≥µÍ≤©ÌïòÎäî Í±∏Î°ú
                     }
 
                 }
@@ -631,12 +443,12 @@ private:
             if (distance < 10) {
             Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
             }
-            if (!AirAttackers.empty() && distance > 10) { //6.26 ¿˚
+            if (!AirAttackers.empty() && distance > 10) { //6.26 Ï†Å
             for (const auto& Proxy2 : AirAttackers) {
             Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
             }
             }
-            else if (!EnemyWorker.empty() && distance > 10 && distance < 20) { //6.26 ¿˚
+            else if (!EnemyWorker.empty() && distance > 10 && distance < 20) { //6.26 Ï†Å
             for (const auto& Proxy1 : EnemyWorker) {
             Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
             }
@@ -645,13 +457,13 @@ private:
         }
 
         for (const auto& unit : Carriers) {
-            float distance = std::numeric_limits<float>::max(); // 6.25 ƒ≥∏ÆæÓ ∞≈∏Æ¿Ø¡ˆ
-            float UnitAttackRange = getAttackRange(unit); // 7.3 ¿Ã ¿Ø¥÷¿« ∞¯∞›ªÁ¡§∞≈∏Æ
-            float TargetAttackRange = 0.0f; // 7.3 ≥™∏¶ ∞¯∞›«“ ºˆ ¿÷¥¬ ¿Ø¥÷¿« ∞¯∞› ªÁ¡§∞≈∏Æ
+            float distance = std::numeric_limits<float>::max(); // 6.25 Ï∫êÎ¶¨Ïñ¥ Í±∞Î¶¨Ïú†ÏßÄ
+            float UnitAttackRange = getAttackRange(unit); // 7.3 Ïù¥ Ïú†ÎãõÏùò Í≥µÍ≤©ÏÇ¨Ï†ïÍ±∞Î¶¨
+            float TargetAttackRange = 0.0f; // 7.3 ÎÇòÎ•º Í≥µÍ≤©Ìï† Ïàò ÏûàÎäî Ïú†ÎãõÏùò Í≥µÍ≤© ÏÇ¨Ï†ïÍ±∞Î¶¨
 
             int CurrentCarrier = CountUnitType(observation, UNIT_TYPEID::PROTOSS_CARRIER);
 
-            EvadeEffect(unit);
+            //EvadeEffect(unit);
 
 
             if (CurrentCarrier <= 3) {
@@ -668,12 +480,12 @@ private:
 
                     float TargetAttackRange = getAttackRange(u);
 
-                    Vector2D diff = unit->pos - u->pos; // 7.3 ¿˚ ¿Ø¥÷∞˙¿« π›¥Î πÊ«‚¿∏∑Œ µµ∏¡
+                    Vector2D diff = unit->pos - u->pos; // 7.3 Ï†Å Ïú†ÎãõÍ≥ºÏùò Î∞òÎåÄ Î∞©Ìñ•ÏúºÎ°ú ÎèÑÎßù
                     Normalize2D(diff);
                     KitingLocation = unit->pos + diff * 7.0f;
                     if (unit->shield < 10)
                     {
-                        if (unit->weapon_cooldown == 0.0f || distance > TargetAttackRange + 4.5) // ≥ª∞° ∞¯∞›«“ ºˆ ¿÷∞Ì ¿˚ ªÁ∞≈∏Æ∫∏¥Ÿ ∏÷∏Æ ¿÷¿ª ∂ß ∞¯∞›«—¥Ÿ
+                        if (unit->weapon_cooldown == 0.0f || distance > TargetAttackRange + 4.5) // ÎÇ¥Í∞Ä Í≥µÍ≤©Ìï† Ïàò ÏûàÍ≥† Ï†Å ÏÇ¨Í±∞Î¶¨Î≥¥Îã§ Î©ÄÎ¶¨ ÏûàÏùÑ Îïå Í≥µÍ≤©ÌïúÎã§
                         {
                             if (unit->orders.empty())
                                 RetreatWithCarrier(unit);
@@ -687,7 +499,7 @@ private:
                     else
                     {
 
-                        if (unit->weapon_cooldown == 0.0f || distance > TargetAttackRange + CarrierRange) // ≥ª∞° ∞¯∞›«“ ºˆ ¿÷∞Ì ¿˚ ªÁ∞≈∏Æ∫∏¥Ÿ ∏÷∏Æ ¿÷¿ª ∂ß ∞¯∞›«—¥Ÿ
+                        if (unit->weapon_cooldown == 0.0f || distance > TargetAttackRange + CarrierRange) // ÎÇ¥Í∞Ä Í≥µÍ≤©Ìï† Ïàò ÏûàÍ≥† Ï†Å ÏÇ¨Í±∞Î¶¨Î≥¥Îã§ Î©ÄÎ¶¨ ÏûàÏùÑ Îïå Í≥µÍ≤©ÌïúÎã§
                         {
                             if (unit->orders.empty())
                                 RetreatWithCarrier(unit);
@@ -722,12 +534,12 @@ private:
 
                         float TargetAttackRange = getAttackRange(u);
 
-                        Vector2D diff = unit->pos - u->pos; // 7.3 ¿˚ ¿Ø¥÷∞˙¿« π›¥Î πÊ«‚¿∏∑Œ µµ∏¡
+                        Vector2D diff = unit->pos - u->pos; // 7.3 Ï†Å Ïú†ÎãõÍ≥ºÏùò Î∞òÎåÄ Î∞©Ìñ•ÏúºÎ°ú ÎèÑÎßù
                         Normalize2D(diff);
                         KitingLocation = unit->pos + diff * 7.0f;
                         if (unit->shield < 10)
                         {
-                            if (unit->weapon_cooldown == 0.0f || distance > TargetAttackRange + 4.5) // ≥ª∞° ∞¯∞›«“ ºˆ ¿÷∞Ì ¿˚ ªÁ∞≈∏Æ∫∏¥Ÿ ∏÷∏Æ ¿÷¿ª ∂ß ∞¯∞›«—¥Ÿ
+                            if (unit->weapon_cooldown == 0.0f || distance > TargetAttackRange + 4.5) // ÎÇ¥Í∞Ä Í≥µÍ≤©Ìï† Ïàò ÏûàÍ≥† Ï†Å ÏÇ¨Í±∞Î¶¨Î≥¥Îã§ Î©ÄÎ¶¨ ÏûàÏùÑ Îïå Í≥µÍ≤©ÌïúÎã§
                             {
                                 for (const auto& Proxy2 : AirAttackers) {
                                     //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
@@ -751,7 +563,7 @@ private:
                         else
                         {
 
-                            if (unit->weapon_cooldown == 0.0f || distance > TargetAttackRange + CarrierRange) // ≥ª∞° ∞¯∞›«“ ºˆ ¿÷∞Ì ¿˚ ªÁ∞≈∏Æ∫∏¥Ÿ ∏÷∏Æ ¿÷¿ª ∂ß ∞¯∞›«—¥Ÿ
+                            if (unit->weapon_cooldown == 0.0f || distance > TargetAttackRange + CarrierRange) // ÎÇ¥Í∞Ä Í≥µÍ≤©Ìï† Ïàò ÏûàÍ≥† Ï†Å ÏÇ¨Í±∞Î¶¨Î≥¥Îã§ Î©ÄÎ¶¨ ÏûàÏùÑ Îïå Í≥µÍ≤©ÌïúÎã§
                             {
                                 for (const auto& Proxy2 : AirAttackers) {
                                     //Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
@@ -774,7 +586,7 @@ private:
                         }
                     }
                 }
-                else // ¡ˆµµªÛø° ¿˚ ¿Ø¥÷¿Ã æ∆øπ æ¯¥¬ ªÛ»≤ø°º± ƒ≥∏ÆæÓ∞° ¡÷µµ¿˚¿∏∑Œ ≈Ωªˆ«ÿæﬂ«‘
+                else // ÏßÄÎèÑÏÉÅÏóê Ï†Å Ïú†ÎãõÏù¥ ÏïÑÏòà ÏóÜÎäî ÏÉÅÌô©ÏóêÏÑ† Ï∫êÎ¶¨Ïñ¥Í∞Ä Ï£ºÎèÑÏ†ÅÏúºÎ°ú ÌÉêÏÉâÌï¥ÏïºÌï®
                 {
                     ScoutWithUnit(unit, observation);
                     scoutprobe();
@@ -807,25 +619,6 @@ private:
         }
     }
 
-    /*
-    Point3D CarrierLocation;
-    void Location()
-    {
-    const ObservationInterface* observation = Observation();
-    Units nexus = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
-    if (nexus.empty()) return;
-    else {
-    for (int i = 0; i < nexus.size();) {
-    if (i < nexus.size()) {
-    CarrierLocation = nexus.at(i)->pos;
-    if (observation->GetVespene() > 200) {
-    i++;
-    }
-    }
-    }
-    }
-    }
-    */
     void RetreatWithCarrier(const Unit* unit) {
         Actions()->UnitCommand(unit, ABILITY_ID::PATROL, pylonlocation);
 
@@ -848,7 +641,6 @@ private:
         }*/
     }
 
-
     const float getAttackRange(const Unit* target) const
     {
         sc2::Weapon groundWeapons;
@@ -869,8 +661,32 @@ private:
                 }
             }
         }
-        return AirWeapons.range; // 7.5 ¿Ã∞« ø¿∑Œ¡ˆ ∞¯¡ﬂ¿Ø¥÷¿ª ¿ß«— «‘ºˆ!!
-                                 // return groundWeapons.range; // 7.5 ªÁøÎ«œ∞Ì ΩÕ¿∏∏È æµ∞Õ
+        return AirWeapons.range; // 7.5 Ïù¥Í±¥ Ïò§Î°úÏßÄ Í≥µÏ§ëÏú†ÎãõÏùÑ ÏúÑÌïú Ìï®Ïàò!!
+                                 // return groundWeapons.range; // 7.5 ÏÇ¨Ïö©ÌïòÍ≥† Ïã∂ÏúºÎ©¥ Ïì∏Í≤É
+    }
+
+    const float getAttackRangeGround(const Unit* target) const
+    {
+        sc2::Weapon groundWeapons;
+        sc2::Weapon AirWeapons;
+
+        for (const auto & Weapon : Observation()->GetUnitTypeData()[target->unit_type].weapons)
+        {
+            if (Weapon.type == sc2::Weapon::TargetType::Air || Weapon.type == sc2::Weapon::TargetType::Any)
+            {
+                AirWeapons = Weapon;
+            }
+            if ((Weapon.type == sc2::Weapon::TargetType::Ground || Weapon.type == sc2::Weapon::TargetType::Any) && Weapon.range > groundWeapons.range)//Siege tanks
+            {
+                groundWeapons = Weapon;
+                if (groundWeapons.range < 0.11f)//melee. Not exactly 0.1
+                {
+                    groundWeapons.range += target->radius;
+                }
+            }
+        }
+        return groundWeapons.range;; //ÏßÄÏÉÅÏú†ÎãõÏùÑ ÏúÑÌïú Ìï®Ïàò!!
+                                     // return groundWeapons.range; // 7.5 ÏÇ¨Ïö©ÌïòÍ≥† Ïã∂ÏúºÎ©¥ Ïì∏Í≤É
     }
 
     struct Rusher {
@@ -883,7 +699,7 @@ private:
         }
     };
 
-    struct AirAttacker { // ∞¯¡ﬂ ∞¯∞› ∞°¥…«— ¿˚µÈ (øπæ¿⁄∞° ±‚«««ÿæﬂ«œ¥¬ ¿˚ && ∆¯«≥«‘¿Ã øÏº± ∞¯∞›«œ¥¬ ¿˚) //Ω√∞£¿Ã ≥≤¿∏∏È weapon.type == sc2::Weapon::TargetType::Air ¿∏∑Œ «“ºˆ¿÷¡ˆ∏∏ Ω√∞£¿Ã æ¯¿Ω
+    struct AirAttacker { // Í≥µÏ§ë Í≥µÍ≤© Í∞ÄÎä•Ìïú Ï†ÅÎì§ (ÏòàÏñ∏ÏûêÍ∞Ä Í∏∞ÌîºÌï¥ÏïºÌïòÎäî Ï†Å && Ìè≠ÌíçÌï®Ïù¥ Ïö∞ÏÑ† Í≥µÍ≤©ÌïòÎäî Ï†Å) //ÏãúÍ∞ÑÏù¥ ÎÇ®ÏúºÎ©¥ weapon.type == sc2::Weapon::TargetType::Air ÏúºÎ°ú Ìï†ÏàòÏûàÏßÄÎßå ÏãúÍ∞ÑÏù¥ ÏóÜÏùå
         bool operator()(const Unit& unit) {
             switch (unit.unit_type.ToType()) {
 
@@ -926,7 +742,7 @@ private:
     };
 
 
-    struct IsOracle { // øπæ¿⁄¿Œ¡ˆ ∞®¡ˆ
+    struct IsOracle { // ÏòàÏñ∏ÏûêÏù∏ÏßÄ Í∞êÏßÄ
         bool operator()(const Unit& unit) {
 
             switch (unit.unit_type.ToType()) {
@@ -954,40 +770,6 @@ private:
         }
     };
 
-    /*
-    void ManageArmy() {
-    const ObservationInterface* observation = Observation();
-    Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
-    Units army = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
-    // ¿Ø¥÷ ∏¿∏¥¬ ±‚¡ÿ
-    //There are no enemies yet, and we don't have a big army
-    // ¿Œ±∏ºˆ 50¿Ã µ«±‚ ¿¸±Ó¡ˆ¥¬ ¿Ø¥÷¿ª ∏¿∏∞Ì ¿÷¥¬¥Ÿ.
-    if (enemy_units.empty() && !TimetoAttack) {
-    for (const auto& unit : army) {
-    RetreatWithUnit(unit, staging_location_);
-    }
-    }
-    else if (!enemy_units.empty() && TimetoAttack) {
-    for (const auto& unit : army) {
-    AttackWithUnit(unit, observation); // ¿Œ±∏ºˆ∏¶ ¥Ÿ √§ø¸¥Ÿ∏È ∞¯∞›«œ∑Ø∞£¥Ÿ
-    switch (unit->unit_type.ToType()) {
-    case(UNIT_TYPEID::PROTOSS_TEMPEST): {
-    }
-    case(UNIT_TYPEID::PROTOSS_CARRIER): {
-    }
-    default:
-    break;
-    }
-    }
-    }
-    else {
-    for (const auto& unit : army) {
-    ScoutWithUnit(unit, observation);
-    }
-    }
-    }
-    */
-
     void AttackWithUnitType(UnitTypeID unit_type, const ObservationInterface* observation) {
         Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
         for (const auto& unit : units) {
@@ -1002,13 +784,13 @@ private:
             return;
         }
 
-        // ¿Ø¥÷¿Ã «œ¥¬∞‘ æ¯¿ª ∂ß ∞¯∞›
+        // Ïú†ÎãõÏù¥ ÌïòÎäîÍ≤å ÏóÜÏùÑ Îïå Í≥µÍ≤©
         if (unit->orders.empty()) {
             Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemy_units.front()->pos);
             return;
         }
 
-        //If the unit is doing something besides attacking, make it attack. // ∞¯∞›¿ª æ»«œ∏È ∞¯∞›∏Ì∑…
+        //If the unit is doing something besides attacking, make it attack. // Í≥µÍ≤©ÏùÑ ÏïàÌïòÎ©¥ Í≥µÍ≤©Î™ÖÎ†π
         if (unit->orders.front().ability_id != ABILITY_ID::ATTACK) {
             Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemy_units.front()->pos);
         }
@@ -1122,7 +904,57 @@ private:
         }
     };
 
-    // Control ≥°
+    bool TryBuildUnitChrono(AbilityID ability_type_for_unit, UnitTypeID unit_type) {
+        const ObservationInterface* observation = Observation();
+
+        //If we are at supply cap, don't build anymore units, unless its an overlord.
+        if (observation->GetFoodUsed() >= observation->GetFoodCap() && ability_type_for_unit != ABILITY_ID::TRAIN_OVERLORD) {
+            return false;
+        }
+        const Unit* unit = nullptr;
+        if (!GetRandomUnit(unit, observation, unit_type)) {
+            return false;
+        }
+        if (!unit->orders.empty()) {
+
+            return false;
+        }
+        if (unit->build_progress != 1) {
+            return false;
+        }
+
+        Actions()->UnitCommand(unit, ability_type_for_unit);
+        Chronoboost(unit);
+        return true;
+    }
+
+    bool Chronoboost(const Unit * unit) {
+        const ObservationInterface* observation = Observation();
+        Units nexus = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+
+        if (nexus.empty()) return false;
+        else {
+            for (int i = 0; i < nexus.size(); ++i) {
+                if (nexus.at(i)->build_progress != 1) {
+                    continue;
+                }
+                else {
+                    if (i < nexus.size()) {
+                        if (nexus.at(i)->energy >= 50) {
+                            Actions()->UnitCommand(nexus.at(i), ABILITY_ID::EFFECT_CHRONOBOOST, unit);
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                            //Chat("Not enough Energy for Chronoboost~"); Too loud
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+    }
 
     struct IsWorker {
         bool operator()(const Unit& unit) {
@@ -1146,7 +978,6 @@ private:
                 }
             }
             switch (unit.unit_type.ToType()) {
-            case UNIT_TYPEID::PROTOSS_ORACLE: return false;
             case UNIT_TYPEID::ZERG_OVERLORD: return false;
             case UNIT_TYPEID::PROTOSS_PROBE: return false;
             case UNIT_TYPEID::ZERG_DRONE: return false;
@@ -1211,7 +1042,7 @@ private:
         }
     };
 
-    int CountUnitType(const ObservationInterface* observation, UnitTypeID unit_type) {
+    size_t CountUnitType(const ObservationInterface* observation, UnitTypeID unit_type) {
         return observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type)).size();
     }
 
@@ -1228,22 +1059,11 @@ private:
     }
 
     const Unit* FindNearestMineralPatch(const Point2D& start) {
-            
         Units units = Observation()->GetUnits(Unit::Alliance::Neutral);
         float distance = std::numeric_limits<float>::max();
         const Unit* target = nullptr;
         for (const auto& u : units) {
-            if ([](const Unit& unit) {
-                return unit.unit_type == UNIT_TYPEID::NEUTRAL_MINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_MINERALFIELD750 ||
-                    unit.unit_type == UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD750 ||
-                    unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD750 ||
-                    unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD750 ||
-                    unit.unit_type == UNIT_TYPEID::NEUTRAL_LABMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_LABMINERALFIELD750 ||
-                    unit.unit_type == UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD750 ||
-                    unit.unit_type == UNIT_TYPEID::NEUTRAL_VESPENEGEYSER || unit.unit_type == UNIT_TYPEID::NEUTRAL_PROTOSSVESPENEGEYSER ||
-                    unit.unit_type == UNIT_TYPEID::NEUTRAL_SPACEPLATFORMGEYSER || unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERVESPENEGEYSER ||
-                    unit.unit_type == UNIT_TYPEID::NEUTRAL_SHAKURASVESPENEGEYSER || unit.unit_type == UNIT_TYPEID::NEUTRAL_RICHVESPENEGEYSER;
-            }(*u)) {
+            if (u->unit_type == UNIT_TYPEID::NEUTRAL_MINERALFIELD) {
                 float d = DistanceSquared2D(u->pos, start);
                 if (d < distance) {
                     distance = d;
@@ -1280,59 +1100,7 @@ private:
         Actions()->UnitCommand(unit, ability_type_for_unit);
         return true;
     }
-    // Control Ω√¿€
-    bool TryBuildUnitChrono(AbilityID ability_type_for_unit, UnitTypeID unit_type) {
-        const ObservationInterface* observation = Observation();
 
-        //If we are at supply cap, don't build anymore units, unless its an overlord.
-        if (observation->GetFoodUsed() >= observation->GetFoodCap() && ability_type_for_unit != ABILITY_ID::TRAIN_OVERLORD) {
-            return false;
-        }
-        const Unit* unit = nullptr;
-        if (!GetRandomUnit(unit, observation, unit_type)) {
-            return false;
-        }
-        if (!unit->orders.empty()) {
-
-            return false;
-        }
-        if (unit->build_progress != 1) {
-            return false;
-        }
-
-        Actions()->UnitCommand(unit, ability_type_for_unit);
-        Chronoboost(unit);
-        return true;
-    }
-
-    bool Chronoboost(const Unit * unit) {
-        const ObservationInterface* observation = Observation();
-        Units nexus = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
-
-        if (nexus.empty()) return false;
-        else {
-            for (int i = 0; i < nexus.size(); ++i) {
-                if (nexus.at(i)->build_progress != 1) {
-                    continue;
-                }
-                else {
-                    if (i < nexus.size()) {
-                        if (nexus.at(i)->energy >= 50) {
-                            Actions()->UnitCommand(nexus.at(i), ABILITY_ID::EFFECT_CHRONOBOOST, unit);
-                            return true;
-                        }
-                        else
-                        {
-                            return false;
-                            //Chat("Not enough Energy for Chronoboost~"); Too loud
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-    }
-    // Control ≥°
     bool TryBuildStructure(AbilityID ability_type_for_structure, UnitTypeID unit_type, Point2D location, bool isExpansion = false) {
 
         const ObservationInterface* observation = Observation();
@@ -1357,7 +1125,7 @@ private:
         // If no worker is already building one, get a random worker to build one
         const Unit* unit = nullptr;
         for (const auto& worker : workers) {
-            //¿¸¡¯ «¡∑Œ∫Í¥¬ ¡¶ø‹
+            //ÔøΩÔøΩÔøΩÔøΩ ÔøΩÔøΩÔøΩŒ∫ÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩ
             if (worker == probe_scout) continue;
             for (const auto& order : worker->orders) {
                 if (order.ability_id == ABILITY_ID::HARVEST_GATHER) {
@@ -1448,16 +1216,41 @@ private:
         return TryBuildStructure(ability_type_for_structure, UNIT_TYPEID::PROTOSS_PROBE, build_location);
     }
 
-    bool TryBuildStructureNearPylonWithUnit(const Unit* unit, AbilityID ability_type_for_structure, const Unit* pylon) {
-
+    bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID, const Unit* pylon) {
         const ObservationInterface* observation = Observation();
 
-        if (unit == nullptr) return false;
-        if (pylon == nullptr) return false;
+        //Need to check to make sure its a pylon instead of a warp prism
         std::vector<PowerSource> power_sources = observation->GetPowerSources();
         if (power_sources.empty()) {
             return false;
         }
+
+        const PowerSource& random_power_source = GetRandomEntry(power_sources);
+        if (observation->GetUnit(random_power_source.tag) != nullptr) {
+            if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISM) {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
+        float radius = random_power_source.radius;
+        float rx = GetRandomScalar();
+        float ry = GetRandomScalar();
+        Point2D build_location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
+        return TryBuildStructure(ability_type_for_structure, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+    }
+
+    bool TryBuildStructureNearPylonWithUnit(const Unit* unit, AbilityID ability_type_for_structure, const Unit* pylon) {
+
+        const ObservationInterface* observation = Observation();
+        std::vector<PowerSource> power_sources = observation->GetPowerSources();
+
+        if (power_sources.empty()) {
+            return false;
+        }
+        if (unit == nullptr) return false;
+
         float radius = power_sources.front().radius;
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
@@ -1482,7 +1275,6 @@ private:
         Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 
         if (unit == nullptr) return false;
-        if (pylon == nullptr) return false;
         std::vector<PowerSource> power_sources = observation->GetPowerSources();
         if (power_sources.empty()) {
             return false;
@@ -1492,11 +1284,8 @@ private:
         float ry = GetRandomScalar();
         Point2D location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
 
-        if (!bases.empty())
-        {
-            if (Distance2D(location, front_expansion) < bases.front()->radius*1.3) {
-                return false;
-            }
+        if (Distance2D(location, front_expansion)<bases.front()->radius*1.3) {
+            return false;
         }
         // Check to see if unit can make it there
         if (Query()->PathingDistance(unit, location) < 0.1f) {
@@ -1588,6 +1377,29 @@ private:
         Point2D build_location = Point2D(location.x + rx * 3, location.y + ry * 3);
         return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
     }
+    bool TryBuildPylonWide(Point2D location) {
+        const ObservationInterface* observation = Observation();
+
+        if (observation->GetMinerals() < 100) {
+            return false;
+        }
+
+        //check to see if there is already on building
+        Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
+
+        for (const auto& unit : units) {
+            if (unit->build_progress != 1) {
+                return false;
+            }
+        }
+
+
+        // Try and build a pylon. Find a random Probe and give it the order.
+        float rx = GetRandomScalar();
+        float ry = GetRandomScalar();
+        Point2D build_location = Point2D(location.x + rx * 8, location.y + ry * 8);
+        return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+    }
 
     void MineIdleWorkers(const Unit* worker, AbilityID worker_gather_command, UnitTypeID vespene_building_type) {
         if (worker == probe_scout || worker == probe_forge) return;
@@ -1629,6 +1441,30 @@ private:
         const Unit* random_base = GetRandomEntry(bases);
         valid_mineral_patch = FindNearestMineralPatch(random_base->pos);
         Actions()->UnitCommand(worker, worker_gather_command, valid_mineral_patch);
+    }
+
+    int GetExpectedWorkers(UNIT_TYPEID vespene_building_type) {
+        const ObservationInterface* observation = Observation();
+        Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
+        Units geysers = observation->GetUnits(Unit::Alliance::Self, IsUnit(vespene_building_type));
+        int expected_workers = 0;
+        for (const auto& base : bases) {
+            if (base->build_progress != 1) {
+                continue;
+            }
+            expected_workers += base->ideal_harvesters;
+        }
+
+        for (const auto& geyser : geysers) {
+            if (geyser->vespene_contents > 0) {
+                if (geyser->build_progress != 1) {
+                    continue;
+                }
+                expected_workers += geyser->ideal_harvesters;
+            }
+        }
+
+        return expected_workers;
     }
 
     void ManageWorkers(UNIT_TYPEID worker_type, AbilityID worker_gather_command, UNIT_TYPEID vespene_building_type) {
@@ -1701,36 +1537,80 @@ private:
     void ManageUpgrades() {
         const ObservationInterface* observation = Observation();
         auto upgrades = observation->GetUpgrades();
-        if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_FLEETBEACON)>0) {
-            TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
-            TryBuildUnit(ABILITY_ID::RESEARCH_INTERCEPTORGRAVITONCATAPULT, UNIT_TYPEID::PROTOSS_FLEETBEACON);
-        }
-    }
-
-    void BuildPylonEarly(Units pylons, Point2D probe_scout_dest)
-    {
-        if (pylons.size()<1 && probe_scout != nullptr) {
-            if (Distance2D(probe_scout->pos, front_expansion)<5) {
-                probe_scout_dest = Point2D((double)game_info_.width / 2, (double)game_info_.height / 2);
-                Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, probe_scout_dest);
+        for (const auto& upgrade : upgrades) {
+            if (upgrade == UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL1 || upgrade == UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL2) {
+                TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
             }
-
-            if (Distance2D(probe_scout->pos, front_expansion) > 10 && Distance2D(probe_scout->pos, startLocation_) > 25) {
-                probe_scout_dest = probe_scout->pos;
-                float rx = GetRandomScalar();
-                float ry = GetRandomScalar();
-                Point2D build_location = Point2D(probe_scout->pos.x + rx * 3, probe_scout->pos.y + ry * 3);
-                if (Query()->PathingDistance(probe_scout, build_location) < 0.1f) {
-                    return;
-                }
-                if (Query()->Placement(ABILITY_ID::BUILD_PYLON, build_location)) {
-                    Actions()->UnitCommand(probe_scout, ABILITY_ID::BUILD_PYLON, build_location);
-                    pylonlocation = build_location; // Control
-                }
+            else if (upgrade == UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL3 || upgrade == UPGRADE_ID::PROTOSSAIRARMORSLEVEL1 || upgrade == UPGRADE_ID::PROTOSSAIRARMORSLEVEL2) {
+                TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRARMOR, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
             }
         }
     }
-    Point2D baselocation;
+
+    bool TryExpand(AbilityID build_ability, UnitTypeID worker_type) {
+        const ObservationInterface* observation = Observation();
+        float minimum_distance = std::numeric_limits<float>::max();
+        Point3D closest_expansion;
+        for (const auto& expansion : expansions_) {
+            float current_distance = Distance2D(startLocation_, expansion);
+            if (current_distance < .01f) {
+                continue;
+            }
+
+            if (current_distance < minimum_distance) {
+                if (Query()->Placement(build_ability, expansion)) {
+                    closest_expansion = expansion;
+                    minimum_distance = current_distance;
+                }
+            }
+        }
+        //only update staging location up till 3 bases.
+        if (TryBuildStructure(build_ability, worker_type, closest_expansion, true) && observation->GetUnits(Unit::Self, IsTownHall()).size() < 4) {
+            staging_location_ = Point3D(((staging_location_.x + closest_expansion.x) / 2), ((staging_location_.y + closest_expansion.y) / 2),
+                ((staging_location_.z + closest_expansion.z) / 2));
+            return true;
+        }
+        return false;
+
+    }
+
+    bool TryBuildExpansionNexus() {
+        const ObservationInterface* observation = Observation();
+
+        //Don't have more active bases than we can provide workers for
+        if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) > max_worker_count_) {
+            return false;
+        }
+        // If we have extra workers around, try and build another nexus.
+        if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) < observation->GetFoodWorkers() - 16) {
+            return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+        }
+        //Only build another nexus if we are floating extra minerals
+        if (observation->GetMinerals() > CountUnitType(observation, UNIT_TYPEID::PROTOSS_NEXUS) * 400) {
+            return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+        }
+        return false;
+    }
+
+    bool TryBuildAssimilator() {
+        const ObservationInterface* observation = Observation();
+        Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
+
+        if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_ASSIMILATOR) >= observation->GetUnits(Unit::Alliance::Self, IsTownHall()).size() * 2) {
+            return false;
+        }
+
+        for (const auto& base : bases) {
+            if (base->assigned_harvesters >= base->ideal_harvesters) {
+                if (base->build_progress == 1) {
+                    if (TryBuildGas(ABILITY_ID::BUILD_ASSIMILATOR, UNIT_TYPEID::PROTOSS_PROBE, base->pos)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 
     bool EarlyStrategy() {
         const ObservationInterface* observation = Observation();
@@ -1739,47 +1619,131 @@ private:
         Units pylons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
         Units enemy_structures = observation->GetUnits(Unit::Alliance::Enemy, IsStructure(observation));
         Units enemy_townhalls = observation->GetUnits(Unit::Alliance::Enemy, IsTownHall());
-        Units Cannons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PHOTONCANNON));
 
-        int forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
-        int cannon_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_PHOTONCANNON);
-        int shield_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_SHIELDBATTERY);
-        int gateway_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_GATEWAY) + CountUnitType(observation, UNIT_TYPEID::PROTOSS_WARPGATE);
-        int assimilator_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ASSIMILATOR);
-        int cybernetics_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
-        int stargate_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STARGATE);
+
+        size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
+        size_t cannon_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_PHOTONCANNON);
+        size_t gateway_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_GATEWAY) + CountUnitType(observation, UNIT_TYPEID::PROTOSS_WARPGATE);
+        size_t assimilator_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ASSIMILATOR);
+        size_t cybernetics_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
+        size_t stargate_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STARGATE);
 
         Point2D probe_scout_dest = Point2D((double)game_info_.width / 2, (double)game_info_.height / 2);
 
-        bool done = false;
+        std::cout << stage_number << std::endl;
 
-        const Unit* base = nullptr;
-        const Unit* frontbase = nullptr;
-        if (bases.size()>1) {
-            for (const auto& b : bases) {
-                if (Distance2D(b->pos, startLocation_)<3) {
-                    base = b;
+        if (stage_number>1) {
+            if (find_enemy_location == false && pylons.size()>0) {
+                Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
+                if (!enemy_townhalls.empty() || enemy_structures.size()>2 || game_info_.enemy_start_locations.size() == 1) {
+                    if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<10 || game_info_.enemy_start_locations.size() == 1) {
+                        find_enemy_location = true;
+                        std::cout << "find!" << std::endl;
+                        Actions()->UnitCommand(probe_scout, ABILITY_ID::STOP);
+                        float minimum_distance = std::numeric_limits<float>::max();
+                        for (const auto& expansion : expansions_) {
+                            float current_distance = Distance2D(game_info_.enemy_start_locations.front(), expansion);
+                            if (current_distance < 3) {
+                                continue;
+                            }
+
+                            if (current_distance < minimum_distance) {
+                                enemy_expansion = expansion;
+                                minimum_distance = current_distance;
+                            }
+                        }
+                    }
                 }
-                else
-                {
-                    frontbase = b;
+                else {
+                    if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<7) {
+                        iter_esl = game_info_.enemy_start_locations.begin();
+                        game_info_.enemy_start_locations.erase(iter_esl);
+                    }
                 }
             }
         }
-        else if (!bases.empty()) {
-            base = bases.front();
-            frontbase = bases.front();
+
+        switch (stage_number) {
+        case 4:
+            break;
+        case 5:
+            break;
+        default:
+            if (observation->GetFoodWorkers()<25) {
+                TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+            }
+            else {
+                if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) > observation->GetFoodWorkers() && observation->GetFoodWorkers() < max_worker_count_) {
+                    TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+                }
+            }
+
+            if (stage_number>9 && assimilator_count<4) {
+                for (const auto& b : bases) {
+                    if (b != base) {
+                        if (b->assigned_harvesters >= 10) {
+                            TryBuildGas(ABILITY_ID::BUILD_ASSIMILATOR, UNIT_TYPEID::PROTOSS_PROBE, b->pos);
+                        }
+                    }
+                }
+            }
+
+            if (stage_number>18) {
+                TryBuildPylon();
+            }
+
+            if (stage_number>18) {
+                TryBuildUnit(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE);
+            }
+
+            if (stage_number>26) {
+                TryBuildExpansionNexus();
+                TryBuildAssimilator();
+                if (stargate_count<bases.size()) {
+                    TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_PROBE);
+                }
+                if (observation->GetMinerals()> 600 && observation->GetVespene()<250) {
+                    TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE);
+                }
+            }
         }
-        baselocation = base->pos;
 
-        //BuildPylonEarly(pylons, probe_scout_dest);
 
-        if (pylons.size()<1 && probe_scout != nullptr) {
+        switch (stage_number) {
+        case 0:
+            if (bases.size()>1) {
+                for (const auto& b : bases) {
+                    if (Distance2D(b->pos, startLocation_)<3) {
+                        base = b;
+                    }
+                }
+            }
+            else {
+                base = bases.front();
+            }//Î≥∏ÏßÑ ÎÑ•ÏÑúÏä§ ÏßÄÏ†ï
+
+            if (probe_scout == nullptr) {
+                probe_scout_dest = front_expansion;
+                GetRandomUnit(probe_scout, observation, UNIT_TYPEID::PROTOSS_PROBE);
+            }//Ï†ïÏ∞∞ ÌîÑÎ°úÎ∏å ÏßÄÏ†ï
+            if (probe_forge == nullptr) {
+                GetRandomUnit(probe_forge, observation, UNIT_TYPEID::PROTOSS_PROBE);
+                if (probe_scout == probe_forge) probe_forge = nullptr;
+            }//Í±¥Î¨º ÏßÄÏùÑ ÌîÑÎ°úÎ∏å ÏßÄÏ†ï
+            if (observation->GetMinerals()>80) {
+                Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, probe_scout_dest);
+                stage_number++;
+            }
+            return false;
+        case 1:
+            if (pylons.size()>0) {
+                stage_number++;
+                return false;
+            }
             if (Distance2D(probe_scout->pos, front_expansion)<5) {
                 probe_scout_dest = Point2D((double)game_info_.width / 2, (double)game_info_.height / 2);
                 Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, probe_scout_dest);
             }
-
             if (Distance2D(probe_scout->pos, front_expansion) > 10 && Distance2D(probe_scout->pos, startLocation_) > 25) {
                 probe_scout_dest = probe_scout->pos;
                 float rx = GetRandomScalar();
@@ -1790,212 +1754,260 @@ private:
                 }
                 if (Query()->Placement(ABILITY_ID::BUILD_PYLON, build_location)) {
                     Actions()->UnitCommand(probe_scout, ABILITY_ID::BUILD_PYLON, build_location);
-                    pylonlocation = build_location; // Control
                 }
             }
-        }
-
-        if (find_enemy_location == false && pylons.size()>0) {
-            Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
-            if (!enemy_townhalls.empty() || enemy_structures.size()>2 || game_info_.enemy_start_locations.size() == 1) {
-                if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<10 || game_info_.enemy_start_locations.size() == 1) {
-                    find_enemy_location = true;
-                    //std::cout << "find!" << std::endl;
-                    Actions()->UnitCommand(probe_scout, ABILITY_ID::STOP);
-                    float minimum_distance = std::numeric_limits<float>::max();
-                    for (const auto& expansion : expansions_) {
-                        float current_distance = Distance2D(game_info_.enemy_start_locations.front(), expansion);
-                        if (current_distance < 3) {
-                            continue;
-                        }
-                        if (current_distance < minimum_distance) {
-                            enemy_expansion = expansion;
-                            minimum_distance = current_distance;
-                        }
-                    }
-                }
+            return false;
+        case 2:
+            if (forge_count>0) {
+                stage_number++;
+                return false;
             }
-            else {
-                if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<7) {
-                    iter_esl = game_info_.enemy_start_locations.begin();
-                    game_info_.enemy_start_locations.erase(iter_esl);
-                }
+            if (pylon_first == nullptr && !pylons.empty()) {
+                pylon_first = pylons.front();
             }
-        }
-
-
-
-
-
-        if (observation->GetFoodUsed()<14) {
-            if (probe_scout == nullptr || !probe_forge->is_alive) {
-                probe_scout_dest = front_expansion;
-                GetRandomUnit(probe_scout, observation, UNIT_TYPEID::PROTOSS_PROBE);
-            }
-            if (probe_forge == nullptr || !probe_forge->is_alive) {
-                GetRandomUnit(probe_forge, observation, UNIT_TYPEID::PROTOSS_PROBE);
-                if (probe_scout == probe_forge) probe_forge = nullptr;
-            }
-
-            TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
-        }
-        else if (observation->GetFoodUsed() == 14) {
-            if (Distance2D(startLocation_, probe_scout->pos)<5) Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, probe_scout_dest);
-            TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
-        }
-        else if (observation->GetFoodUsed() == 15) {
-            if (pylon_first == nullptr && pylons.size()>0) pylon_first = pylons.front();
             if (pylon_first != nullptr && observation->GetMinerals()>100) {
                 Actions()->UnitCommand(probe_forge, ABILITY_ID::MOVE, pylon_first->pos);
             }
-            TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
-        }
-        else if (observation->GetFoodUsed() == 16) {
-            if (forge_count<1) {
-                if (!TryBuildForge(probe_forge, pylon_first))
-                    TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_PROBE);
+            if (probe_forge->orders.empty()) {
+                TryBuildForge(probe_forge, pylon_first);
             }
-            else TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
-
-        }
-        else if (observation->GetFoodUsed()<19) {
-            if (bases.size()<2) {
-                if (observation->GetMinerals()>400) {
-                    TryBuildExpansionNexus();
-                    //Actions()->UnitCommand(probe_forge, ABILITY_ID::BUILD_NEXUS, front_expansion);
-                }
-                else if (observation->GetMinerals()>300) {
-                    Actions()->UnitCommand(probe_forge, ABILITY_ID::MOVE, front_expansion);
-                }
+            return false;
+        case 3:
+            if (bases.size()>1) {
+                stage_number++;
+                return false;
             }
-            else {
-                if (pylon_first != nullptr && observation->GetMinerals()>150 && cannon_count<4 && !probe_forge->orders.size()) {
-                    TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_PHOTONCANNON, pylon_first);
-                }
+            if (observation->GetMinerals()>400) {
+                Actions()->UnitCommand(probe_forge, ABILITY_ID::BUILD_NEXUS, front_expansion);
             }
-            //if (observation->GetFoodUsed() != 18) TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
-            if (cannon_count>3) TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
-
-        }
-        else if (observation->GetFoodUsed()<20) {
-            if (observation->GetMinerals()>150) {
-                if (TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_GATEWAY, pylon_first) && !done)
-                    bool done = true;
-                else if (!done)
-                {
-                    if (TryBuildPylon(staging_location_)) {
-                        bool done = true;
-                        TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_PROBE);
-                    }
-                }
+            if (observation->GetMinerals()>300) {
+                Actions()->UnitCommand(probe_forge, ABILITY_ID::MOVE, front_expansion);
             }
-            if (gateway_count>0) {
-                TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+            return false;
+        case 4:
+            if (cannon_count>1) {
+                stage_number++;
+                return false;
             }
-        }
-        else if (observation->GetFoodUsed()<21) {
-            if (observation->GetMinerals()>75 && assimilator_count<2) {
-                TryBuildGas(ABILITY_ID::BUILD_ASSIMILATOR, UNIT_TYPEID::PROTOSS_PROBE, base->pos);
-            }
-            else if (assimilator_count == 2) TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
-        }
-        else {
-            if (pylons.size()<2) {
-                TryBuildPylon(staging_location_);
-            }
-            else if (pylons.size() == 2) {
-                if (observation->GetFoodUsed()>observation->GetFoodCap() - 6)
-                    TryBuildPylon(Point2D((FindNearestMineralPatch(base->pos)->pos.x + base->pos.x) / 2, (FindNearestMineralPatch(base->pos)->pos.y + base->pos.y) / 2));
-            }
-            else if (pylons.size() == 3) {
-                TryBuildPylon(FindNearestMineralPatch(front_expansion)->pos);
-            }
-            else if (observation->GetFoodUsed()>observation->GetFoodCap() - 7) {
-                if (!TryBuildPylon(frontbase->pos))
-                    if (!TryBuildPylon(base->pos))
-                        TryBuildPylon();
-            }
-
-            if (cybernetics_count<1 && gateway_count > 0) {
-                TryBuildStructureNearPylon(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_PROBE);
-            }
-            else if (gateway_count == 0) // Control
-                TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_PROBE);
-            else if (cannon_count<6) {
+            if (observation->GetMinerals()>150 && !probe_forge->orders.size()) {
                 TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_PHOTONCANNON, pylon_first);
             }
-            else if (cannon_count == 6) {
-                bool ShouldRecoverCannon = true;
-                if (stargate_count<1 && cybernetics_count == 1) {
-                    TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_PROBE);
+            return false;
+        case 5:
+            if (observation->GetMinerals()>300) {
+                if (pylons.size()<2) {
+                    TryBuildPylon(staging_location_);
                 }
-                else if (cybernetics_count == 0) { // Control
-                    TryBuildStructureNearPylon(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_PROBE);
-                }
-                else {
-                    for (const auto& b : bases) {
-                        if (b != base) {
-                            if (b->assigned_harvesters >= 10 && assimilator_count<4) {
-                                TryBuildGas(ABILITY_ID::BUILD_ASSIMILATOR, UNIT_TYPEID::PROTOSS_PROBE, b->pos);
-                            }
-                        }
-                    }
-                }
+                TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_PROBE);
+
             }
-            if (observation->GetFoodUsed()<60 && CountUnitType(observation, UNIT_TYPEID::PROTOSS_ORACLE) < 2 && OracleCount < 2) {
-                //Control
-                if (TryBuildUnitChrono(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE))
-                {
-                    OracleCount++;
-                    OracleTrained = true;
-                    Chat("Oracle is Trained!");
-                }
+
+            if (gateway_count>0) {
+                stage_number++;
+                return false;
             }
-            if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_FLEETBEACON)<1 && stargate_count > 0) {
+            if (observation->GetMinerals()>150 && !probe_forge->orders.size()) {
+                TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_GATEWAY, pylon_first);
+            }
+            return false;
+        case 6:
+            if (assimilator_count>1) {
+                stage_number++;
+                return false;
+            }
+            if (observation->GetMinerals()>75) {
+                TryBuildGas(ABILITY_ID::BUILD_ASSIMILATOR, UNIT_TYPEID::PROTOSS_PROBE, base->pos);
+            }
+            return false;
+        case 7:
+            if (pylons.size()>1) {
+                stage_number++;
+                return false;
+            }
+            if (observation->GetMinerals()>100) {
+                TryBuildPylon(staging_location_);
+            }
+            return false;
+        case 8:
+            if (cybernetics_count>0) {
+                stage_number++;
+                return false;
+            }
+            if (observation->GetMinerals()>150) {
+                TryBuildStructureNearPylon(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_PROBE);
+            }
+            return false;
+        case 9:
+            if (cannon_count>3) {
+                stage_number++;
+                return false;
+            }
+            if (observation->GetMinerals()>150) {
+                TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_PHOTONCANNON, pylon_first);
+            }
+            return false;
+        case 10:
+            if (stargate_count>0) {
+                stage_number++;
+                return false;
+            }
+            if (observation->GetMinerals()>150 && observation->GetVespene()>150) {
+                TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_PROBE);
+            }
+            return false;
+        case 11:
+            if (TryBuildUnit(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
+                OracleTrained = true;
+                stage_number++;
+            }
+            return false;
+        case 12:
+            if (pylons.size()>2) {
+                stage_number++;
+                return false;
+            }
+            if (observation->GetMinerals()>100) {
+                TryBuildPylon(Point2D((FindNearestMineralPatch(base->pos)->pos.x + base->pos.x) / 2, (FindNearestMineralPatch(base->pos)->pos.y + base->pos.y) / 2));
+            }
+            return false;
+        case 13:
+            if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_FLEETBEACON)>0) {
+                stage_number++;
+                return false;
+            }
+
+            if (observation->GetMinerals()>300 && observation->GetVespene()>200) {
                 TryBuildStructureNearPylon(ABILITY_ID::BUILD_FLEETBEACON, UNIT_TYPEID::PROTOSS_PROBE);
             }
-            else if (stargate_count == 0)
+            return false;
+        case 14:
+            if (TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE)) {
+                stage_number++;
+            }
+            return false;
+        case 15:
+            if (TryBuildUnit(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
+                stage_number++;
+            }
+            return false;
+        case 16:
+            if (stargate_count>1) {
+                stage_number++;
+                return false;
+            }
+            if (observation->GetMinerals()>150 && observation->GetVespene()>150) {
                 TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_PROBE);
-            else {
-                if (cannon_count<8) {
-                    TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_PHOTONCANNON, pylon_first);
+            }
+            return false;
+        case 17:
+            if (cannon_count>5) {
+                stage_number++;
+                return false;
+            }
+            if (observation->GetMinerals()>150) {
+                TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon_first);
+            }
+            return false;
+        case 18:
+            if (pylons.size()>3) {
+                stage_number++;
+                return false;
+            }
+            for (const auto& b : bases) {
+                if (b != base) {
+                    TryBuildPylon(FindNearestMineralPatch(b->pos)->pos);
                 }
-                else if (stargate_count< 3) {
-                    TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_PROBE);
-                }
-                else {
-                    if ((observation->GetMinerals() - 300) * 250>observation->GetVespene() * 350) {
-                        if (shield_count<2) {
-                            TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_SHIELDBATTERY, pylon_first);
-                        }
-                    }
-                    if (cannon_count>4 && cannon_count<10) {
-                        for (const auto& pylon : pylons) {
-                            if (Distance2D(pylon->pos, base->pos)<5) {
-                                TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_PHOTONCANNON, pylon);
-                                return false;
-                            }
-                        }
-                    }
-                    if (cannon_count >= 10) {
-                        if (observation->GetMinerals() > 1500) // Control
-                            TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE);
-                        else if ((observation->GetMinerals() - 500) * 250 > observation->GetVespene() * 350) {
-                            TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE);
-                        }
-                    }
-                    if (observation->GetMinerals() > 350 && observation->GetVespene() > 250) {
-                        if (TryBuildUnitChrono(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE)) {
-                            CarrierCount++;
-                            return true;
-                        }
+            }
+            return false;
+        case 19:
+            if (TryBuildUnit(ABILITY_ID::RESEARCH_INTERCEPTORGRAVITONCATAPULT, UNIT_TYPEID::PROTOSS_FLEETBEACON)) {
+                stage_number++;
+            }
+            return false;
+        case 20:
+            if (TryBuildPylonWide(front_expansion)) {
+                stage_number++;
+            }
+            return false;
+        case 21:
+            for (const auto& pylon : pylons) {
+                if (Distance2D(pylon->pos, base->pos)<10) {
+                    if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
+                        stage_number++;
+                        return false;
                     }
                 }
             }
-            if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_PROBE)<42) {
-                TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+            return false;
+        case 22:
+            for (const auto& pylon : pylons) {
+                if (Distance2D(pylon->pos, base->pos)<10) {
+                    if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
+                        stage_number++;
+                        return false;
+                    }
+                }
             }
+            return false;
+        case 23:
+            for (const auto& pylon : pylons) {
+                if (Distance2D(pylon->pos, front_expansion)<10) {
+                    if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
+                        stage_number++;
+                        return false;
+                    }
+                }
+            }
+            return false;
+        case 24:
+            for (const auto& pylon : pylons) {
+                if (Distance2D(pylon->pos, front_expansion)<10) {
+                    if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
+                        stage_number++;
+                        return false;
+                    }
+                }
+            }
+            return false;
+        case 25:
+            for (const auto& pylon : pylons) {
+                if (Distance2D(pylon->pos, front_expansion)<10) {
+                    if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
+                        stage_number++;
+                        return false;
+                    }
+                }
+            }
+            return false;
+        case 26:
+            for (const auto& pylon : pylons) {
+                if (Distance2D(pylon->pos, front_expansion)<10) {
+                    if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
+                        stage_number++;
+                        return false;
+                    }
+                }
+            }
+            return false;
+            /*case 27 :
+            if(TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE)){
+            stage_number++;
+            return false;
+            }
+
+            case 28 :
+            for(const auto& b : bases){
+            if(b->build_progress<1){
+            if(TryBuildPylonWide(b->pos)){
+            stage_number++;
+            return false;
+            }
+            }
+            }*/
         }
+
+
+
         return false;
     }
 
@@ -2003,13 +2015,7 @@ private:
         const ObservationInterface* observation = Observation();
         if (observation->GetFoodUsed() < 15) return;
 
-        const Unit* mineralp = FindNearestMineralPatch(*iter_exp);
-        if (mineralp == nullptr) {
-            std::cout << "mineral not found so i cannot search" << std::endl;
-            return;
-        }
-        Point2D tag_pos = mineralp->pos;
-        
+        Point2D tag_pos = FindNearestMineralPatch(*iter_exp)->pos;
         if (Distance2D(game_info_.enemy_start_locations.front(), tag_pos)<7 || Distance2D(enemy_expansion, tag_pos)<7) {
             iter_exp++;
             return;
@@ -2030,8 +2036,11 @@ private:
     std::vector<Point2D>::iterator iter_esl = game_info_.enemy_start_locations.begin();
     std::vector<Point3D>::iterator iter_exp;
     Point3D enemy_expansion;
+
+    uint16_t stage_number = 0;
+    const Unit* base = nullptr;
+    int max_worker_count_ = 65;
 };
-static bool VsHuman = false;
 
 class Human : public sc2::Agent {
 public:
@@ -2040,8 +2049,10 @@ public:
         Debug()->SendDebug();
     }
 };
+static bool VsHuman = false;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
     if (VsHuman)
     {
         sc2::Coordinator coordinator;
@@ -2073,7 +2084,7 @@ int main(int argc, char* argv[]) {
 
         bool do_break = false;
         while (!do_break) {
-            if (!coordinator.StartGame("(2)LostandFoundLE.sc2map")) {
+            if (!coordinator.StartGame("C:/Program Files (x86)/StarCraft II/Maps/Redshift.SC2Map")) {
                 break;
             }
             while (coordinator.Update() && !do_break) {
@@ -2096,20 +2107,20 @@ int main(int argc, char* argv[]) {
         Bot bot;
         coordinator.SetParticipants({
             CreateParticipant(Race::Protoss, &bot),
-            CreateComputer(Race::Random,Difficulty::CheatVision)
+            CreateComputer(Race::Random,Difficulty::CheatInsane)
             });
 
         coordinator.SetStepSize(10); //Control
-                                      //∞‘¿”º”µµ ∫¸∏£∞‘ speed faster
+                                     //Í≤åÏûÑÏÜçÎèÑ Îπ†Î•¥Í≤å speed faster
         coordinator.LaunchStarcraft();
-        coordinator.StartGame("(2)LostandFoundLE.sc2map");
+        coordinator.StartGame("C:/Program Files (x86)/StarCraft II/Maps/DarknessSanctuary.SC2Map");
 
         while (coordinator.Update()) {
             // Slow down game speed for better look & feel while making experiments.
             //sc2::SleepFor(30);
         }
 
-       
+
         return 0;
     }
 }
