@@ -1,15 +1,13 @@
-﻿#include <sc2api/sc2_api.h>
+﻿#include "sc2api/sc2_api.h"
 #include "sc2lib/sc2_lib.h"
-#include <sc2utils/sc2_manage_process.h>
+#include "sc2utils/sc2_manage_process.h"
 #include "sc2utils/sc2_arg_parser.h"
 
 #include <iostream>
 #include <string>
 #include <algorithm>
-#include <random>
 #include <iterator>
 #include <typeinfo>
-#include <map>
 
 using namespace sc2;
 
@@ -117,19 +115,13 @@ public:
 
 	Point3D front_expansion;
 
-	sc2::Point2D RushLocation;
-	sc2::Point2D EnemyLocation;
-	sc2::Point2D ReadyLocation1;
-	sc2::Point2D ReadyLocation2;
-	sc2::Point2D EscapeLocation;
-	sc2::Point2D KitingLocation;
-	uint64_t RushUnitTag;
+	Point2D RushLocation;
+	Point2D EnemyLocation;
+	Point2D ReadyLocation1;
+	Point2D ReadyLocation2;
+	Point2D KitingLocation;
 
-	bool OracleCanAttack = false;
-	int OracleCount = 0;
-	int TempestCount = 0;
-	int OracleStop = 0;
-	int CarrierCount = 0;
+	
 	float base_range = 35;
 
 private:
@@ -369,12 +361,15 @@ private:
 		Units Carriers = observation->GetUnits(Unit::Alliance::Self, IsCarrier());
 		Units EnemyWorker = observation->GetUnits(Unit::Alliance::Enemy, IsWorker());
 		Units AirAttackers = observation->GetUnits(Unit::Alliance::Enemy, AirAttacker()); //적 방어 유닛 및 건물
+		Units AirAttackers2 = observation->GetUnits(Unit::Alliance::Enemy, AirAttacker2());
 																						  //Units ProxyEnemy = observation->GetUnits(Unit::Alliance::Enemy, ExceptBuilding());
 		float rx = GetRandomScalar();
 		float ry = GetRandomScalar();
 
 		for (const auto& unit : Oracles) {
-			if (unit == oracle_second) continue;
+			if (unit == oracle_second)
+				continue;
+			bool OracleCanAttack = false;
 			if (!unit->orders.empty()) { // 펄서광선  ON / OFF
 				float distance = std::numeric_limits<float>::max();
 				for (const auto& u : EnemyWorker) {
@@ -383,6 +378,7 @@ private:
 						distance = d;
 					}
 				}
+
 				if (unit->energy == 1)
 					OracleCanAttack = false;
 				else if (distance < 6 && unit->energy >= 50) {
@@ -411,7 +407,7 @@ private:
 			float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
 			float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
 
-			for (const auto& u : AirAttackers) {
+			for (const auto& u : AirAttackers2) {
 				float d = Distance2D(u->pos, unit->pos);
 				if (d < distance) {
 					distance = d; // 가장 가까운 거리의 적을 고른다
@@ -585,9 +581,7 @@ private:
 				Normalize2D(diff);
 				KitingLocation = unit->pos + diff * 7.0f;
 
-				unit->weapon_cooldown == 0.0f;
-
-				float RealCarrierRange = (unit->shield < 10) ? 6.0 : CarrierRange;
+				float RealCarrierRange = (unit->shield < 10) ? 6.0f : CarrierRange;
 
 				// 하나라도 가까이 있는 경우.
 				if (distance <= TargetAttackRange + RealCarrierRange) // 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
@@ -752,7 +746,7 @@ private:
 		Point2D sl;
 	};
 
-	struct AirAttacker { // 공중 공격 가능한 적들 (예언자가 기피해야하는 적 && 폭풍함이 우선 공격하는 적) //시간이 남으면 weapon.type == sc2::Weapon::TargetType::Air 으로 할수있지만 시간이 없음
+	struct AirAttacker { // 공중 공격 가능한 적들 (폭풍함이 우선 공격하는 적) //시간이 남으면 weapon.type == sc2::Weapon::TargetType::Air 으로 할수있지만 시간이 없음
 		bool operator()(const Unit& unit) {
 			switch (unit.unit_type.ToType()) {
 
@@ -794,6 +788,44 @@ private:
 		}
 	};
 
+	struct AirAttacker2 { // 공중 공격 가능한 적들: 예언자가 기피해야하는 적. 완성이 아직 안 된 건물들은 안 피하도록
+		bool operator()(const Unit& unit) {
+			switch (unit.unit_type.ToType()) {
+			case UNIT_TYPEID::PROTOSS_PHOTONCANNON: 
+			case UNIT_TYPEID::TERRAN_MISSILETURRET: 
+			case UNIT_TYPEID::TERRAN_BUNKER: 
+			case UNIT_TYPEID::ZERG_SPORECRAWLER: 
+				return (unit.build_progress == 1.0);
+
+			case UNIT_TYPEID::PROTOSS_STALKER: 
+			case UNIT_TYPEID::TERRAN_MARINE: 
+			case UNIT_TYPEID::ZERG_QUEEN: 
+			case UNIT_TYPEID::TERRAN_BATTLECRUISER:
+			case UNIT_TYPEID::TERRAN_CYCLONE:
+			case UNIT_TYPEID::TERRAN_GHOST:
+			case UNIT_TYPEID::TERRAN_LIBERATOR:
+			case UNIT_TYPEID::TERRAN_THOR:
+			case UNIT_TYPEID::TERRAN_VIKINGASSAULT:
+			case UNIT_TYPEID::TERRAN_VIKINGFIGHTER:
+			case UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED:
+			case UNIT_TYPEID::TERRAN_WIDOWMINE:
+
+			case UNIT_TYPEID::ZERG_HYDRALISK:
+			case UNIT_TYPEID::ZERG_MUTALISK:
+			case UNIT_TYPEID::ZERG_INFESTORTERRAN:
+			case UNIT_TYPEID::ZERG_CORRUPTOR:
+
+			case UNIT_TYPEID::PROTOSS_TEMPEST:
+			case UNIT_TYPEID::PROTOSS_VOIDRAY:
+			case UNIT_TYPEID::PROTOSS_PHOENIX:
+			case UNIT_TYPEID::PROTOSS_CARRIER:
+			case UNIT_TYPEID::PROTOSS_SENTRY:
+			case UNIT_TYPEID::PROTOSS_ARCHON: return true;
+
+			default: return false;
+			}
+		}
+	};
 
 	struct IsOracle { // 예언자인지 감지
 		bool operator()(const Unit& unit) {
@@ -1388,26 +1420,25 @@ private:
 		return TryBuildStructure(build_ability, worker_type, closestGeyser);
 	}
 
-	bool TryBuildPylonIfNeeded(int MaxBuildAtOnce = 1) {
+	bool TryBuildPylonIfNeeded(size_t MaxBuildAtOnce = 1) {
 		if (MaxBuildAtOnce < 1) MaxBuildAtOnce = 1;
 		const ObservationInterface* observation = Observation();
 
 
-		int i;
-		for (i = 1; i <= MaxBuildAtOnce; i++) {
-			// If we are not supply capped, don't build a supply depot.
-			int margin = i * 8 - 2;
+		size_t i;
+		for (i = 0; i < MaxBuildAtOnce; i++) {
+			// If we are not supply capped, don't build a supply depot. (test for (i+1) pylons)
+			int margin = (i+1) * 8 - 2;
 			if (observation->GetFoodUsed() < observation->GetFoodCap() - margin) {
-				i--;
 				break;
 			}
 		}
 		if (i == 0) return false;
 		if (observation->GetFoodCap() == 200) return false;
 
-		return TryBuildPylon(staging_location_, 15, i);
+		return TryBuildPylon(staging_location_, 15.0f, i);
 	}
-	bool TryBuildPylon(Point2D location, int radius = 3, int MaxBuildAtOnce = 1) {
+	bool TryBuildPylon(Point2D location, float radius = 3.0f, size_t MaxBuildAtOnce = 1) {
 		const ObservationInterface* observation = Observation();
 
 		if (observation->GetMinerals() < 100) {
@@ -1435,8 +1466,8 @@ private:
 		return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
 	}
 
-	bool TryBuildPylonWide(Point2D location, int MaxBuildAtOnce = 1) {
-		return TryBuildPylon(location, 8, MaxBuildAtOnce);
+	bool TryBuildPylonWide(Point2D location, size_t MaxBuildAtOnce = 1) {
+		return TryBuildPylon(location, 8.0f, MaxBuildAtOnce);
 	}
 
 	void MineIdleWorkers(const Unit* worker, AbilityID worker_gather_command, UnitTypeID vespene_building_type) {
@@ -1701,7 +1732,7 @@ private:
 		size_t cybernetics_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
 		size_t stargate_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STARGATE);
 
-		Point2D probe_scout_dest = Point2D((double)game_info_.width / 2, (double)game_info_.height / 2);
+		Point2D probe_scout_dest = Point2D((float)game_info_.width / 2, (float)game_info_.height / 2);
 
 		std::cout << stage_number << std::endl;
 
@@ -1785,6 +1816,7 @@ private:
 					TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE);
 				}
 			}
+			// 파일런 다시 짓기
 			if (stage_number > 2 && pylon_first != nullptr && !pylon_first->is_alive) {
 				bool rebuilding_pylon = false;
 				for (const auto & p : observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON))) {
@@ -1835,7 +1867,7 @@ private:
 				return false;
 			}
 			if (Distance2D(probe_scout->pos, front_expansion)<5) {
-				probe_scout_dest = Point2D((double)game_info_.width / 2, (double)game_info_.height / 2);
+				probe_scout_dest = Point2D((float)game_info_.width / 2, (float)game_info_.height / 2);
 				Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, probe_scout_dest);
 			}
 			if (Distance2D(probe_scout->pos, front_expansion) > 10 && Distance2D(probe_scout->pos, startLocation_) > 25) {
@@ -1860,7 +1892,7 @@ private:
 				pylon_first = pylons.front();
 				pylonlocation = pylon_first->pos;
 			}
-			if (pylon_first != nullptr && observation->GetMinerals()>100) {
+			if (pylon_first != nullptr && observation->GetMinerals()>100 && observation->GetMinerals()<150) {
 				Actions()->UnitCommand(probe_forge, ABILITY_ID::MOVE, pylon_first->pos);
 			}
 			if (probe_forge->orders.empty()) {
@@ -1872,15 +1904,15 @@ private:
 				stage_number++;
 				return false;
 			}
-			if (observation->GetMinerals()>400) {
+			if (observation->GetMinerals()>=400) {
 				Actions()->UnitCommand(probe_forge, ABILITY_ID::BUILD_NEXUS, front_expansion);
 			}
-			if (observation->GetMinerals()>300) {
+			if (observation->GetMinerals()<400 && observation->GetMinerals()>300) {
 				Actions()->UnitCommand(probe_forge, ABILITY_ID::MOVE, front_expansion);
 			}
 			return false;
 		case 4:
-			if (cannon_count>1 + early * 2) {
+			if (cannon_count>1) {
 				stage_number++;
 				return false;
 			}
@@ -2139,7 +2171,7 @@ private:
 
 	uint16_t stage_number = 0;
 	const Unit* base = nullptr;
-	int max_worker_count_ = 65;
+	const size_t max_worker_count_ = 65;
 };
 
 class Human : public sc2::Agent {
@@ -2180,8 +2212,10 @@ int main(int argc, char* argv[])
 			});
 	}
 	else {
-		CreateParticipant(Race::Protoss, &bot),
-		CreateComputer(Race::Random, Difficulty::CheatInsane)
+		coordinator.SetParticipants({
+			CreateParticipant(Race::Protoss, &bot),
+			CreateComputer(Race::Random, Difficulty::CheatInsane),
+			});
 	}
 	
 	// Start the game.
@@ -2198,8 +2232,7 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
-    bot1.Control()->DumpProtoUsage();
-    bot2.Control()->DumpProtoUsage();
+    bot.Control()->DumpProtoUsage();
 
     return 0;
 }
