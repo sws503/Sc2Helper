@@ -136,10 +136,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="defend.cpp" />
+    <ClCompile Include="earlystrategy.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="managerush.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LadderInterface.h" />
+    <ClInclude Include="memibot.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
