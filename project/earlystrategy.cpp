@@ -57,7 +57,7 @@ bool MEMIBot::EarlyStrategy() {
 	case 5:
 		break;
 	default:
-		if (observation->GetFoodWorkers()<25) {
+		if (observation->GetFoodWorkers()<25 && observation->GetFoodCap() - observation->GetFoodUsed() >= 1) {
 			TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
 		}
 		else {
@@ -73,22 +73,22 @@ bool MEMIBot::EarlyStrategy() {
 			for (const auto& b : bases) {
 				if (b != base) {
 					if (b->assigned_harvesters >= 10) {
-						TryBuildGas(ABILITY_ID::BUILD_ASSIMILATOR, UNIT_TYPEID::PROTOSS_PROBE, b->pos);
+						TryBuildGas(b->pos);
 					}
 				}
 			}
 		}
 
-		if (stage_number>18) {
+		if (stage_number>17) {
 			TryBuildPylonIfNeeded(CountUnitType(observation, UNIT_TYPEID::PROTOSS_STARGATE));
 		}
 
 		if (stage_number>18) {
-			if (observation->GetMinerals() > 350 && observation->GetVespene() > 250)
+			if (observation->GetMinerals() > 350 && observation->GetVespene() > 250 && observation->GetFoodCap() - observation->GetFoodUsed() >= 6)
 				TryBuildUnitChrono(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE);
 		}
 
-		if (stage_number>26) {
+		if (stage_number>19) {
 			TryBuildExpansionNexus();
 			TryBuildAssimilator();
 			if (stargate_count<bases.size()) {
@@ -227,7 +227,7 @@ bool MEMIBot::EarlyStrategy() {
 			return false;
 		}
 		if (observation->GetMinerals()>75) {
-			TryBuildGas(ABILITY_ID::BUILD_ASSIMILATOR, UNIT_TYPEID::PROTOSS_PROBE, base->pos);
+			TryBuildGas(base->pos);
 		}
 		return false;
 	case 7:
@@ -311,7 +311,7 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return false;
 	case 17:
-		if (cannon_count>5 + early * 2) {
+		if (cannon_count>5) {
 			stage_number++;
 			return false;
 		}
@@ -335,86 +335,6 @@ bool MEMIBot::EarlyStrategy() {
 			stage_number++;
 		}
 		return false;
-	case 20:
-		if (TryBuildPylonWide(front_expansion)) {
-			stage_number++;
-		}
-		return false;
-	case 21:
-		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, base->pos)<10) {
-				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
-					stage_number++;
-					return false;
-				}
-			}
-		}
-		return false;
-	case 22:
-		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, base->pos)<10) {
-				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
-					stage_number++;
-					return false;
-				}
-			}
-		}
-		return false;
-	case 23:
-		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, front_expansion)<10) {
-				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
-					stage_number++;
-					return false;
-				}
-			}
-		}
-		return false;
-	case 24:
-		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, front_expansion)<10) {
-				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
-					stage_number++;
-					return false;
-				}
-			}
-		}
-		return false;
-	case 25:
-		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, front_expansion)<10) {
-				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
-					stage_number++;
-					return false;
-				}
-			}
-		}
-		return false;
-	case 26:
-		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, front_expansion)<10) {
-				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
-					stage_number++;
-					return false;
-				}
-			}
-		}
-		return false;
-		/*case 27 :
-		if(TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE)){
-		stage_number++;
-		return false;
-		}
-
-		case 28 :
-		for(const auto& b : bases){
-		if(b->build_progress<1){
-		if(TryBuildPylonWide(b->pos)){
-		stage_number++;
-		return false;
-		}
-		}
-		}*/
 	}
 
 

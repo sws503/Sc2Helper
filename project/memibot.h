@@ -318,7 +318,9 @@ public:
 		//ManageArmy();
 		ManageRush();
 
-
+		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
+		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
+		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 	}
 
 	virtual void OnUnitIdle(const Unit* unit) override {
@@ -427,10 +429,8 @@ private:
 
 	bool early = true;
 	bool EnemyRush;
-
+	bool PhotonRush;
 	void Defend();
-
-	int PhotonRush = 0;
 
 	void SetupRushLocation(const ObservationInterface *observation)
 	{
@@ -438,9 +438,10 @@ private:
 			ReadyLocation1 = game_info_.enemy_start_locations.front() + Point2D(30.0f, 0.0f);
 			ReadyLocation2 = game_info_.enemy_start_locations.front() + Point2D(0.0f, 30.0f);
 		}
-		else
+		else {
 			ReadyLocation1 = startLocation_;
-		ReadyLocation2 = startLocation_;
+			ReadyLocation2 = startLocation_;
+		}
 	}
 
 	float OracleRange; // 절대적으로 생존
@@ -538,7 +539,7 @@ private:
 				}
 			}
 		}
-		return groundWeapons.range;; //지상유닛을 위한 함수!!
+		return groundWeapons.range; //지상유닛을 위한 함수!!
 									 // return groundWeapons.range; // 7.5 사용하고 싶으면 쓸것
 	}
 
@@ -685,36 +686,43 @@ private:
 		}
 
 		Actions()->UnitCommand(unit, ability_type_for_unit);
-		Chronoboost(unit);
+		//Chronoboost(unit);
 		return true;
+	}
+
+	void TryChronoboost(Filter f = {}) {
+		const ObservationInterface* observation = Observation();
+		Units structures = observation->GetUnits(Unit::Alliance::Self, f);
+		for (const auto& structure : structures) {
+			// is structure?
+			if (!IsStructure(observation)(*structure)) continue;
+			// is completely built?
+			if (structure->build_progress != 1.0f) continue;
+			// is doing nothing?
+			if (structure->orders.empty()) continue;
+			// is already buffed?
+			for (const auto& buff : structure->buffs) {
+				if (buff == BUFF_ID::TIMEWARPPRODUCTION) continue;
+			}
+			Chronoboost(structure);
+		}
 	}
 
 	bool Chronoboost(const Unit * unit) {
 		const ObservationInterface* observation = Observation();
-		Units nexus = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+		Units nexuses = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 
-		if (nexus.empty()) return false;
-		else {
-			for (int i = 0; i < nexus.size(); ++i) {
-				if (nexus.at(i)->build_progress != 1) {
-					continue;
-				}
-				else {
-					if (i < nexus.size()) {
-						if (nexus.at(i)->energy >= 50) {
-							Actions()->UnitCommand(nexus.at(i), 3755, unit);
-							return true;
-						}
-						else
-						{
-							return false;
-							//Chat("Not enough Energy for Chronoboost~"); Too loud
-						}
-					}
-				}
+		if (nexuses.empty()) return false;
+		for (const auto& nexus : nexuses) {
+			if (nexus->build_progress != 1.0f) {
+				continue;
 			}
-			return false;
+			if (nexus->energy >= 50) {
+				Actions()->UnitCommand(nexus, 3755, unit);
+				return true;
+			}
 		}
+		return false;
 	}
 
 
@@ -723,15 +731,11 @@ private:
 	}
 
 	bool GetRandomUnit(const Unit*& unit_out, const ObservationInterface* observation, UnitTypeID unit_type) {
-		Units my_units = observation->GetUnits(Unit::Alliance::Self);
-		std::random_shuffle(my_units.begin(), my_units.end()); // Doesn't work, or doesn't work well.
-		for (const auto unit : my_units) {
-			if (unit->unit_type == unit_type) {
-				unit_out = unit;
-				return true;
-			}
-		}
-		return false;
+		Units my_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
+		int num = static_cast<int>(my_units.size());
+		if (num == 0) return false;
+		unit_out = my_units[GetRandomInteger(0, num - 1)];
+		return true;
 	}
 
 	const Unit* FindNearestMineralPatch(const Point2D& start) {
@@ -796,27 +800,71 @@ private:
 			}
 		}
 
+		// If no worker is already building one, get a nearest worker to build one
+		Tag builder_tag = NullTag;
+		std::vector<QueryInterface::PathingQuery> query_vector;
+		for (const auto& worker : workers) {
+			if (worker == probe_scout) continue;
+			// consider idle or mining workers only
+			if (!worker->orders.empty()) {
+				auto abilityid = worker->orders.front().ability_id;
+				if (abilityid != ABILITY_ID::HARVEST_GATHER &&
+					abilityid != ABILITY_ID::HARVEST_RETURN) {
+					continue;
+				}
+			}
+			// add queries
+			QueryInterface::PathingQuery query;
+			query.start_unit_tag_ = worker->tag;
+			query.start_ = worker->pos;
+			query.end_ = location;
+			query_vector.push_back(query);
+		}
+		size_t size = query_vector.size();
+		if (size == 0) return false;
+		std::vector<float> distances = Query()->PathingDistance(query_vector);
 
-
-		// If no worker is already building one, get a random worker to build one
-		const Unit* unit = nullptr;
+		// find workers that are nearest.
+		float min_distance = std::numeric_limits<float>::max();
+		for (size_t i = 0; i < size; i++) {
+			float d = distances.at(i);
+			// Check to see if unit can make it there
+			if (d < 0.1f) {
+				continue;
+			}
+			if (d < min_distance) {
+				min_distance = d;
+				builder_tag = query_vector.at(i).start_unit_tag_;
+			}
+		}
+		if (builder_tag == NullTag) return false;
+		const Unit* builder = observation->GetUnit(builder_tag);
+		if (builder == nullptr) {
+			return false;
+		}
+		/*
 		for (const auto& worker : workers) {
 			//전진 프로브는 제외
 			if (worker == probe_scout) continue;
 			for (const auto& order : worker->orders) {
-				if (order.ability_id == ABILITY_ID::HARVEST_GATHER) {
+				if (order.ability_id == ABILITY_ID::HARVEST_GATHER
+					|| order.ability_id == ABILITY_ID::HARVEST_RETURN) {
 					unit = worker;
 					break;
 				}
 			}
+			
 			if (unit != nullptr) break;
 		}
 		if (unit == nullptr) return false;
-
 		// Check to see if unit can make it there
-		if (Query()->PathingDistance(unit, location) < 0.1f) {
-			return false;
+		if (Query()->PathingDistance(builder, location) < 0.1f) {
+		return false;
 		}
+
+		*/
+
+		
 		if (!isExpansion) {
 			for (const auto& expansion : expansions_) {
 				if (Distance2D(location, Point2D(expansion.x, expansion.y)) < 7) {
@@ -826,41 +874,76 @@ private:
 		}
 		// Check to see if unit can build there
 		if (Query()->Placement(ability_type_for_structure, location)) {
-			Actions()->UnitCommand(unit, ability_type_for_structure, location);
+			Actions()->UnitCommand(builder, ability_type_for_structure, location);
 			return true;
 		}
 		return false;
 
 	}
 
-	bool TryBuildStructure(AbilityID ability_type_for_structure, UnitTypeID unit_type, Tag location_tag) {
+	bool BuildGas(Tag geyser_tag) {
 		const ObservationInterface* observation = Observation();
-		Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
-		const Unit* target = observation->GetUnit(location_tag);
+		Units workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
+		const Unit* geyser = observation->GetUnit(geyser_tag);
 
 		if (workers.empty()) {
 			return false;
 		}
 
 		// Check to see if there is already a worker heading out to build it
-
-		if (ability_type_for_structure != ABILITY_ID::BUILD_ASSIMILATOR) {
-			for (const auto& worker : workers) {
-				if (worker == probe_scout || worker == probe_forge) continue;
-				for (const auto& order : worker->orders) {
-					if (order.ability_id == ability_type_for_structure) {
-						return false;
-					}
+		for (const auto& worker : workers) {
+			for (const auto& order : worker->orders) {
+				if (order.target_unit_tag == geyser_tag &&
+					   (order.ability_id == ABILITY_ID::BUILD_ASSIMILATOR ||
+						order.ability_id == ABILITY_ID::BUILD_REFINERY ||
+						order.ability_id == ABILITY_ID::BUILD_EXTRACTOR)) {
+					return false;
 				}
 			}
 		}
+		float minimum_distance = 15.0f;
+		const Unit* builder = nullptr;
 
-		// If no worker is already building one, get a random worker to build one
-		const Unit* unit = GetRandomEntry(workers);
+		// find nearest worker near geyser
+		for (const auto& worker : workers) {
+			if (worker == probe_scout || worker == probe_forge) continue;
+			// consider idle or mining workers only
+			if (!worker->orders.empty()) {
+				auto abilityid = worker->orders.front().ability_id;
+				if (abilityid != ABILITY_ID::HARVEST_GATHER &&
+					abilityid != ABILITY_ID::HARVEST_RETURN) {
+					continue;
+				}
+			}
+			float distance = Distance2D(worker->pos, geyser->pos);
+
+			if (distance < minimum_distance)
+			{
+				minimum_distance = distance;
+				builder = worker;
+			}
+		}
+		if (builder == nullptr) {
+			builder = GetRandomEntry(workers);
+		}
+
+		ABILITY_ID build_ability = ABILITY_ID::INVALID;
+		if (IsUnit(UNIT_TYPEID::PROTOSS_PROBE)(*builder)) {
+			build_ability = ABILITY_ID::BUILD_ASSIMILATOR;
+		}
+		else if (IsUnit(UNIT_TYPEID::TERRAN_SCV)(*builder)) {
+			build_ability = ABILITY_ID::BUILD_REFINERY;
+		}
+		else if (IsUnit(UNIT_TYPEID::ZERG_DRONE)(*builder)) {
+			build_ability = ABILITY_ID::BUILD_EXTRACTOR;
+		}
+		else {
+			return false;
+		}
 
 		// Check to see if unit can build there
-		if (Query()->Placement(ability_type_for_structure, target->pos)) {
-			Actions()->UnitCommand(unit, ability_type_for_structure, target);
+		if (Query()->Placement(build_ability, geyser->pos)) {
+			Actions()->UnitCommand(builder, build_ability, geyser);
 			return true;
 		}
 		return false;
@@ -977,13 +1060,14 @@ private:
 		return false;
 	}
 
-	bool TryBuildGas(AbilityID build_ability, UnitTypeID worker_type, Point2D base_location) {
+	bool TryBuildGas(Point2D base_location) {
 		const ObservationInterface* observation = Observation();
 		Units geysers = observation->GetUnits(Unit::Alliance::Neutral, IsVespeneGeyser());
+		ABILITY_ID build_ability = ABILITY_ID::BUILD_ASSIMILATOR;
 
 		//only search within this radius
 		float minimum_distance = 15.0f;
-		Tag closestGeyser = 0;
+		Tag closestGeyser = NullTag;
 		for (const auto& geyser : geysers) {
 			float current_distance = Distance2D(base_location, geyser->pos);
 			if (current_distance < minimum_distance) {
@@ -998,15 +1082,15 @@ private:
 		if (closestGeyser == 0) {
 			return false;
 		}
-		return TryBuildStructure(build_ability, worker_type, closestGeyser);
+
+		return BuildGas(closestGeyser);
 	}
 
 	bool TryBuildPylonIfNeeded(size_t MaxBuildAtOnce = 1) {
 		if (MaxBuildAtOnce < 1) MaxBuildAtOnce = 1;
 		const ObservationInterface* observation = Observation();
 
-
-		size_t i;
+		int i;
 		for (i = 0; i < MaxBuildAtOnce; i++) {
 			// If we are not supply capped, don't build a supply depot. (test for (i+1) pylons)
 			int margin = (i + 1) * 8 - 2;
@@ -1038,7 +1122,6 @@ private:
 				}
 			}
 		}
-
 
 		// Try and build a pylon. Find a random Probe and give it the order.
 		float rx = GetRandomScalar();
@@ -1253,11 +1336,9 @@ private:
 		}
 
 		for (const auto& base : bases) {
-			if (base->assigned_harvesters >= base->ideal_harvesters) {
-				if (base->build_progress == 1) {
-					if (TryBuildGas(ABILITY_ID::BUILD_ASSIMILATOR, UNIT_TYPEID::PROTOSS_PROBE, base->pos)) {
-						return true;
-					}
+			if (base->build_progress == 1.0 && base->assigned_harvesters >= base->ideal_harvesters) {
+				if (TryBuildGas(base->pos)) {
+					return true;
 				}
 			}
 		}
@@ -1285,7 +1366,7 @@ private:
 		for (const auto& base : bases) {
 			//if there is a base with less than ideal workers
 			if (base->assigned_harvesters < base->ideal_harvesters && base->build_progress == 1) {
-				if (observation->GetMinerals() >= 50) {
+				if (observation->GetMinerals() >= 50 && observation->GetFoodCap() - observation->GetFoodUsed() >= 1) {
 					return TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
 
 				}
@@ -1317,7 +1398,6 @@ private:
 		if (Distance2D(probe_scout->pos, tag_pos)<1) {
 			iter_exp++;
 		}
-
 	}
 
 	bool early_strategy = false;
