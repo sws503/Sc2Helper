@@ -1,3 +1,4 @@
+#include "memibot.h"
 void MEMIBot::Defend() {
 	const ObservationInterface* observation = Observation();
 	Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ORACLE));

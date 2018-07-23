@@ -29,10 +29,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="LadderInterface.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="memibot.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LadderInterface.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
