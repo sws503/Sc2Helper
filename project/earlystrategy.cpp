@@ -1,5 +1,6 @@
 #include "memibot.h"
 
+
 bool MEMIBot::EarlyStrategy() {
 	const ObservationInterface* observation = Observation();
 	Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PROBE));
