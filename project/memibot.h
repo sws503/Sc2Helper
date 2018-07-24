@@ -343,8 +343,8 @@ public:
 		ManageRush();
 
 		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
-		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
-		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
+		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 	}
 
 	virtual void OnUnitIdle(const Unit* unit) override {
@@ -725,16 +725,21 @@ private:
 		const ObservationInterface* observation = Observation();
 		Units structures = observation->GetUnits(Unit::Alliance::Self, f);
 		for (const auto& structure : structures) {
-			// is structure?
-			if (IsStructure(observation)(*structure)) 
-			// is completely built?
-			if (structure->build_progress != 1.0f) continue;
-			// is doing nothing?
-			if (structure->orders.empty()) continue;
-			// is already buffed?
-			if (HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*structure)) continue;
-			Chronoboost(structure);
+			TryChronoboost(structure);
 		}
+	}
+
+	bool TryChronoboost(const Unit * unit) {
+		const ObservationInterface* observation = Observation();
+		// is structure?
+		if (!IsStructure(observation)(*unit)) return false;
+			// is completely built?
+		if (unit->build_progress != 1.0f) return false;
+		// is doing nothing?
+		if (unit->orders.empty()) return false;
+		// is already buffed?
+		if (HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) return false;
+		Chronoboost(unit);
 	}
 
 	bool Chronoboost(const Unit * unit) {
@@ -838,7 +843,7 @@ private:
 		Tag builder_tag = NullTag;
 		std::vector<QueryInterface::PathingQuery> query_vector;
 		for (const auto& worker : workers) {
-			if (worker == probe_scout) continue;
+			if (worker == probe_scout && !probe_scout->orders.empty()) continue;
 			// consider idle or mining workers only
 			if (!worker->orders.empty()) {
 				auto abilityid = worker->orders.front().ability_id;

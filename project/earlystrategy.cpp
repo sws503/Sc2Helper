@@ -60,8 +60,8 @@ bool MEMIBot::EarlyStrategy() {
         break;
 	default:
 		if (observation->GetFoodWorkers()<25 && observation->GetFoodCap() - observation->GetFoodUsed() >= 1) {
-       TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
-		 //TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+			TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+			//TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
 		}
 		else {
 			if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) > observation->GetFoodWorkers() && observation->GetFoodWorkers() < max_worker_count_) {
@@ -78,7 +78,7 @@ bool MEMIBot::EarlyStrategy() {
 
 		if (stage_number>18) {
 			if (observation->GetMinerals() > 350 && observation->GetVespene() > 250 && observation->GetFoodCap() - observation->GetFoodUsed() >= 6)
-				TryBuildUnitChrono(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE);
+				TryBuildUnit(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE);
 		}
 
 		/*if (stage_number>26) {
@@ -152,23 +152,10 @@ bool MEMIBot::EarlyStrategy() {
                 Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, front_expansion);
             }
             else if (Distance2D(probe_scout->pos, front_expansion) > 7 && Distance2D(probe_scout->pos, startLocation_) > 20) {
-                Actions()->UnitCommand(probe_scout,ABILITY_ID::STOP);
-                /*if (TryBuildPylon(probe_scout->pos)) {
-                    stage_number++;
-                    return false;
-                }*/
-                //probe_scout_dest = probe_scout->pos;
-                float rx = GetRandomScalar();
-                float ry = GetRandomScalar();
-                Point2D build_location = Point2D(probe_scout->pos.x + rx * 3, probe_scout->pos.y + ry * 3);
-                if (Query()->PathingDistance(probe_scout, build_location) < 0.1f) {
-                    return false;
-                }
-                if (Query()->Placement(ABILITY_ID::BUILD_PYLON, build_location)) {
-                    if(probe_scout->orders.empty()){
-                        Actions()->UnitCommand(probe_scout, ABILITY_ID::BUILD_PYLON, build_location);
-                    }
-                }
+				if (!probe_scout->orders.empty() && probe_scout->orders.front().ability_id != ABILITY_ID::BUILD_PYLON) {
+					Actions()->UnitCommand(probe_scout, ABILITY_ID::STOP);
+				}
+				TryBuildPylon(probe_scout->pos);
             }
 		}
 		return false;
@@ -196,8 +183,8 @@ bool MEMIBot::EarlyStrategy() {
 			stage_number++;
 			return false;
 		}
-		if (base->buffs.size()==0 && observation->GetFoodUsed()<17) {
-            Actions()->UnitCommand(base, 3755, base);
+		if (observation->GetFoodUsed()<17) {
+			TryChronoboost(base);
         }
 
 		if (observation->GetMinerals() >= 400) {
@@ -270,20 +257,18 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return false;
     case 10:
-		if (assimilator_count>0) {
+		if (assimilator_count>1) {
 			stage_number++;
 			return false;
 		}
 		for (const auto& b : bases) {
             if (b!=base){
-                if (b->buffs.size()==0) {
-                    Actions()->UnitCommand(base, 3755, b);
-                }
+				TryChronoboost(b);
             }
 		}
 
 		if (observation->GetMinerals()>75) {
-			TryBuildGas(ABILITY_ID::BUILD_ASSIMILATOR, UNIT_TYPEID::PROTOSS_PROBE, base->pos);
+			TryBuildGas(base->pos);
 		}
 		return false;
 	case 11:
@@ -311,7 +296,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         for (const auto& b : bases) {
             if (b != base) {
-                TryBuildGas(ABILITY_ID::BUILD_ASSIMILATOR, UNIT_TYPEID::PROTOSS_PROBE, b->pos);
+                TryBuildGas(b->pos);
             }
         }
         return false;
