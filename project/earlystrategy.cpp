@@ -59,9 +59,9 @@ bool MEMIBot::EarlyStrategy() {
     case 7 :
         break;
 	default:
-		if (observation->GetFoodWorkers()<25) {
-            TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
-			//TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+		if (observation->GetFoodWorkers()<25 && observation->GetFoodCap() - observation->GetFoodUsed() >= 1) {
+       TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+		 //TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
 		}
 		else {
 			if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) > observation->GetFoodWorkers() && observation->GetFoodWorkers() < max_worker_count_) {
@@ -77,7 +77,7 @@ bool MEMIBot::EarlyStrategy() {
 		}
 
 		if (stage_number>18) {
-			if (observation->GetMinerals() > 350 && observation->GetVespene() > 250)
+			if (observation->GetMinerals() > 350 && observation->GetVespene() > 250 && observation->GetFoodCap() - observation->GetFoodUsed() >= 6)
 				TryBuildUnitChrono(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE);
 		}
 
@@ -93,7 +93,7 @@ bool MEMIBot::EarlyStrategy() {
 				TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE);
 			}
 		}*/
-		// ÆÄÀÏ·± ´Ù½Ã Áþ±â
+		// íŒŒì¼ëŸ° ë‹¤ì‹œ ì§“ê¸°
 		if (stage_number > 2 && pylon_first != nullptr && !pylon_first->is_alive) {
 			bool rebuilding_pylon = false;
 			for (const auto & p : observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON))) {
@@ -123,16 +123,16 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		else {
 			base = bases.front();
-		}//º»Áø ³Ø¼­½º ÁöÁ¤
+		}//ë³¸ì§„ ë„¥ì„œìŠ¤ ì§€ì •
 
 		if (probe_scout == nullptr || !probe_scout->is_alive) {
 			probe_scout_dest = front_expansion;
 			GetRandomUnit(probe_scout, observation, UNIT_TYPEID::PROTOSS_PROBE);
-		}//Á¤Âû ÇÁ·Îºê ÁöÁ¤
+		}//ì •ì°° í”„ë¡œë¸Œ ì§€ì •
 		if (probe_forge == nullptr || !probe_forge->is_alive) {
 			GetRandomUnit(probe_forge, observation, UNIT_TYPEID::PROTOSS_PROBE);
 			if (probe_scout == probe_forge) probe_forge = nullptr;
-		}//°Ç¹° ÁöÀ» ÇÁ·Îºê ÁöÁ¤
+		}//ê±´ë¬¼ ì§€ì„ í”„ë¡œë¸Œ ì§€ì •
 		if (observation->GetMinerals()>50) {
 			Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, probe_scout_dest);
 			stage_number++;
@@ -239,7 +239,7 @@ bool MEMIBot::EarlyStrategy() {
 			return false;
 		}
 		if (observation->GetMinerals()>75) {
-			TryBuildGas(ABILITY_ID::BUILD_ASSIMILATOR, UNIT_TYPEID::PROTOSS_PROBE, base->pos);
+			TryBuildGas(base->pos);
 		}
 		return false;
 	case 7:

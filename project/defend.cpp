@@ -1,9 +1,10 @@
 #include "memibot.h"
+
 void MEMIBot::Defend() {
 	const ObservationInterface* observation = Observation();
 	Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ORACLE));
 	Units nexus = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
-	int CurrentOracle = Oracles.size();
+	size_t CurrentOracle = Oracles.size();
 
 	// deal with nullptrs
 	// remove oracles if dead
@@ -54,8 +55,8 @@ void MEMIBot::Defend() {
 
 	Units Workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
 	Units EnemyWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsWorker());
-	int cannon_count = observation->GetUnits(Unit::Alliance::Enemy, Rusher(startLocation_)).size();
-	int EnemyWorkercount = observation->GetUnits(Unit::Alliance::Enemy, IsWorker()).size();
+	size_t cannon_count = observation->GetUnits(Unit::Alliance::Enemy, Rusher(startLocation_)).size();
+	size_t EnemyWorkercount = observation->GetUnits(Unit::Alliance::Enemy, IsWorker()).size();
 	Units EnemyCannon = observation->GetUnits(Unit::Alliance::Enemy, Rusher(startLocation_));
 
 
@@ -108,18 +109,23 @@ void MEMIBot::Defend() {
 
 		if (!EnemyCannon.empty())
 		{
-			int PhotonRush = 1;
+			PhotonRush = true;
 			for (const auto& worker : Workers) {
 				Actions()->UnitCommand(worker, ABILITY_ID::ATTACK, EnemyCannon.front()->pos);
 			}
 		}
-		else if (PhotonRush == 1)
-		{
-			for (const auto& worker : Workers) {
-				Actions()->UnitCommand(worker, ABILITY_ID::STOP, EnemyCannon.front()->pos);
+		else {
+			if (PhotonRush == true) {
+				for (const auto& worker : Workers) {
+					if (!worker->orders.empty() && worker->orders.front().ability_id == ABILITY_ID::ATTACK)
+						Actions()->UnitCommand(worker, ABILITY_ID::STOP);
+				}
 			}
-			int PhotonRush = 0;
+			PhotonRush = false;
 		}
+	}
+	if (OracleTrained) {
+
 	}
 
 	if (enemyUnitsInRegion.size() > 3)
@@ -127,5 +133,7 @@ void MEMIBot::Defend() {
 		EnemyRush = true;
 	}
 	if (enemyUnitsInRegion.size() == 0)
+	{
 		EnemyRush = false;
+	}
 }

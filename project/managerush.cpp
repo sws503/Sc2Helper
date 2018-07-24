@@ -193,7 +193,7 @@ void MEMIBot::ManageRush() { // 5.17 ¿À¶óÅ¬ À¯´Ö °ü¸® +6.25 ÆøÇ³ÇÔ À¯´Ö °ü¸®
 
 	}
 
-	int CurrentCarrier = CountUnitType(observation, UNIT_TYPEID::PROTOSS_CARRIER);
+	size_t CurrentCarrier = CountUnitType(observation, UNIT_TYPEID::PROTOSS_CARRIER);
 
 	if (CurrentCarrier <= 3) {
 		OracleRange = 7.0f;
