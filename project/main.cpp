@@ -8,7 +8,7 @@
 #include <iostream>
 
 #ifdef DEBUG
-static bool VsHuman = true;
+static bool VsHuman = false;
 
 class Human : public sc2::Agent {
 public:
@@ -33,11 +33,11 @@ int main(int argc, char* argv[])
 	if (VsHuman) {
 		//coordinator.SetRealtime(true);
 	}
-	
+
 	// Add the custom bot, it will control the players.
 	MEMIBot bot;
 	Human human_bot;
-	
+
 	if (VsHuman) {
 		coordinator.SetParticipants({
 			CreateParticipant(sc2::Race::Terran, &human_bot),
@@ -50,13 +50,13 @@ int main(int argc, char* argv[])
 			CreateComputer(Race::Terran, Difficulty::HardVeryHard),
 			});
 	}
-	
+
 	// Start the game.
 	coordinator.LaunchStarcraft();
 
 	bool do_break = false;
 	while (!do_break) {
-		if (!coordinator.StartGame("CatalystLE.SC2Map")) {
+		if (!coordinator.StartGame("(2)CatalystLE.SC2Map")) {
 			break;
 		}
 		while (coordinator.Update() && !do_break) {
