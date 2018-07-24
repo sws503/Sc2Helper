@@ -299,7 +299,13 @@ bool MEMIBot::EarlyStrategy() {
             }
         }
         return false;
-	case 14:
+     case 14:
+		if (TryBuildUnitChrono(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
+			OracleTrained = true;
+			stage_number++;
+		}
+		return false;
+	case 15:
 		if (pylons.size()>2) {
 			stage_number++;
 			return false;
@@ -308,7 +314,7 @@ bool MEMIBot::EarlyStrategy() {
 			TryBuildPylon(Point2D((FindNearestMineralPatch(base->pos)->pos.x + base->pos.x) / 2, (FindNearestMineralPatch(base->pos)->pos.y + base->pos.y) / 2));
 		}
 		return false;
-    case 15:
+    case 16:
 		if (pylons.size()>3) {
 			stage_number++;
 			return false;
@@ -320,12 +326,6 @@ bool MEMIBot::EarlyStrategy() {
                     TryBuildPylon(FindNearestMineralPatch(b->pos)->pos);
                 }
             }
-		}
-		return false;
-    case 16:
-		if (TryBuildUnitChrono(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
-			OracleTrained = true;
-			stage_number++;
 		}
 		return false;
 	case 17:
@@ -394,16 +394,11 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return false;
     case 25:
-		if (TryBuildUnit(ABILITY_ID::RESEARCH_INTERCEPTORGRAVITONCATAPULT, UNIT_TYPEID::PROTOSS_FLEETBEACON)) {
-			stage_number++;
-		}
-		return false;
-    case 26:
 		if (TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE)) {
 			stage_number++;
 		}
 		return false;
-    case 27:
+    case 26:
         if (observation->GetMinerals()>700){
             if(TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon_first)) {
                 return false;
@@ -414,7 +409,12 @@ bool MEMIBot::EarlyStrategy() {
                 }
             }
         }
-        TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE);
+        if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_CARRIER)>1) {
+            TryBuildUnit(ABILITY_ID::RESEARCH_INTERCEPTORGRAVITONCATAPULT, UNIT_TYPEID::PROTOSS_FLEETBEACON);
+        }
+        if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_CARRIER)>3) {
+            TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE);
+        }
         TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
         TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRARMOR, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
     /*
