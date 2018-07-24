@@ -962,7 +962,7 @@ private:
 		float ry = GetRandomScalar();
 		Point2D location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
 
-		if (Distance2D(location, front_expansion)<bases.front()->radius*1.3) {
+		if (Distance2D(location, front_expansion)<bases.front()->radius*1.5) {
 			return false;
 		}
 		// Check to see if unit can make it there

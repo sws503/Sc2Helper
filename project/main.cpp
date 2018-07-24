@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
 			break;
 		}
 		while (coordinator.Update() && !do_break) {
-
+			sc2::SleepFor(50);
 			if (sc2::PollKeyPress()) {
 				do_break = true;
 			}
