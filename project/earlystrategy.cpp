@@ -50,6 +50,10 @@ bool MEMIBot::EarlyStrategy() {
 	}
 
 	switch (stage_number) {
+    case 3:
+        if(observation->GetFoodUsed()<18) {
+            TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+        }
 	case 4:
 		break;
 	case 5:
