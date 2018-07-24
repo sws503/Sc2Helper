@@ -142,6 +142,7 @@
     <ClCompile Include="managerush.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="flag.h" />
     <ClInclude Include="LadderInterface.h" />
     <ClInclude Include="memibot.h" />
   </ItemGroup>
