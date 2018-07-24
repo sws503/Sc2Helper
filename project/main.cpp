@@ -56,10 +56,11 @@ int main(int argc, char* argv[])
 
 	bool do_break = false;
 	while (!do_break) {
-		if (!coordinator.StartGame("(4)DarknessSanctuaryLE.SC2Map")) {
+		if (!coordinator.StartGame("(2)DreamcatcherLE.SC2Map")) {
 			break;
 		}
 		while (coordinator.Update() && !do_break) {
+			sc2::SleepFor(50);
 			if (sc2::PollKeyPress()) {
 				do_break = true;
 			}
