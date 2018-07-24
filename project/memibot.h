@@ -37,6 +37,10 @@ struct Rusher {
 	}
 	bool operator()(const Unit& unit) {
 		return unit.unit_type.ToType() == UNIT_TYPEID::PROTOSS_PHOTONCANNON && Distance2D(sl, unit.pos) < 20;
+		return unit.unit_type.ToType() == UNIT_TYPEID::PROTOSS_PYLON && Distance2D(sl, unit.pos) < 20;
+		return unit.unit_type.ToType() == UNIT_TYPEID::ZERG_HATCHERY && Distance2D(sl, unit.pos) < 20;
+		return unit.unit_type.ToType() == UNIT_TYPEID::TERRAN_BUNKER && Distance2D(sl, unit.pos) < 20;
+		return unit.unit_type.ToType() == UNIT_TYPEID::TERRAN_BARRACKS && Distance2D(sl, unit.pos) < 20;
 	}
 private:
 	Point2D sl;
@@ -478,7 +482,7 @@ private:
 		}
 	}
 
-	float OracleRange = 3.5; // 절대적으로 생존
+	float OracleRange = 3.0; // 절대적으로 생존
 	float TempestRange = 3.0f;
 	float CarrierRange = 3.0f;
 	bool TimetoAttack = false;
@@ -497,7 +501,11 @@ private:
 	void RetreatWithCarrier(const Unit* unit) {
 		if (pylonlocation != Point2D(0, 0))
 			Actions()->UnitCommand(unit, ABILITY_ID::PATROL, pylonlocation);
+	}
 
+	void RetreatWithVoidray(const Unit* unit) {
+			Actions()->UnitCommand(unit, ABILITY_ID::PATROL, startLocation_);
+	}
 		/*Location();
 		float dist = Distance2D(unit->pos, CarrierLocation);
 		if (dist < 10) {
@@ -515,7 +523,6 @@ private:
 		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, CarrierLocation);
 		}
 		}*/
-	}
 
 	const float getAttackRange(const Unit* target) const
 	{

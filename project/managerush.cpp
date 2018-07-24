@@ -88,7 +88,7 @@ bool MEMIBot::OracleCanWin(const Unit* Oracle , Units enemyunits, bool OracleCan
 	}
 }
 
-
+bool mustattack = false;
 
 void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 	const ObservationInterface* observation = Observation();
@@ -268,7 +268,10 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 
 		bool enemiesnear = false;
 
+		bool IsArmored = false;
 		for (const auto& u : AirAttackers) {
+
+
 			if (!u->is_alive)
 			{
 				continue;
@@ -285,32 +288,37 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 			Normalize2D(diff);
 			KitingLocation = unit->pos + diff * 7.0f;
 
-			if (distance < 5.5) // 공허포격기는 되도록 최대 사거리(=6)에서 공격한다
+			if (distance < 6) // 공허포격기는 되도록 최대 사거리(=6)에서 공격한다
 			{
+				for (const auto & Attribute : Observation()->GetUnitTypeData()[u->unit_type].attributes)
+				{
+					if (Attribute == Attribute::Armored)
+					{
+						IsArmored = true;
+					}
+				}
+
+
 				enemiesnear = true;
 				break;
 			}
 		}
 
-		if (AirAttackers.empty())
-		{
-			AttackWithUnit(unit, observation);
+		// 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
+		if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
+			if(IsArmored)
+				Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_VOIDRAYPRISMATICALIGNMENT); // 적 유닛 중 중장갑 유닛이 있으면 분광정렬 사용
+			if(EnemyRush)
+				RetreatWithVoidray(unit);
+
+			if (unit->orders.empty())
+				RetreatWithCarrier(unit);
 		}
-		else if (!enemy_units.empty()) {
-			// 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-			if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
-				Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
-			}
-			// 가까우면 도망간다.
-			else {
-				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-			}
+		// 가까우면 도망간다.
+		else {
+			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
 		}
-		else // 지도상에 적 유닛이 아예 없는 상황에선 공허포격기도 같이 적 찾으러가자~
-		{
-			ScoutWithUnit(unit, observation);
-			scoutprobe();
-		}
+
 
 	}
 
@@ -406,9 +414,8 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 			}
 		}
 
-
-		if (CurrentCarrier < 10) {
-
+		
+		if (CurrentCarrier < 10 && !mustattack) {
 			// 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
 			if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
 				if (unit->orders.empty())
@@ -419,7 +426,21 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
 			}
 		}
+		else if (CurrentCarrier < 4 && mustattack) {
+			mustattack = false;
+			if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
+				if (unit->orders.empty())
+					RetreatWithCarrier(unit);
+			}
+			// 가까우면 도망간다.
+			else {
+				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+			}
+		}
+
 		else { //if (CurrentCarrier >= 10)
+			mustattack = true;
+
 			if (AirAttackers.empty())
 			{
 				AttackWithUnit(unit, observation);

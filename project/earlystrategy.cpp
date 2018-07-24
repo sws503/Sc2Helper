@@ -304,10 +304,13 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
      case 14:
-		if (TryBuildUnitChrono(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
-			OracleTrained = true;
-			stage_number++;
-		}
+		 if (observation->GetMinerals() > 150 && observation->GetVespene() > 150 && observation->GetFoodCap() - observation->GetFoodUsed() >= 3) // 안되길래 바꿔놨음
+		 {
+			 if (TryBuildUnit(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
+				 OracleTrained = true;
+				 stage_number++;
+			 }
+		 }
 		return false;
 	case 15:
 		if (pylons.size()>2) {
@@ -343,8 +346,11 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return false;
     case 18:
-		if (TryBuildUnit(ABILITY_ID::TRAIN_VOIDRAY, UNIT_TYPEID::PROTOSS_STARGATE)) {
-			stage_number++;
+		if (observation->GetMinerals() > 250 && observation->GetVespene() > 150 && observation->GetFoodCap() - observation->GetFoodUsed() >= 4) // 안되길래 바꿔놨음
+		{
+			if (TryBuildUnit(ABILITY_ID::TRAIN_VOIDRAY, UNIT_TYPEID::PROTOSS_STARGATE)) {
+				stage_number++;
+			}
 		}
 		return false;
 	case 19:
