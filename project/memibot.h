@@ -197,7 +197,7 @@ struct IsArmy {
 		default: return true;
 		}
 	}
-
+private:
 	const ObservationInterface* observation_;
 };
 
@@ -231,7 +231,7 @@ struct IsStructure {
 		}
 		return is_structure;
 	}
-
+private:
 	const ObservationInterface* observation_;
 };
 
@@ -263,12 +263,36 @@ struct IsMineral {
 	}
 };
 
+struct HasBuff {
+	HasBuff(BuffID buff): buff_(buff) {};
+
+	bool operator()(const Unit& unit) {
+		// is buffed?
+		for (const auto& buff : unit.buffs) {
+			if (buff == buff_) return true;
+		}
+		return false;
+	}
+
+private:
+	const BuffID buff_;
+};
+
 class MEMIBot : public Agent {
 public:
 	virtual void OnGameStart() final {
 		game_info_ = Observation()->GetGameInfo();
 		std::cout << "Game started!" << std::endl;
-		expansions_ = search::CalculateExpansionLocations(Observation(), Query());
+		search::ExpansionParameters ep;
+		ep.radiuses_.push_back(0.0f);
+		ep.radiuses_.push_back(1.0f);
+		ep.radiuses_.push_back(2.1f);
+		ep.radiuses_.push_back(3.2f);
+		ep.radiuses_.push_back(4.3f);
+		ep.radiuses_.push_back(4.9f);
+		ep.radiuses_.push_back(5.9f);
+		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
+
 		iter_exp = expansions_.begin();
 
 		//Temporary, we can replace this with observation->GetStartLocation() once implemented
@@ -357,6 +381,7 @@ public:
 	float base_range = 35;
 
 private:
+
 
 	void Chat(std::string Message) // 6.29 채팅 함수
 	{
@@ -666,6 +691,7 @@ private:
 		return distance > 0.1f;
 	}
 
+
 	bool TryBuildUnitChrono(AbilityID ability_type_for_unit, UnitTypeID unit_type) {
 		const ObservationInterface* observation = Observation();
 
@@ -674,19 +700,24 @@ private:
 			return false;
 		}
 		const Unit* unit = nullptr;
-		if (!GetRandomUnit(unit, observation, unit_type)) {
-			return false;
-		}
-		if (!unit->orders.empty()) {
+		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
+		for (const auto& candidate_unit : target_units) {
+			// is completely built?
+			if (candidate_unit->build_progress != 1.0f) continue;
+			// is doing something?
+			if (!candidate_unit->orders.empty()) continue;
 
+			unit = candidate_unit;
+			// pick prioritized structures first
+			if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
+				break;
+			}
+		}
+		if (unit == nullptr) {
 			return false;
 		}
-		if (unit->build_progress != 1) {
-			return false;
-		}
-
 		Actions()->UnitCommand(unit, ability_type_for_unit);
-		//Chronoboost(unit);
+		Chronoboost(unit);
 		return true;
 	}
 
@@ -695,15 +726,13 @@ private:
 		Units structures = observation->GetUnits(Unit::Alliance::Self, f);
 		for (const auto& structure : structures) {
 			// is structure?
-			if (!IsStructure(observation)(*structure)) continue;
+			if (IsStructure(observation)(*structure)) 
 			// is completely built?
 			if (structure->build_progress != 1.0f) continue;
 			// is doing nothing?
 			if (structure->orders.empty()) continue;
 			// is already buffed?
-			for (const auto& buff : structure->buffs) {
-				if (buff == BUFF_ID::TIMEWARPPRODUCTION) continue;
-			}
+			if (HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*structure)) continue;
 			Chronoboost(structure);
 		}
 	}
@@ -758,7 +787,7 @@ private:
 		return target;
 	}
 
-	bool TryBuildUnit(AbilityID ability_type_for_unit, UnitTypeID unit_type) {
+	bool TryBuildUnit(AbilityID ability_type_for_unit, UnitTypeID unit_type, Filter priority_filter = {}) {
 		const ObservationInterface* observation = Observation();
 
 		//If we are at supply cap, don't build anymore units, unless its an overlord.
@@ -766,17 +795,22 @@ private:
 			return false;
 		}
 		const Unit* unit = nullptr;
-		if (!GetRandomUnit(unit, observation, unit_type)) {
-			return false;
-		}
-		if (!unit->orders.empty()) {
-			return false;
-		}
+		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
+		for (const auto& candidate_unit : target_units) {
+			// is completely built?
+			if (candidate_unit->build_progress != 1.0f) continue;
+			// is doing something?
+			if (!candidate_unit->orders.empty()) continue;
 
-		if (unit->build_progress != 1) {
+			unit = candidate_unit;
+			// pick prioritized structures first
+			if (!priority_filter || priority_filter(*candidate_unit)) {
+				break;
+			}
+		}
+		if (unit == nullptr) {
 			return false;
 		}
-
 		Actions()->UnitCommand(unit, ability_type_for_unit);
 		return true;
 	}

@@ -35,5 +35,8 @@
     <ClInclude Include="LadderInterface.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="flag.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,4 +1,5 @@
 #include "memibot.h"
+
 void MEMIBot::Defend() {
 	const ObservationInterface* observation = Observation();
 	Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ORACLE));
@@ -116,7 +117,8 @@ void MEMIBot::Defend() {
 		else {
 			if (PhotonRush == true) {
 				for (const auto& worker : Workers) {
-					Actions()->UnitCommand(worker, ABILITY_ID::STOP, EnemyCannon.front()->pos);
+					if (!worker->orders.empty() && worker->orders.front().ability_id == ABILITY_ID::ATTACK)
+						Actions()->UnitCommand(worker, ABILITY_ID::STOP);
 				}
 			}
 			PhotonRush = false;
