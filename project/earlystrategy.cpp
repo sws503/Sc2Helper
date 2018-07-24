@@ -85,6 +85,15 @@ bool MEMIBot::EarlyStrategy() {
 				TryBuildUnit(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE);
 		}
 
+		if (stage_number>26) {
+            TryBuildUnit(ABILITY_ID::RESEARCH_INTERCEPTORGRAVITONCATAPULT, UNIT_TYPEID::PROTOSS_FLEETBEACON);
+            TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE);
+
+            TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
+            TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRARMOR, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
+
+		}
+
 		if (stage_number>25) {
 			//TryBuildExpansionNexus();
 			TryBuildAssimilator();
@@ -425,15 +434,7 @@ bool MEMIBot::EarlyStrategy() {
                 }
             }
         }
-        if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_CARRIER)>1) {
-            TryBuildUnit(ABILITY_ID::RESEARCH_INTERCEPTORGRAVITONCATAPULT, UNIT_TYPEID::PROTOSS_FLEETBEACON);
-        }
-        if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_CARRIER)>3) {
-            TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE);
-        }
-        TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
-        TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRARMOR, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
-    case 27:
+        case 27:
         if (bases.size()>2) {
             for (const auto& b : bases) {
                 if(b!=base && Distance2D(b->pos,front_expansion)>10) {
@@ -486,6 +487,9 @@ bool MEMIBot::EarlyStrategy() {
                     return false;
                 }
             }
+        }
+        if(bases.size()<3){
+            stage_number--;
         }
 
 
