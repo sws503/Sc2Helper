@@ -133,6 +133,15 @@ struct IsOracle { // 예언자인지 감지
 	}
 };
 
+struct IsVoidray {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_VOIDRAY: return true;
+		default: return false;
+		}
+	}
+};
+
 struct IsTempest {
 	bool operator()(const Unit& unit) {
 		switch (unit.unit_type.ToType()) {
