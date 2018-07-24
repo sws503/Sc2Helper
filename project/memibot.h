@@ -142,6 +142,15 @@ struct IsTempest {
 	}
 };
 
+struct IsVoidray {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_VOIDRAY: return true;
+		default: return false;
+		}
+	}
+};
+
 struct IsCarrier {
 	bool operator()(const Unit& unit) {
 		switch (unit.unit_type.ToType()) {
@@ -326,7 +335,7 @@ public:
 		const ObservationInterface* observation = Observation();
 		Units units = observation->GetUnits(Unit::Self, IsArmy(observation));
 
-		ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE, ABILITY_ID::HARVEST_GATHER, UNIT_TYPEID::PROTOSS_ASSIMILATOR);
+		ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE);
 
 		if (!early_strategy) {
 			EarlyStrategy();
@@ -350,7 +359,7 @@ public:
 	virtual void OnUnitIdle(const Unit* unit) override {
 		switch (unit->unit_type.ToType()) {
 		case UNIT_TYPEID::PROTOSS_PROBE: {
-			MineIdleWorkers(unit, ABILITY_ID::HARVEST_GATHER, UNIT_TYPEID::PROTOSS_ASSIMILATOR);
+			MineIdleWorkers(unit);
 			break;
 		}
 		case UNIT_TYPEID::PROTOSS_CARRIER: {
@@ -892,9 +901,25 @@ private:
 				}
 			}
 		}
+		std::vector<UnitOrder> builder_orders;
+		for (auto& o : builder->orders) {
+			builder_orders.push_back(o);
+		}
 		// Check to see if unit can build there
 		if (Query()->Placement(ability_type_for_structure, location)) {
 			Actions()->UnitCommand(builder, ability_type_for_structure, location);
+			Actions()->UnitCommand(builder, ABILITY_ID::HARVEST_RETURN, true);
+			for (auto& o : builder_orders) {
+				if (o.target_unit_tag != NullTag) {
+					Actions()->UnitCommand(builder, o.ability_id, observation->GetUnit(o.target_unit_tag), true);
+				}
+				else if (o.target_pos != Point2D(0.0f, 0.0f)) {
+					Actions()->UnitCommand(builder, o.ability_id, o.target_pos, true);
+				}
+				else {
+					Actions()->UnitCommand(builder, o.ability_id, true);
+				}
+			}
 			return true;
 		}
 		return false;
@@ -1040,6 +1065,7 @@ private:
 		if (Query()->PathingDistance(unit, location) < 0.1f) {
 			return false;
 		}
+
 		// Check to see if unit can build there
 		if (Query()->Placement(ability_type_for_structure, location)) {
 			Actions()->UnitCommand(unit, ability_type_for_structure, location);
@@ -1065,7 +1091,7 @@ private:
 		float ry = GetRandomScalar();
 		Point2D location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
 
-		if (Distance2D(location, front_expansion)<bases.front()->radius*1.5) {
+		if (abs(location.x - front_expansion.x) < 3.99f || abs(location.y - front_expansion.y) < 3.99f) {
 			return false;
 		}
 		// Check to see if unit can make it there
@@ -1154,22 +1180,23 @@ private:
 		return TryBuildPylon(location, 8.0f, MaxBuildAtOnce);
 	}
 
-	void MineIdleWorkers(const Unit* worker, AbilityID worker_gather_command, UnitTypeID vespene_building_type) {
+	void MineIdleWorkers(const Unit* worker) {
 		if (worker == probe_scout || worker == probe_forge) return;
 
 		const ObservationInterface* observation = Observation();
 		Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
-		Units geysers = observation->GetUnits(Unit::Alliance::Self, IsUnit(vespene_building_type));
+		Units geysers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ASSIMILATOR));
 
 		const Unit* valid_mineral_patch = nullptr;
 
 		if (bases.empty()) {
 			return;
 		}
-
+		
 		for (const auto& geyser : geysers) {
+			if (geyser->build_progress != 1.0) continue;
 			if (geyser->assigned_harvesters < geyser->ideal_harvesters) {
-				Actions()->UnitCommand(worker, worker_gather_command, geyser);
+				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, geyser);
 				return;
 			}
 		}
@@ -1181,7 +1208,7 @@ private:
 			}
 			if (base->assigned_harvesters < base->ideal_harvesters) {
 				valid_mineral_patch = FindNearestMineralPatch(base->pos);
-				Actions()->UnitCommand(worker, worker_gather_command, valid_mineral_patch);
+				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, valid_mineral_patch);
 				return;
 			}
 		}
@@ -1193,7 +1220,7 @@ private:
 		//If all workers are spots are filled just go to any base.
 		const Unit* random_base = GetRandomEntry(bases);
 		valid_mineral_patch = FindNearestMineralPatch(random_base->pos);
-		Actions()->UnitCommand(worker, worker_gather_command, valid_mineral_patch);
+		Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, valid_mineral_patch);
 	}
 
 	int GetExpectedWorkers(UNIT_TYPEID vespene_building_type) {
@@ -1220,10 +1247,10 @@ private:
 		return expected_workers;
 	}
 
-	void ManageWorkers(UNIT_TYPEID worker_type, AbilityID worker_gather_command, UNIT_TYPEID vespene_building_type) {
+	void ManageWorkers(UNIT_TYPEID worker_type) {
 		const ObservationInterface* observation = Observation();
 		Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
-		Units geysers = observation->GetUnits(Unit::Alliance::Self, IsUnit(vespene_building_type));
+		Units geysers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ASSIMILATOR));
 
 		if (bases.empty()) {
 			return;
@@ -1231,7 +1258,7 @@ private:
 
 		for (const auto& base : bases) {
 			//If we have already mined out or still building here skip the base.
-			if (base->ideal_harvesters == 0 || base->build_progress != 1) {
+			if (base->ideal_harvesters == 0 || base->build_progress != 1.0f) {
 				continue;
 			}
 			//if base is
@@ -1239,11 +1266,11 @@ private:
 				Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(worker_type));
 
 				for (const auto& worker : workers) {
-					if (worker == probe_scout) continue;
+					if (worker == probe_scout || worker == probe_forge) continue;
 					if (!worker->orders.empty()) {
-						if (worker->orders.front().target_unit_tag == base->tag) {
+						if (worker->orders.front().target_unit_tag == base->tag){
 							//This should allow them to be picked up by mineidleworkers()
-							MineIdleWorkers(worker, worker_gather_command, vespene_building_type);
+							MineIdleWorkers(worker);
 							return;
 						}
 					}
@@ -1253,16 +1280,24 @@ private:
 		Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(worker_type));
 
 		for (const auto& geyser : geysers) {
-			if (geyser->ideal_harvesters == 0 || geyser->build_progress != 1) {
+			if (geyser->ideal_harvesters == 0 || geyser->build_progress != 1.0f) {
+				for (const auto& worker : workers) {
+					if (!worker->orders.empty()) {
+						if (worker->orders.front().target_unit_tag == geyser->tag) {
+							//This should allow them to be picked up by mineidleworkers()
+							MineIdleWorkers(worker);
+						}
+					}
+				}
 				continue;
 			}
 			if (geyser->assigned_harvesters > geyser->ideal_harvesters) {
 				for (const auto& worker : workers) {
-					if (worker == probe_scout) continue;
+					if (worker == probe_scout || worker == probe_forge) continue;
 					if (!worker->orders.empty()) {
 						if (worker->orders.front().target_unit_tag == geyser->tag) {
 							//This should allow them to be picked up by mineidleworkers()
-							MineIdleWorkers(worker, worker_gather_command, vespene_building_type);
+							MineIdleWorkers(worker);
 							return;
 						}
 					}
@@ -1276,9 +1311,9 @@ private:
 						if (target == nullptr) {
 							continue;
 						}
-						if (target->unit_type != vespene_building_type) {
+						if (target->unit_type != UNIT_TYPEID::PROTOSS_ASSIMILATOR && target->unit_type != UNIT_TYPEID::PROTOSS_NEXUS) {
 							//This should allow them to be picked up by mineidleworkers()
-							MineIdleWorkers(worker, worker_gather_command, vespene_building_type);
+							MineIdleWorkers(worker);
 							return;
 						}
 					}
@@ -1434,4 +1469,8 @@ private:
 	uint16_t stage_number = 0;
 	const Unit* base = nullptr;
 	const size_t max_worker_count_ = 65;
+	/*
+	bool GetAllUnitsNear(Units& units, const Unit* unit, ) {
+		for (unit)
+	}*/
 };
