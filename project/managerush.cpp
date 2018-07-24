@@ -64,10 +64,11 @@ bool MEMIBot::OracleCanWin(const Unit* Oracle , Units enemyunits, bool OracleCan
 		}
 		TotalDPS += dps;
 	}
+#ifdef DEBUG
 	std::cout << TotalEnemyHP << "<" << OracleDeal << (TotalEnemyHP < OracleDeal) << std::endl;
 
 	std::cout << TotalEnemyHP << "/" << OracleDPS << "<" <<  OracleHP << "/" << TotalDPS << "=" << ((TotalEnemyHP / OracleDPS) < (OracleHP / TotalDPS)) << std::endl;
-
+#endif
 
 
 	if (TotalEnemyHP < OracleDeal) // 일단 적을 죽일만큼 딜이 나올 경우
@@ -217,7 +218,7 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 		}
 
 		// 스킬 피하기
-		else if (EvadeEffect(unit)) { std::cout << "evade skills" << std::endl; }
+		else if (EvadeEffect(unit)) {}
 
 		//펄서빔이 켜져있을 때 
 		else if (OracleCanAttack)
@@ -256,8 +257,10 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 				}
 			}
 		}
+#ifdef DEBUG
 		if (OracleFight) std::cout << "Fight";
 		else std::cout << "No Fight";
+#endif
 	}
 	for (const auto& unit : Voidrays) {
 		float distance = std::numeric_limits<float>::max(); // 6.25 공허포격기 거리유지

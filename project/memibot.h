@@ -137,15 +137,6 @@ struct IsOracle { // 예언자인지 감지
 	}
 };
 
-struct IsVoidray {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_VOIDRAY: return true;
-		default: return false;
-		}
-	}
-};
-
 struct IsTempest {
 	bool operator()(const Unit& unit) {
 		switch (unit.unit_type.ToType()) {
@@ -407,7 +398,9 @@ private:
 
 	void Chat(std::string Message) // 6.29 채팅 함수
 	{
+#ifdef DEBUG
 		Actions()->SendChat(Message);
+#endif
 	}
 
 	const bool isBadEffect(const EffectID id) const
@@ -1174,7 +1167,12 @@ private:
 		if (i == 0) return false;
 		if (observation->GetFoodCap() == 200) return false;
 
-		return TryBuildPylon(staging_location_, 15.0f, i);
+		if (TryBuildPylon(startLocation_, 15.0f, i)) return true;
+		Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+		for (const auto& b : bases) {
+			if (TryBuildPylon(b->pos, 7.0f, i)) return true;
+		}
+		return false;
 	}
 	bool TryBuildPylon(Point2D location, float radius = 3.0f, size_t MaxBuildAtOnce = 1) {
 		const ObservationInterface* observation = Observation();

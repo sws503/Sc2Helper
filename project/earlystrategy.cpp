@@ -16,8 +16,9 @@ bool MEMIBot::EarlyStrategy() {
 	size_t cybernetics_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
 	size_t stargate_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STARGATE);
 
-
+#ifdef DEBUG
 	std::cout << stage_number << std::endl;
+#endif
     if (stage_number>2) {
 		if (find_enemy_location == false && pylons.size()>0) {
 			Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
