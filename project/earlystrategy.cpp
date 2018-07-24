@@ -405,7 +405,14 @@ bool MEMIBot::EarlyStrategy() {
 		return false;
     case 27:
         if (observation->GetMinerals()>700){
-            TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON,UNIT_TYPEID::PROTOSS_PROBE);
+            if(TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon_first)) {
+                return false;
+            }
+            for (const auto& pylon : pylons) {
+                if (Distance2D(pylon->pos,front_expansion)<Distance2D(pylon->pos,base->pos)) {
+                   TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon);
+                }
+            }
         }
         TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE);
         TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
