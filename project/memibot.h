@@ -307,7 +307,7 @@ public:
 		if (!early_strategy) {
 			EarlyStrategy();
 		}
-		if (iter_exp < expansions_.end() && find_enemy_location == true) {
+		if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_PYLON)>0 && iter_exp < expansions_.end() && find_enemy_location == true) {
 			scoutprobe();
 		}
 
@@ -1324,6 +1324,7 @@ private:
 	const Unit* probe_scout = nullptr;
 	const Unit* pylon_first = nullptr;
 	const Unit* probe_forge = nullptr;
+	Point2D probe_scout_dest = Point2D(0,0);
 
 	bool find_enemy_location = false;
 	std::vector<Point2D>::iterator iter_esl = game_info_.enemy_start_locations.begin();
