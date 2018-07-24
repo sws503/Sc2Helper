@@ -173,7 +173,6 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		if (probe_forge->orders.empty()) {
 			if (TryBuildForge(probe_forge, pylon_first)) {
-                stage_number++;
                 return false;
 			}
 		}

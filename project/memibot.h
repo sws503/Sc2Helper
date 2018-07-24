@@ -740,6 +740,7 @@ private:
 		// is already buffed?
 		if (HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) return false;
 		Chronoboost(unit);
+		return true;
 	}
 
 	bool Chronoboost(const Unit * unit) {
@@ -881,27 +882,6 @@ private:
 		if (builder == nullptr) {
 			return false;
 		}
-		/*
-		for (const auto& worker : workers) {
-			//전진 프로브는 제외
-			if (worker == probe_scout) continue;
-			for (const auto& order : worker->orders) {
-				if (order.ability_id == ABILITY_ID::HARVEST_GATHER
-					|| order.ability_id == ABILITY_ID::HARVEST_RETURN) {
-					unit = worker;
-					break;
-				}
-			}
-			
-			if (unit != nullptr) break;
-		}
-		if (unit == nullptr) return false;
-		// Check to see if unit can make it there
-		if (Query()->PathingDistance(builder, location) < 0.1f) {
-		return false;
-		}
-
-		*/
 
 		
 		if (!isExpansion) {
@@ -1118,7 +1098,7 @@ private:
 		}
 
 		// In the case where there are no more available geysers nearby
-		if (closestGeyser == 0) {
+		if (closestGeyser == NullTag) {
 			return false;
 		}
 
