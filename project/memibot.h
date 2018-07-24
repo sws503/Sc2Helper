@@ -766,6 +766,17 @@ private:
 		return observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type)).size();
 	}
 
+	size_t CountUnitTypeNearLocation(const ObservationInterface* observation, UnitTypeID unit_type, Point2D location) {
+		Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
+		int number=0;
+		for (const auto& u : units){
+            if(Distance2D(u->pos,location)<10){
+                number++;
+            }
+		}
+		return number;
+	}
+
 	bool GetRandomUnit(const Unit*& unit_out, const ObservationInterface* observation, UnitTypeID unit_type) {
 		Units my_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
 		int num = static_cast<int>(my_units.size());
@@ -884,7 +895,7 @@ private:
 			return false;
 		}
 
-		
+
 		if (!isExpansion) {
 			for (const auto& expansion : expansions_) {
 				if (Distance2D(location, Point2D(expansion.x, expansion.y)) < 7) {

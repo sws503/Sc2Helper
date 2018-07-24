@@ -403,12 +403,16 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return false;
     case 26:
+        if (cannon_count>14 && bases.size()<3) {
+            stage_number++;
+            return false;
+        }
         if (observation->GetMinerals()>700){
             if(TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon_first)) {
                 return false;
             }
             for (const auto& pylon : pylons) {
-                if (Distance2D(pylon->pos,front_expansion)<Distance2D(pylon->pos,base->pos)) {
+                if (Distance2D(pylon->pos,base->pos)>25) {
                    TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon);
                 }
             }
@@ -421,6 +425,39 @@ bool MEMIBot::EarlyStrategy() {
         }
         TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
         TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRARMOR, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
+    case 27:
+        if (bases.size()>2) {
+            for (const auto& b : bases) {
+                if(b!=base && Distance2D(b->pos,front_expansion)>10) {
+                    if(CountUnitTypeNearLocation(observation,UNIT_TYPEID::PROTOSS_PHOTONCANNON,b->pos)>8){
+                        stage_number--;
+                        return false;
+                    }
+                }
+            }
+        }
+        if (bases.size()<3) {
+            TryExpand(ABILITY_ID::BUILD_NEXUS,UNIT_TYPEID::PROTOSS_PROBE);
+            return false;
+        }
+        if (bases.size()>2) {
+            for (const auto& b : bases) {
+                if(b!=base && Distance2D(b->pos,front_expansion)>10) {
+                    for (const auto& pylon : pylons) {
+                        if(Distance2D(b->pos,pylon->pos)<8) {
+                            if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON,UNIT_TYPEID::PROTOSS_PROBE)) {
+                                return false;
+                            }
+                        }
+                    }
+                    if (CountUnitTypeNearLocation(observation,UNIT_TYPEID::PROTOSS_PYLON,b->pos)<3) {
+                        TryBuildPylon(b->pos,10);
+                    }
+                }
+            }
+        }
+
+
     /*
 
 	case 20:
