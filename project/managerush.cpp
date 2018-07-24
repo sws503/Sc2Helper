@@ -88,7 +88,7 @@ bool MEMIBot::OracleCanWin(const Unit* Oracle , Units enemyunits, bool OracleCan
 	}
 }
 
-
+bool mustattack = false;
 
 void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 	const ObservationInterface* observation = Observation();
@@ -260,6 +260,65 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 		else std::cout << "No Fight";
 	}
 	for (const auto& unit : Voidrays) {
+		float distance = std::numeric_limits<float>::max(); // 6.25 공허포격기 거리유지
+		float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
+		float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
+
+		if (EvadeEffect(unit)) continue;
+
+		bool enemiesnear = false;
+
+		bool IsArmored = false;
+		for (const auto& u : AirAttackers) {
+
+
+			if (!u->is_alive)
+			{
+				continue;
+			}
+
+			float d = Distance2D(u->pos, unit->pos);
+			if (d < distance) {
+				distance = d;
+			}
+
+			float TargetAttackRange = getAttackRange(u);
+
+			Vector2D diff = unit->pos - u->pos; // 7.3 적 유닛과의 반대 방향으로 도망
+			Normalize2D(diff);
+			KitingLocation = unit->pos + diff * 7.0f;
+
+			if (distance < 6) // 공허포격기는 되도록 최대 사거리(=6)에서 공격한다
+			{
+				for (const auto & Attribute : Observation()->GetUnitTypeData()[u->unit_type].attributes)
+				{
+					if (Attribute == Attribute::Armored)
+					{
+						IsArmored = true;
+					}
+				}
+
+
+				enemiesnear = true;
+				break;
+			}
+		}
+
+		// 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
+		if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
+			if(IsArmored)
+				Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_VOIDRAYPRISMATICALIGNMENT); // 적 유닛 중 중장갑 유닛이 있으면 분광정렬 사용
+			if(EnemyRush)
+				RetreatWithVoidray(unit);
+
+			if (unit->orders.empty())
+				RetreatWithCarrier(unit);
+		}
+		// 가까우면 도망간다.
+		else {
+			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+		}
+
 
 	}
 
@@ -355,9 +414,8 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 			}
 		}
 
-
-		if (CurrentCarrier < 10) {
-
+		
+		if (CurrentCarrier < 10 && !mustattack) {
 			// 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
 			if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
 				if (unit->orders.empty())
@@ -368,7 +426,21 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
 			}
 		}
+		else if (CurrentCarrier < 4 && mustattack) {
+			mustattack = false;
+			if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
+				if (unit->orders.empty())
+					RetreatWithCarrier(unit);
+			}
+			// 가까우면 도망간다.
+			else {
+				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+			}
+		}
+
 		else { //if (CurrentCarrier >= 10)
+			mustattack = true;
+
 			if (AirAttackers.empty())
 			{
 				AttackWithUnit(unit, observation);
