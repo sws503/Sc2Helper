@@ -33,21 +33,21 @@ int main(int argc, char* argv[])
 	if (VsHuman) {
 		//coordinator.SetRealtime(true);
 	}
-
+	
 	// Add the custom bot, it will control the players.
 	MEMIBot bot;
 	Human human_bot;
-
+	
 	if (VsHuman) {
 		coordinator.SetParticipants({
-			CreateParticipant(sc2::Race::Protoss, &human_bot),
+			CreateParticipant(sc2::Race::Zerg, &human_bot),
 			CreateParticipant(sc2::Race::Protoss, &bot),
 			});
 	}
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Random, Difficulty::CheatInsane),
+			CreateComputer(Race::Terran, Difficulty::Easy),
 			});
 	}
 	
@@ -56,11 +56,10 @@ int main(int argc, char* argv[])
 
 	bool do_break = false;
 	while (!do_break) {
-		if (!coordinator.StartGame("(2)DreamcatcherLE.SC2Map")) {
+		if (!coordinator.StartGame("CatalystLE.SC2Map")) {
 			break;
 		}
 		while (coordinator.Update() && !do_break) {
-			sc2::SleepFor(50);
 			if (sc2::PollKeyPress()) {
 				do_break = true;
 			}

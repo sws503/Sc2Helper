@@ -186,13 +186,13 @@ struct IsArmy {
 		}
 		switch (unit.unit_type.ToType()) {
 		case UNIT_TYPEID::ZERG_OVERLORD: return false;
-		case UNIT_TYPEID::PROTOSS_PROBE: return false;
-		case UNIT_TYPEID::ZERG_DRONE: return false;
-		case UNIT_TYPEID::TERRAN_SCV: return false;
+		//case UNIT_TYPEID::PROTOSS_PROBE: return false;
+		//case UNIT_TYPEID::ZERG_DRONE: return false;
+		//case UNIT_TYPEID::TERRAN_SCV: return false;
 		case UNIT_TYPEID::ZERG_QUEEN: return false;
 		case UNIT_TYPEID::ZERG_LARVA: return false;
 		case UNIT_TYPEID::ZERG_EGG: return false;
-		case UNIT_TYPEID::TERRAN_MULE: return false;
+		//case UNIT_TYPEID::TERRAN_MULE: return false;
 		case UNIT_TYPEID::TERRAN_NUKE: return false;
 		default: return true;
 		}
@@ -385,7 +385,7 @@ private:
 
 	void Chat(std::string Message) // 6.29 채팅 함수
 	{
-		//Actions()->SendChat(Message);
+		Actions()->SendChat(Message);
 	}
 
 	const bool isBadEffect(const EffectID id) const
@@ -469,9 +469,9 @@ private:
 		}
 	}
 
-	float OracleRange; // 절대적으로 생존
+	float OracleRange = 3.5; // 절대적으로 생존
 	float TempestRange = 3.0f;
-	float CarrierRange = 1.9f;
+	float CarrierRange = 3.0f;
 	bool TimetoAttack = false;
 	bool OracleTrained = false;
 	Point2D pylonlocation;
@@ -482,6 +482,7 @@ private:
 	const Unit* WorkerKiller = nullptr;
 	const Unit* oracle_first = nullptr;
 
+	bool MEMIBot::OracleCanWin(const Unit* Oracle, Units enemyunits, bool OracleCanAttack);
 	void ManageRush();
 
 	void RetreatWithCarrier(const Unit* unit) {
