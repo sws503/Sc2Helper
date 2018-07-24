@@ -95,7 +95,8 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 	Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
 	Units enemy_army = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
 	Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsOracle());
-	Units Tempests = observation->GetUnits(Unit::Alliance::Self, IsTempest()); //6.25 폭풍함 컨트롤 추가
+	Units Tempests = observation->GetUnits(Unit::Alliance::Self, IsTempest());
+	Units Voidrays = observation->GetUnits(Unit::Alliance::Self, IsVoidray());
 	Units Carriers = observation->GetUnits(Unit::Alliance::Self, IsCarrier());
 	Units EnemyWorker = observation->GetUnits(Unit::Alliance::Enemy, IsWorker());
 	Units AirAttackers = observation->GetUnits(Unit::Alliance::Enemy, AirAttacker()); //적 방어 유닛 및 건물
@@ -103,6 +104,8 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 	//Units ProxyEnemy = observation->GetUnits(Unit::Alliance::Enemy, ExceptBuilding());
 	float rx = GetRandomScalar();
 	float ry = GetRandomScalar();
+
+	
 
 	for (const auto& unit : Oracles) {
 		bool OracleFight = false; //false
@@ -256,6 +259,10 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 		if (OracleFight) std::cout << "Fight";
 		else std::cout << "No Fight";
 	}
+	for (const auto& unit : Voidrays) {
+
+	}
+
 
 	for (const auto& unit : Tempests) {
 		float distance = std::numeric_limits<float>::max(); // 6.25 폭풍함은 사거리를 활용해 방어 건물,유닛 근처로 가지 않는다

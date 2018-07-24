@@ -8,7 +8,7 @@
 #include <iostream>
 
 #ifdef DEBUG
-static bool VsHuman = true;
+static bool VsHuman = false;
 
 class Human : public sc2::Agent {
 public:
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Terran, Difficulty::VeryEasy),
+			CreateComputer(Race::Terran, Difficulty::Easy),
 			});
 	}
 	
@@ -60,7 +60,6 @@ int main(int argc, char* argv[])
 			break;
 		}
 		while (coordinator.Update() && !do_break) {
-			sc2::SleepFor(50);
 			if (sc2::PollKeyPress()) {
 				do_break = true;
 			}

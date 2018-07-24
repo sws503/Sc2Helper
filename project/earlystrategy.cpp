@@ -323,7 +323,7 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return false;
     case 16:
-		if (TryBuildUnitChrono(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
+		if (TryBuildUnit(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
 			OracleTrained = true;
 			stage_number++;
 		}
@@ -339,7 +339,7 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return false;
     case 18:
-		if (TryBuildUnitChrono(ABILITY_ID::TRAIN_VOIDRAY, UNIT_TYPEID::PROTOSS_STARGATE)) {
+		if (TryBuildUnit(ABILITY_ID::TRAIN_VOIDRAY, UNIT_TYPEID::PROTOSS_STARGATE)) {
 			stage_number++;
 		}
 		return false;
