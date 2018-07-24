@@ -786,7 +786,7 @@ private:
 		Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
 		int number=0;
 		for (const auto& u : units){
-            if(Distance2D(u->pos,location)<10){
+            if(Distance2D(u->pos,location)<15){
                 number++;
             }
 		}
