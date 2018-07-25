@@ -94,7 +94,7 @@ void MEMIBot::Defend() {
 				{
 					Chat("Killer Captured 2");
 					GetRandomUnit(Killer, observation, UNIT_TYPEID::PROTOSS_PROBE);
-					if (Killer == probe_scout || Killer == probe_forge)
+					if (Killer == probe_scout || Killer == probe_forward)
 						continue;
 				}
 				i++;

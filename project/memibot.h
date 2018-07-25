@@ -338,6 +338,8 @@ public:
 
 		const ObservationInterface* observation = Observation();
 		Units units = observation->GetUnits(Unit::Self, IsArmy(observation));
+		ConvertGateWayToWarpGate();
+
 
 		ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE);
 
@@ -376,6 +378,15 @@ public:
 		}
 		return;
 	}
+    void OnUpgradeCompleted(UpgradeID upgrade) {
+        switch (upgrade.ToType()) {
+            case UPGRADE_ID::WARPGATERESEARCH: {
+                warpgate_researched = true;
+            }
+            default:
+                break;
+        }
+    }
 
 	GameInfo game_info_;
 	std::vector<Point3D> expansions_;
@@ -803,6 +814,19 @@ private:
 		return true;
 	}
 
+	void ConvertGateWayToWarpGate() {
+        const ObservationInterface* observation = Observation();
+        Units gateways = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_GATEWAY));
+
+        if (warpgate_researched) {
+            for (const auto& gateway : gateways) {
+                if (gateway->build_progress == 1) {
+                    Actions()->UnitCommand(gateway, ABILITY_ID::MORPH_WARPGATE);
+                }
+            }
+        }
+    }
+
 	const Unit* FindNearestMineralPatch(const Point2D& start) {
 		Units units = Observation()->GetUnits(Unit::Alliance::Neutral);
 		float distance = std::numeric_limits<float>::max();
@@ -971,7 +995,7 @@ private:
 
 		// find nearest worker near geyser
 		for (const auto& worker : workers) {
-			if (worker == probe_scout || worker == probe_forge) continue;
+			if (worker == probe_scout || worker == probe_forward) continue;
 			// consider idle or mining workers only
 			if (!worker->orders.empty()) {
 				auto abilityid = worker->orders.front().ability_id;
@@ -1206,7 +1230,7 @@ private:
 	}
 
 	void MineIdleWorkers(const Unit* worker) {
-		if (worker == probe_scout || worker == probe_forge) return;
+		if (worker == probe_scout || worker == probe_forward) return;
 
 		const ObservationInterface* observation = Observation();
 		Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
@@ -1217,7 +1241,7 @@ private:
 		if (bases.empty()) {
 			return;
 		}
-		
+
 		for (const auto& geyser : geysers) {
 			if (geyser->build_progress != 1.0) continue;
 			if (geyser->assigned_harvesters < geyser->ideal_harvesters) {
@@ -1291,7 +1315,7 @@ private:
 				Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(worker_type));
 
 				for (const auto& worker : workers) {
-					if (worker == probe_scout || worker == probe_forge) continue;
+					if (worker == probe_scout || worker == probe_forward) continue;
 					if (!worker->orders.empty()) {
 						if (worker->orders.front().target_unit_tag == base->tag){
 							//This should allow them to be picked up by mineidleworkers()
@@ -1318,7 +1342,7 @@ private:
 			}
 			if (geyser->assigned_harvesters > geyser->ideal_harvesters) {
 				for (const auto& worker : workers) {
-					if (worker == probe_scout || worker == probe_forge) continue;
+					if (worker == probe_scout || worker == probe_forward) continue;
 					if (!worker->orders.empty()) {
 						if (worker->orders.front().target_unit_tag == geyser->tag) {
 							//This should allow them to be picked up by mineidleworkers()
@@ -1350,13 +1374,8 @@ private:
 	void ManageUpgrades() {
 		const ObservationInterface* observation = Observation();
 		auto upgrades = observation->GetUpgrades();
+		TryBuildUnit(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
 		for (const auto& upgrade : upgrades) {
-			if (upgrade == UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL1 || upgrade == UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL2) {
-				TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
-			}
-			else if (upgrade == UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL3 || upgrade == UPGRADE_ID::PROTOSSAIRARMORSLEVEL1 || upgrade == UPGRADE_ID::PROTOSSAIRARMORSLEVEL2) {
-				TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRARMOR, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
-			}
 		}
 	}
 
@@ -1478,13 +1497,55 @@ private:
 		if (Distance2D(probe_scout->pos, tag_pos)<1) {
 			iter_exp++;
 		}
+
 	}
 
+	bool TryWarpAdept(){
+        const ObservationInterface* observation = Observation();
+        std::vector<PowerSource> power_sources = observation->GetPowerSources();
+        Units warpgates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE));
+
+        if (power_sources.empty()) {
+            return false;
+        }
+
+        const PowerSource& random_power_source = GetRandomEntry(power_sources);
+
+        float radius = random_power_source.radius;
+        float rx = GetRandomScalar();
+        float ry = GetRandomScalar();
+        Point2D build_location = Point2D(advance_pylon->pos.x + rx * radius, advance_pylon->pos.y + ry * radius);
+
+
+        if (Query()->PathingDistance(build_location, game_info_.enemy_start_locations.front())) {
+            return false;
+        }
+
+        for (const auto& warpgate : warpgates) {
+            //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
+            if (warpgate->build_progress == 1) {
+                AvailableAbilities abilities = Query()->GetAbilitiesForUnit(warpgate);
+                for (const auto& ability : abilities.abilities) {
+                    if (ability.ability_id == ABILITY_ID::TRAINWARP_ADEPT) {
+                        Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+
 	bool early_strategy = false;
+	bool warpgate_researched = false;
+	const Unit* advance_pylon = nullptr;
 	const Unit* probe_scout = nullptr;
 	const Unit* pylon_first = nullptr;
 	const Unit* probe_forge = nullptr;
+	const Unit* probe_forward = nullptr;
 	Point2D probe_scout_dest = Point2D(0,0);
+	Point2D advance_pylon_location = Point2D((float)game_info_.width/2,(float)game_info_.height/2);
 
 	bool find_enemy_location = false;
 	std::vector<Point2D>::iterator iter_esl = game_info_.enemy_start_locations.begin();
