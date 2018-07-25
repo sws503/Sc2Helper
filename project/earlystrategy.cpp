@@ -23,7 +23,7 @@ bool MEMIBot::EarlyStrategy() {
 #endif
 
     if (find_enemy_location) {
-        advance_pylon_location = Point2D((startLocation_.x + game_info_.enemy_start_locations.front().x*3)/4, (startLocation_.y + game_info_.enemy_start_locations.front().y*3)/4);
+        advance_pylon_location = Point2D((startLocation_.x*1.5 + game_info_.enemy_start_locations.front().x*2.5)/4, (startLocation_.y*1.5 + game_info_.enemy_start_locations.front().y*2.5)/4);
     }
 
     if (stage_number>2) {
