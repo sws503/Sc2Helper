@@ -9,12 +9,27 @@ bool MEMIBot::EarlyStrategy() {
 	Units enemy_townhalls = observation->GetUnits(Unit::Alliance::Enemy, IsTownHall());
 
 
-	size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
-	size_t cannon_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_PHOTONCANNON);
-	size_t gateway_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_GATEWAY) + CountUnitType(observation, UNIT_TYPEID::PROTOSS_WARPGATE);
-	size_t assimilator_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ASSIMILATOR);
-	size_t cybernetics_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
-	size_t stargate_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STARGATE);
+	size_t forge_count = CountUnitType(UNIT_TYPEID::PROTOSS_FORGE);
+	size_t cannon_count = CountUnitType(UNIT_TYPEID::PROTOSS_PHOTONCANNON);
+	size_t gateway_count = CountUnitType(UNIT_TYPEID::PROTOSS_GATEWAY) + CountUnitType(UNIT_TYPEID::PROTOSS_WARPGATE);
+	size_t assimilator_count = CountUnitType(UNIT_TYPEID::PROTOSS_ASSIMILATOR);
+	size_t cybernetics_count = CountUnitType(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
+	size_t stargate_count = CountUnitType(UNIT_TYPEID::PROTOSS_STARGATE);
+
+	while (workers.size() > 2 && (probe_forge == nullptr || !probe_forge->is_alive)) {
+		//건물 지을 프로브 지정
+		const Unit* probe_candidate;
+		GetRandomUnit(probe_candidate, observation, UNIT_TYPEID::PROTOSS_PROBE);
+		if (probe_scout == nullptr || probe_candidate->tag != probe_scout->tag) probe_forge = probe_candidate;
+	}
+
+	// Todo: 프로브 상납 방지
+	while (workers.size() > 2 && (probe_scout == nullptr || !probe_scout->is_alive)) {
+		//정찰 프로브 지정
+		const Unit* probe_candidate;
+		GetRandomUnit(probe_candidate, observation, UNIT_TYPEID::PROTOSS_PROBE);
+		if (probe_forge == nullptr || probe_candidate->tag != probe_forge->tag)  probe_scout = probe_candidate;
+	}
 
 #ifdef DEBUG
 	std::cout << stage_number << std::endl;
@@ -78,7 +93,7 @@ bool MEMIBot::EarlyStrategy() {
 		}
 
 		if (stage_number>18) {
-			TryBuildPylonIfNeeded(CountUnitType(observation, UNIT_TYPEID::PROTOSS_STARGATE));
+			TryBuildPylonIfNeeded(CountUnitType(UNIT_TYPEID::PROTOSS_STARGATE));
 		}
 
 		if (stage_number>18) {
@@ -101,7 +116,7 @@ bool MEMIBot::EarlyStrategy() {
 			if (stargate_count<bases.size()) {
 				TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_PROBE);
 			}
-			int CurrentStargate = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STARGATE);
+			int CurrentStargate = CountUnitType(UNIT_TYPEID::PROTOSS_STARGATE);
 
 		}
 		// 파일런 다시 짓기
@@ -121,13 +136,13 @@ bool MEMIBot::EarlyStrategy() {
 			}
 		}
 	}
-
+	Point2D probe_scout_dest;
 
 	switch (stage_number) {
 	case 0:
-		if (bases.size()>1) {
+		if (bases.size() > 1) {
 			for (const auto& b : bases) {
-				if (Distance2D(b->pos, startLocation_)<3) {
+				if (Distance2D(b->pos, startLocation_) < 3) {
 					base = b;
 				}
 			}
@@ -136,42 +151,41 @@ bool MEMIBot::EarlyStrategy() {
 			base = bases.front();
 		}//본진 넥서스 지정
 
-		if (probe_scout == nullptr || !probe_scout->is_alive) {
-			probe_scout_dest = front_expansion;
-			GetRandomUnit(probe_scout, observation, UNIT_TYPEID::PROTOSS_PROBE);
-		}//정찰 프로브 지정
-		if (probe_forge == nullptr || !probe_forge->is_alive) {
-			GetRandomUnit(probe_forge, observation, UNIT_TYPEID::PROTOSS_PROBE);
-			if (probe_scout == probe_forge) probe_forge = nullptr;
-		}//건물 지을 프로브 지정
-		if (observation->GetMinerals()>50) {
-			Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, probe_scout_dest);
+		probe_scout_dest = front_expansion;
+
+		if (observation->GetMinerals() > 50) {
+			Actions()->UnitCommand(probe_forge, ABILITY_ID::MOVE, probe_scout_dest);
 			stage_number++;
 		}
 		return false;
 	case 1:
-		if (pylons.size()>0) {
+		if (pylons.size() > 0) {
+			probe_scout = probe_forge;
+			while (workers.size() > 2 && probe_scout->tag == probe_forge->tag) {
+				GetRandomUnit(probe_forge, observation, UNIT_TYPEID::PROTOSS_PROBE);
+			}
 			stage_number++;
 			return false;
 		}
-		if (Distance2D(probe_scout->pos, front_expansion)<3) {
+
+		if (Distance2D(probe_forge->pos, front_expansion) < 3) {
 			probe_scout_dest = Point2D((float)game_info_.width / 2, (float)game_info_.height / 2);
-			Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, probe_scout_dest);
+			Actions()->UnitCommand(probe_forge, ABILITY_ID::MOVE, probe_scout_dest);
 		}
-		if (Distance2D(probe_scout_dest,front_expansion)>5) {
-            if (Distance2D(probe_scout->pos,front_expansion) > 20) {
-                Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, front_expansion);
-            }
-            else if (Distance2D(probe_scout->pos, front_expansion) > 7 && Distance2D(probe_scout->pos, startLocation_) > 20) {
-				if (!probe_scout->orders.empty() && probe_scout->orders.front().ability_id != ABILITY_ID::BUILD_PYLON) {
-					Actions()->UnitCommand(probe_scout, ABILITY_ID::STOP);
+		if (Distance2D(probe_scout_dest, front_expansion) > 5) {
+			if (Distance2D(probe_forge->pos, front_expansion) > 20) {
+				Actions()->UnitCommand(probe_forge, ABILITY_ID::MOVE, front_expansion);
+			}
+			else if (Distance2D(probe_forge->pos, front_expansion) > 7 && Distance2D(probe_forge->pos, startLocation_) > 20) {
+				if (!probe_forge->orders.empty() && probe_forge->orders.front().ability_id != ABILITY_ID::BUILD_PYLON) {
+					Actions()->UnitCommand(probe_forge, ABILITY_ID::STOP);
 				}
-				TryBuildPylon(probe_scout->pos);
-            }
+				TryBuildPylon(probe_forge->pos);
+			}
 		}
 		return false;
 	case 2:
-		if (forge_count>0) {
+		if (forge_count > 0) {
 			stage_number++;
 			return false;
 		}
@@ -179,181 +193,181 @@ bool MEMIBot::EarlyStrategy() {
 			pylon_first = pylons.front();
 			pylonlocation = pylon_first->pos;
 		}
-		if (pylon_first != nullptr && observation->GetMinerals()>100 && observation->GetMinerals()<150) {
+		if (pylon_first != nullptr && observation->GetMinerals() > 100 && observation->GetMinerals() < 150) {
 			Actions()->UnitCommand(probe_forge, ABILITY_ID::MOVE, pylon_first->pos);
 		}
 		if (probe_forge->orders.empty()) {
 			if (TryBuildForge(probe_forge, pylon_first)) {
-                return false;
+				return false;
 			}
 		}
 		return false;
 	case 3:
-		if (bases.size()>1) {
+		if (bases.size() > 1) {
 			stage_number++;
 			return false;
 		}
-		if (observation->GetFoodUsed()<17) {
+		if (observation->GetFoodUsed() < 17) {
 			TryChronoboost(base);
-        }
+		}
 
 		if (observation->GetMinerals() >= 400) {
 			Actions()->UnitCommand(probe_forge, ABILITY_ID::BUILD_NEXUS, front_expansion);
 		}
-		if (observation->GetMinerals()<400 && observation->GetMinerals()>300) {
+		if (observation->GetMinerals() < 400 && observation->GetMinerals() > 300) {
 			Actions()->UnitCommand(probe_forge, ABILITY_ID::MOVE, front_expansion);
 		}
 		return false;
 	case 4:
-		if (cannon_count>1) {
+		if (cannon_count > 1) {
 			stage_number++;
 			return false;
 		}
-		if (observation->GetMinerals()>150 && !probe_forge->orders.size()) {
+		if (observation->GetMinerals() >= 150 && !probe_forge->orders.size()) {
 			TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_PHOTONCANNON, pylon_first);
 		}
 		return false;
 	case 5:
-		if (observation->GetMinerals()>300) {
-			if (pylons.size()<2) {
+		if (observation->GetMinerals() >= 300) {
+			if (pylons.size() < 2) {
 				TryBuildPylon(staging_location_);
 			}
 			TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_PROBE);
 
 		}
 
-		if (gateway_count>0) {
+		if (gateway_count > 0) {
 			stage_number++;
 			return false;
 		}
-		if (observation->GetMinerals()>150 && !probe_forge->orders.size()) {
+		if (observation->GetMinerals() >= 150 && !probe_forge->orders.size()) {
 			TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_GATEWAY, pylon_first);
 		}
 		return false;
 	case 6:
-		if (assimilator_count>0) {
+		if (assimilator_count > 0) {
 			stage_number++;
 			return false;
 		}
-		if (observation->GetMinerals()>75) {
+		if (observation->GetMinerals() >= 75) {
 			TryBuildGas(base->pos);
 		}
 		return false;
 	case 7:
-		if (pylons.size()>1) {
+		if (pylons.size() > 1) {
 			stage_number++;
 			return false;
 		}
-		if (observation->GetMinerals()>100) {
+		if (observation->GetMinerals() >= 100) {
 			TryBuildPylon(staging_location_);
 		}
 		return false;
 	case 8:
-		if (cannon_count>3) {
+		if (cannon_count > 3) {
 			stage_number++;
 			return false;
 		}
-		if (observation->GetMinerals()>150) {
+		if (observation->GetMinerals() >= 150) {
 			TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_PHOTONCANNON, pylon_first);
 		}
 		return false;
-    case 9:
-		if (cybernetics_count>0) {
+	case 9:
+		if (cybernetics_count > 0) {
 			stage_number++;
 			return false;
 		}
-		if (observation->GetMinerals()>150) {
+		if (observation->GetMinerals() >= 150) {
 			TryBuildStructureNearPylon(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_PROBE);
 		}
 		return false;
-    case 10:
-		if (assimilator_count>1) {
+	case 10:
+		if (assimilator_count > 1) {
 			stage_number++;
 			return false;
 		}
 		for (const auto& b : bases) {
-            if (b!=base){
+			if (b != base) {
 				TryChronoboost(b);
-            }
+			}
 		}
 
-		if (observation->GetMinerals()>75) {
+		if (observation->GetMinerals() >= 75) {
 			TryBuildGas(base->pos);
 		}
 		return false;
 	case 11:
-		if (stargate_count>0) {
+		if (stargate_count > 0) {
 			stage_number++;
 			return false;
 		}
-		if (observation->GetMinerals()>150 && observation->GetVespene()>150) {
+		if (observation->GetMinerals() >= 150 && observation->GetVespene() >= 150) {
 			TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_PROBE);
 		}
 		return false;
-    case 12:
-		if (cannon_count>5) {
+	case 12:
+		if (cannon_count > 5) {
 			stage_number++;
 			return false;
 		}
-		if (observation->GetMinerals()>150) {
+		if (observation->GetMinerals() >= 150) {
 			TryBuildStructureNearPylonWithUnit(probe_forge, ABILITY_ID::BUILD_PHOTONCANNON, pylon_first);
 		}
 		return false;
-    case 13 :
-        if (assimilator_count>3) {
-            stage_number++;
-            return false;
-        }
-        for (const auto& b : bases) {
-            if (b != base) {
-                TryBuildGas(b->pos);
-            }
-        }
-        return false;
-     case 14:
-		 if (observation->GetMinerals() > 150 && observation->GetVespene() > 150 && observation->GetFoodCap() - observation->GetFoodUsed() >= 3) // 안되길래 바꿔놨음
-		 {
-			 if (TryBuildUnit(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
-				 OracleTrained = true;
-				 stage_number++;
-			 }
-		 }
-		return false;
-	case 15:
-		if (pylons.size()>2) {
+	case 13:
+		if (assimilator_count > 3) {
 			stage_number++;
 			return false;
 		}
-		if (observation->GetMinerals()>100) {
+		for (const auto& b : bases) {
+			if (b != base) {
+				TryBuildGas(b->pos);
+			}
+		}
+		return false;
+	case 14:
+		if (observation->GetMinerals() >= 150 && observation->GetVespene() > 150 && observation->GetFoodCap() - observation->GetFoodUsed() >= 3) // 안되길래 바꿔놨음
+		{
+			if (TryBuildUnit(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE)) {
+				OracleTrained = true;
+				stage_number++;
+			}
+		}
+		return false;
+	case 15:
+		if (pylons.size() > 2) {
+			stage_number++;
+			return false;
+		}
+		if (observation->GetMinerals() >= 100) {
 			TryBuildPylon(Point2D((FindNearestMineralPatch(base->pos)->pos.x + base->pos.x) / 2, (FindNearestMineralPatch(base->pos)->pos.y + base->pos.y) / 2));
 		}
 		return false;
-    case 16:
-		if (pylons.size()>3) {
+	case 16:
+		if (pylons.size() > 3) {
 			stage_number++;
 			return false;
 		}
-		if (observation->GetMinerals()>100) {
-            for (const auto& b : bases) {
-                if (b != base) {
-                    //TryBuildPylon(Point2D((FindNearestMineralPatch(b->pos)->pos.x + b->pos.x) / 2, (FindNearestMineralPatch(b->pos)->pos.y + b->pos.y) / 2));
-                    TryBuildPylon(FindNearestMineralPatch(b->pos)->pos);
-                }
-            }
+		if (observation->GetMinerals() >= 100) {
+			for (const auto& b : bases) {
+				if (b != base) {
+					//TryBuildPylon(Point2D((FindNearestMineralPatch(b->pos)->pos.x + b->pos.x) / 2, (FindNearestMineralPatch(b->pos)->pos.y + b->pos.y) / 2));
+					TryBuildPylon(FindNearestMineralPatch(b->pos)->pos);
+				}
+			}
 		}
 		return false;
 	case 17:
-		if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_FLEETBEACON)>0) {
+		if (CountUnitType(UNIT_TYPEID::PROTOSS_FLEETBEACON) > 0) {
 			stage_number++;
 			return false;
 		}
 
-		if (observation->GetMinerals()>300 && observation->GetVespene()>200) {
+		if (observation->GetMinerals() >= 300 && observation->GetVespene() >= 200) {
 			TryBuildStructureNearPylon(ABILITY_ID::BUILD_FLEETBEACON, UNIT_TYPEID::PROTOSS_PROBE);
 		}
 		return false;
-    case 18:
-		if (observation->GetMinerals() > 250 && observation->GetVespene() > 150 && observation->GetFoodCap() - observation->GetFoodUsed() >= 4) // 안되길래 바꿔놨음
+	case 18:
+		if (observation->GetMinerals() >= 250 && observation->GetVespene() >= 150 && observation->GetFoodCap() - observation->GetFoodUsed() >= 4) // 안되길래 바꿔놨음
 		{
 			if (TryBuildUnit(ABILITY_ID::TRAIN_VOIDRAY, UNIT_TYPEID::PROTOSS_STARGATE)) {
 				stage_number++;
@@ -361,159 +375,33 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return false;
 	case 19:
-		if (stargate_count>1) {
+		if (stargate_count > 1) {
 			stage_number++;
 			return false;
 		}
-		if (observation->GetMinerals()>150 && observation->GetVespene()>150) {
+		if (observation->GetMinerals() >= 150 && observation->GetVespene() >= 150) {
 			TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_PROBE);
 		}
 		return false;
-    case 20:
+	case 20:
 		if (TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE)) {
 			stage_number++;
 		}
 		return false;
-    case 21:
-        if (CountUnitTypeNearLocation(observation, UNIT_TYPEID::PROTOSS_PHOTONCANNON, base->pos)>0) {
-            stage_number++;
-            return false;
-        }
-		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, base->pos)<9) {
-				TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon);
-			}
-		}
-		return false;
-    case 22:
-		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, front_expansion)<10) {
-				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
-					stage_number++;
-					return false;
-				}
-			}
-		}
-		return false;
-	case 23:
-		if (observation->GetMinerals()>150) {
-			if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon_first)) {
-               stage_number++;
-               return false;
-			}
-		}
-		return false;
-    case 24:
-		if (observation->GetMinerals()>150) {
-			if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon_first)) {
-               stage_number++;
-               return false;
-			}
-		}
-		return false;
-    case 25:
-        stage_number++;
-        return false;
-		/*if (TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE)) {
-			stage_number++;
-		}
-		return false;*/
-    case 26:
-        if (cannon_count>10) {
-            stage_number++;
-            return false;
-        }
-        if (observation->GetMinerals()>700){
-            if(TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon_first)) {
-                return false;
-            }
-            for (const auto& pylon : pylons) {
-                if (Distance2D(pylon->pos,front_expansion)<Distance2D(pylon->pos,base->pos)) {
-                    if(TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)){
-                        return false;
-                    }
-                }
-            }
-        }
-        case 27:
-        if (bases.size()>2) {
-            for (const auto& b : bases) {
-                if(b!=base && Distance2D(b->pos,front_expansion)>10) {
-                    if(CountUnitTypeNearLocation(observation,UNIT_TYPEID::PROTOSS_PHOTONCANNON,b->pos)>8){
-                        stage_number++;
-                    }
-                }
-            }
-        }
-        if (bases.size()<3) {
-            TryExpand(ABILITY_ID::BUILD_NEXUS,UNIT_TYPEID::PROTOSS_PROBE);
-            return false;
-        }
-        if (bases.size()>2) {
-            for (const auto& pylon : pylons) {
-                if(Distance2D(front_expansion,pylon->pos)>40 && Distance2D(base->pos,pylon->pos)>40) {
-                    if (observation->GetMinerals()>800) {
-                        if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON,UNIT_TYPEID::PROTOSS_PROBE,pylon)) {
-                            return false;
-                        }
-                    }
-                }
-            }
-            for (const auto& b : bases) {
-                if(Distance2D(b->pos,base->pos)<10 || Distance2D(b->pos,front_expansion)<10) {
-                    continue;
-                }
-
-                if (CountUnitTypeNearLocation(observation,UNIT_TYPEID::PROTOSS_PYLON,b->pos)<3) {
-                    TryBuildPylon(b->pos,7);
-                }
-            }
-        }
-    case 28:
-        if (observation->GetMinerals()>900) {
-            for (const auto& b : bases) {
-                if(Distance2D(b->pos,base->pos)<10 || Distance2D(b->pos,front_expansion)<10) {
-                    continue;
-                }
-                for (const auto& pylon : pylons) {
-                    if (Distance2D(pylon->pos,b->pos)<20 || Distance2D(pylon->pos,front_expansion)) {
-                        TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon);
-                        return false;
-                    }
-                }
-            }
-           for (const auto& pylon : pylons) {
-                if (Distance2D(pylon->pos,base->pos)>40) {
-                    TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon);
-                    return false;
-                }
-            }
-        }
-        if(bases.size()<3){
-            stage_number--;
-        }
-
-
-    /*
-
-	case 20:
-		if (TryBuildPylonWide(front_expansion)) {
-			stage_number++;
-		}
-		return false;
 	case 21:
+		if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PHOTONCANNON, base->pos) > 0) {
+			stage_number++;
+			return false;
+		}
 		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, base->pos)<10) {
-				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
-					stage_number++;
-					return false;
-				}
+			if (Distance2D(pylon->pos, base->pos) < 9) {
+				TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon);
 			}
 		}
 		return false;
 	case 22:
 		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, base->pos)<10) {
+			if (Distance2D(pylon->pos, front_expansion) < 10) {
 				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
 					stage_number++;
 					return false;
@@ -522,63 +410,104 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return false;
 	case 23:
-		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, front_expansion)<10) {
-				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
-					stage_number++;
-					return false;
-				}
+		if (observation->GetMinerals() >= 150) {
+			if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon_first)) {
+				stage_number++;
+				return false;
 			}
 		}
 		return false;
 	case 24:
-		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, front_expansion)<10) {
-				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
-					stage_number++;
-					return false;
-				}
+		if (observation->GetMinerals() >= 150) {
+			if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon_first)) {
+				stage_number++;
+				return false;
 			}
 		}
 		return false;
 	case 25:
-		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, front_expansion)<10) {
-				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
-					stage_number++;
-					return false;
-				}
-			}
-		}
+		stage_number++;
 		return false;
-	case 26:
-		for (const auto& pylon : pylons) {
-			if (Distance2D(pylon->pos, front_expansion)<10) {
-				if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
-					stage_number++;
-					return false;
-				}
-			}
+		/*if (TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE)) {
+			stage_number++;
 		}
 		return false;*/
-		/*case 27 :
-		if(TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE)){
-		stage_number++;
-		return false;
+	case 26:
+		if (cannon_count > 10) {
+			stage_number++;
+			return false;
+		}
+		if (observation->GetMinerals() > 700) {
+			if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon_first)) {
+				return false;
+			}
+			for (const auto& pylon : pylons) {
+				if (Distance2D(pylon->pos, front_expansion) < Distance2D(pylon->pos, base->pos)) {
+					if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
+						return false;
+					}
+				}
+			}
+		}
+	case 27:
+		if (bases.size() > 2) {
+			for (const auto& b : bases) {
+				if (b != base && Distance2D(b->pos, front_expansion) > 10) {
+					if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PHOTONCANNON, b->pos) > 8) {
+						stage_number++;
+					}
+				}
+			}
+		}
+		if (bases.size() < 3) {
+			TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+			return false;
+		}
+		if (bases.size() > 2) {
+			for (const auto& pylon : pylons) {
+				if (Distance2D(front_expansion, pylon->pos) > 40 && Distance2D(base->pos, pylon->pos) > 40) {
+					if (observation->GetMinerals() > 800) {
+						if (TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon)) {
+							return false;
+						}
+					}
+				}
+			}
+			for (const auto& b : bases) {
+				if (Distance2D(b->pos, base->pos) < 10 || Distance2D(b->pos, front_expansion) < 10) {
+					continue;
+				}
+
+				if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, b->pos) < 3) {
+					TryBuildPylon(b->pos, 7);
+				}
+			}
+		}
+	case 28:
+		if (observation->GetMinerals() > 900) {
+			for (const auto& b : bases) {
+				if (Distance2D(b->pos, base->pos) < 10 || Distance2D(b->pos, front_expansion) < 10) {
+					continue;
+				}
+				for (const auto& pylon : pylons) {
+					if (Distance2D(pylon->pos, b->pos) < 20 || Distance2D(pylon->pos, front_expansion)) {
+						TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon);
+						return false;
+					}
+				}
+			}
+			for (const auto& pylon : pylons) {
+				if (Distance2D(pylon->pos, base->pos) > 40) {
+					TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, pylon);
+					return false;
+				}
+			}
+		}
+		if (bases.size() < 3) {
+			stage_number--;
 		}
 
-		case 28 :
-		for(const auto& b : bases){
-		if(b->build_progress<1){
-		if(TryBuildPylonWide(b->pos)){
-		stage_number++;
 		return false;
-		}
-		}
-		}*/
 	}
-
-
-
 	return false;
 }

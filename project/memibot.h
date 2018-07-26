@@ -36,11 +36,12 @@ struct Rusher {
 	Rusher(Point2D startLocation_) : sl(startLocation_) {
 	}
 	bool operator()(const Unit& unit) {
-		return unit.unit_type.ToType() == UNIT_TYPEID::PROTOSS_PHOTONCANNON && Distance2D(sl, unit.pos) < 20;
-		return unit.unit_type.ToType() == UNIT_TYPEID::PROTOSS_PYLON && Distance2D(sl, unit.pos) < 20;
-		return unit.unit_type.ToType() == UNIT_TYPEID::ZERG_HATCHERY && Distance2D(sl, unit.pos) < 20;
-		return unit.unit_type.ToType() == UNIT_TYPEID::TERRAN_BUNKER && Distance2D(sl, unit.pos) < 20;
-		return unit.unit_type.ToType() == UNIT_TYPEID::TERRAN_BARRACKS && Distance2D(sl, unit.pos) < 20;
+		return (unit.unit_type.ToType() == UNIT_TYPEID::PROTOSS_PHOTONCANNON ||
+			unit.unit_type.ToType() == UNIT_TYPEID::PROTOSS_PYLON ||
+			unit.unit_type.ToType() == UNIT_TYPEID::ZERG_HATCHERY ||
+			unit.unit_type.ToType() == UNIT_TYPEID::TERRAN_BUNKER ||
+			unit.unit_type.ToType() == UNIT_TYPEID::TERRAN_BARRACKS)
+			&& Distance2D(sl, unit.pos) < 20;
 	}
 private:
 	Point2D sl;
@@ -344,7 +345,7 @@ public:
 		if (!early_strategy) {
 			EarlyStrategy();
 		}
-		if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_PYLON)>0 && iter_exp < expansions_.end() && find_enemy_location == true) {
+		if (CountUnitType(UNIT_TYPEID::PROTOSS_PYLON)>0 && iter_exp < expansions_.end() && find_enemy_location == true) {
 			scoutprobe();
 		}
 
@@ -363,6 +364,10 @@ public:
 	virtual void OnUnitIdle(const Unit* unit) override {
 		switch (unit->unit_type.ToType()) {
 		case UNIT_TYPEID::PROTOSS_PROBE: {
+			if (unit == probe_forge && EnemyRush) {
+				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, startLocation_);
+				break;
+			}
 			MineIdleWorkers(unit);
 			break;
 		}
@@ -707,7 +712,7 @@ private:
 		// Ideally batch up the queries (using PathingDistanceBatched) and do many at once.
 		float distance = Query()->PathingDistance(unit, target_pos);
 
-		return distance > 0.1f;
+		return distance > 0.01f;
 	}
 
 
@@ -752,14 +757,16 @@ private:
 		const ObservationInterface* observation = Observation();
 		// is structure?
 		if (!IsStructure(observation)(*unit)) return false;
-			// is completely built?
+		// is completely built?
 		if (unit->build_progress != 1.0f) return false;
-		// is doing nothing?
+		// is doing something?
 		if (unit->orders.empty()) return false;
-		// is already buffed?
+		// is powered?
+		//if (!unit->is_powered) return false;
+		// is not buffed?
 		if (HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) return false;
-		Chronoboost(unit);
-		return true;
+		// then chronoboost
+		return Chronoboost(unit);
 	}
 
 	bool Chronoboost(const Unit * unit) {
@@ -779,20 +786,66 @@ private:
 		return false;
 	}
 
-
-	size_t CountUnitType(const ObservationInterface* observation, UnitTypeID unit_type) {
-		return observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type)).size();
+	bool IsUnitAction(const Unit* unit, AbilityID ability_id) {
+		if (unit->orders.empty()) return false;
+		if (unit->orders.front().ability_id != ability_id) return false;
+		return true;
 	}
 
-	size_t CountUnitTypeNearLocation(const ObservationInterface* observation, UnitTypeID unit_type, Point2D location) {
-		Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
-		int number=0;
-		for (const auto& u : units){
-            if(Distance2D(u->pos,location)<15){
-                number++;
-            }
+	bool IsUnitAction(const Unit* unit, AbilityID ability_id, Point2D& target_pos) {
+		if (unit->orders.empty()) return false;
+		if (unit->orders.front().ability_id != ability_id) return false;
+		if (target_pos != unit->orders.front().target_pos) return false;
+		return true;
+	}
+
+	bool IsUnitAction(const Unit* unit, AbilityID ability_id, Unit* target_unit) {
+		if (unit->orders.empty()) return false;
+		if (unit->orders.front().ability_id == ability_id) return false;
+		if (Observation()->GetUnit(unit->orders.front().target_unit_tag) != target_unit) return false;
+		return true;
+	}
+
+	size_t CountUnitType(UnitTypeID unit_type) {
+		return Observation()->GetUnits(Unit::Alliance::Self, IsUnit(unit_type)).size();
+	}
+
+	size_t CountUnitTypeNearLocation(UnitTypeID unit_type, Point2D location, float distance = 15) {
+		Units units = Observation()->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
+		return FindUnitsNear(location, distance, units).size();
+	}
+
+	Units FindUnitsNear(const Point2D& start, float distance, bool square = false) const {
+		const Units units = Observation()->GetUnits();
+		return FindUnitsNear(start, distance, units, square);
+	}
+
+	Units FindUnitsNear(const Point2D& start, float distance, Filter f = {}, bool square = false) const {
+		const Units units = Observation()->GetUnits(f);
+		return FindUnitsNear(start, distance, units, square);
+	}
+
+	Units FindUnitsNear(const Point2D& start, float distance, Unit::Alliance a, Filter f = {}, bool square = false) const {
+		const Units units = Observation()->GetUnits(a, f);
+		return FindUnitsNear(start, distance, units, square);
+	}
+
+	Units FindUnitsNear(const Point2D& start, float distance, const Units& units, bool square = false) const {
+		Units target;
+		if (distance < 0) return target;
+		float distance_squared = distance * distance;
+		for (const auto& u : units) {
+			if (DistanceSquared2D(u->pos, start) <= distance_squared)
+				target.push_back(u);
 		}
-		return number;
+		return target;
+	}
+
+	bool GetRandomUnit(const Unit*& unit_out, const ObservationInterface* observation, Units& my_units) {
+		int num = static_cast<int>(my_units.size());
+		if (num == 0) return false;
+		unit_out = my_units[GetRandomInteger(0, num - 1)];
+		return true;
 	}
 
 	bool GetRandomUnit(const Unit*& unit_out, const ObservationInterface* observation, UnitTypeID unit_type) {
@@ -803,23 +856,31 @@ private:
 		return true;
 	}
 
-	const Unit* FindNearestMineralPatch(const Point2D& start) {
-		Units units = Observation()->GetUnits(Unit::Alliance::Neutral);
-		float distance = std::numeric_limits<float>::max();
+	const Unit* FindNearestMineralPatch(const Point2D& start, float max_d = std::numeric_limits<float>::max()) const {
+		return FindNearestUnit(start, Unit::Alliance::Neutral, IsMineral(), max_d);
+	}
+
+	const Unit* FindNearestUnit(const Point2D& start, Filter f = {}, float max_d = std::numeric_limits<float>::max()) const {
+		const Units units = Observation()->GetUnits(f);
+		return FindNearestUnit(start, units, max_d);
+	}
+
+	const Unit* FindNearestUnit(const Point2D& start, Unit::Alliance a, Filter f = {}, float max_d = std::numeric_limits<float>::max()) const {
+		const Units units = Observation()->GetUnits(a, f);
+		return FindNearestUnit(start, units, max_d);
+	}
+
+	const Unit* FindNearestUnit(const Point2D& start, const Units& units, float max_d = std::numeric_limits<float>::max()) const {
+		float distance = max_d;
 		const Unit* target = nullptr;
 		for (const auto& u : units) {
-			if (IsMineral()(*u)) {
-				float d = DistanceSquared2D(u->pos, start);
-				if (d < distance) {
-					distance = d;
-					target = u;
-				}
+			float d = DistanceSquared2D(u->pos, start);
+			if (d < distance) {
+				distance = d;
+				target = u;
 			}
 		}
-		//If we never found one return false;
-		if (distance == std::numeric_limits<float>::max()) {
-			return target;
-		}
+		//If we never found one return nullptr
 		return target;
 	}
 
@@ -837,6 +898,8 @@ private:
 			if (candidate_unit->build_progress != 1.0f) continue;
 			// is doing something?
 			if (!candidate_unit->orders.empty()) continue;
+			// is powered?
+			//if (!candidate_unit->is_powered) continue;
 
 			unit = candidate_unit;
 			// pick prioritized structures first
@@ -861,6 +924,30 @@ private:
 			return false;
 		}
 
+		bool expansion_building = (ability_type_for_structure == ABILITY_ID::BUILD_NEXUS
+			|| ability_type_for_structure == ABILITY_ID::BUILD_COMMANDCENTER
+			|| ability_type_for_structure == ABILITY_ID::BUILD_HATCHERY);
+
+		// keep expansion site clean
+		if (!isExpansion && !expansion_building) {
+			for (const auto& expansion : expansions_) {
+				if (abs(location.x - expansion.x) < 3.99f && abs(location.y - expansion.y) < 3.99f) {
+					return false;
+				}
+			}
+		}
+		// even for the expansions
+		if (expansion_building) {
+			for (const auto& expansion : expansions_) {
+				if (abs(location.x - expansion.x) < 0.5f && abs(location.y - expansion.y) < 0.5f) {
+					break;
+				}
+				if (abs(location.x - expansion.x) < 4.99f && abs(location.y - expansion.y) < 4.99f) {
+					return false;
+				}
+			}
+		}
+
 		// Check to see if there is already a worker heading out to build it
 		for (const auto& worker : workers) {
 			for (const auto& order : worker->orders) {
@@ -870,6 +957,11 @@ private:
 			}
 		}
 
+		// Check to see if unit can build there
+		if (!Query()->Placement(ability_type_for_structure, location)) {
+			return false;
+		}
+		
 		// If no worker is already building one, get a nearest worker to build one
 		Tag builder_tag = NullTag;
 		std::vector<QueryInterface::PathingQuery> query_vector;
@@ -878,7 +970,8 @@ private:
 			// consider idle or mining workers only
 			if (!worker->orders.empty()) {
 				auto abilityid = worker->orders.front().ability_id;
-				if (abilityid != ABILITY_ID::HARVEST_GATHER &&
+				if (worker == probe_forge) {}
+				else if (abilityid != ABILITY_ID::HARVEST_GATHER &&
 					abilityid != ABILITY_ID::HARVEST_RETURN) {
 					continue;
 				}
@@ -894,17 +987,22 @@ private:
 		if (size == 0) return false;
 		std::vector<float> distances = Query()->PathingDistance(query_vector);
 
+		Tag probe_forge_tag = (probe_forge == nullptr)? NullTag : probe_forge->tag;
 		// find workers that are nearest.
 		float min_distance = std::numeric_limits<float>::max();
 		for (size_t i = 0; i < size; i++) {
 			float d = distances.at(i);
+			Tag current_tag = query_vector.at(i).start_unit_tag_;
+			// prioritize probe_forge
+			if (current_tag != probe_forge_tag) d += 5.0f;
+
 			// Check to see if unit can make it there
-			if (d < 0.1f) {
+			if (d < 0.01f) {
 				continue;
 			}
 			if (d < min_distance) {
 				min_distance = d;
-				builder_tag = query_vector.at(i).start_unit_tag_;
+				builder_tag = current_tag;
 			}
 		}
 		if (builder_tag == NullTag) return false;
@@ -912,38 +1010,34 @@ private:
 		if (builder == nullptr) {
 			return false;
 		}
-
-
-		if (!isExpansion) {
-			for (const auto& expansion : expansions_) {
-				if (Distance2D(location, Point2D(expansion.x, expansion.y)) < 7) {
-					return false;
-				}
-			}
+		
+		// if probe_forge then queue back.
+		/*
+		if (builder_tag == probe_forge_tag) {
+			Actions()->UnitCommand(builder, ability_type_for_structure, location, true);
+			return true;
 		}
+		*/
+		// if not then queue front.
 		std::vector<UnitOrder> builder_orders;
 		for (auto& o : builder->orders) {
 			builder_orders.push_back(o);
 		}
-		// Check to see if unit can build there
-		if (Query()->Placement(ability_type_for_structure, location)) {
-			Actions()->UnitCommand(builder, ability_type_for_structure, location);
-			Actions()->UnitCommand(builder, ABILITY_ID::HARVEST_RETURN, true);
-			for (auto& o : builder_orders) {
-				if (o.target_unit_tag != NullTag) {
-					Actions()->UnitCommand(builder, o.ability_id, observation->GetUnit(o.target_unit_tag), true);
-				}
-				else if (o.target_pos != Point2D(0.0f, 0.0f)) {
-					Actions()->UnitCommand(builder, o.ability_id, o.target_pos, true);
-				}
-				else {
-					Actions()->UnitCommand(builder, o.ability_id, true);
-				}
-			}
-			return true;
-		}
-		return false;
 
+		Actions()->UnitCommand(builder, ability_type_for_structure, location);
+		Actions()->UnitCommand(builder, ABILITY_ID::HARVEST_RETURN, true);
+		for (auto& o : builder_orders) {
+			if (o.target_unit_tag != NullTag) {
+				Actions()->UnitCommand(builder, o.ability_id, observation->GetUnit(o.target_unit_tag), true);
+			}
+			else if (o.target_pos != Point2D(0.0f, 0.0f)) {
+				Actions()->UnitCommand(builder, o.ability_id, o.target_pos, true);
+			}
+			else {
+				Actions()->UnitCommand(builder, o.ability_id, true);
+			}
+		}
+		return true;
 	}
 
 	bool BuildGas(Tag geyser_tag) {
@@ -1015,6 +1109,28 @@ private:
 
 	}
 
+	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, const Unit* pylon) {
+		const ObservationInterface* observation = Observation();
+		if (pylon == nullptr) return false;
+		if (!pylon->is_alive) return false;
+
+		const std::vector<PowerSource>& power_sources = observation->GetPowerSources();
+
+		float radius = 0;
+		for (const auto& p : power_sources) {
+			if (p.tag == pylon->tag) {
+				radius = p.radius;
+				break;
+			}
+		}
+		if (radius == 0) return false;
+
+		float rx = GetRandomScalar();
+		float ry = GetRandomScalar();
+		Point2D build_location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
+		return TryBuildStructure(ability_type_for_structure, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+	}
+
 	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID) {
 		const ObservationInterface* observation = Observation();
 
@@ -1041,28 +1157,33 @@ private:
 	}
 
 	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID, const Unit* pylon) {
-		const ObservationInterface* observation = Observation();
+		return TryBuildStructureNearPylon(ability_type_for_structure, pylon);
+	}
 
-		//Need to check to make sure its a pylon instead of a warp prism
+	bool TryBuildStructureNearPylonWithUnit(const Unit* unit, AbilityID ability_type_for_structure, const Unit* pylon) {
+		return TryBuildStructureNearPylon(ability_type_for_structure, pylon);
+	}
+
+	bool TryBuildForge(const Unit* unit, const Unit* pylon) {
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, pylon);
+	}
+
+
+	/*bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID, const Unit* pylon) {
+		if (pylon == nullptr) return false;
+
+		const ObservationInterface* observation = Observation();
 		std::vector<PowerSource> power_sources = observation->GetPowerSources();
+
 		if (power_sources.empty()) {
 			return false;
 		}
 
-		const PowerSource& random_power_source = GetRandomEntry(power_sources);
-		if (observation->GetUnit(random_power_source.tag) != nullptr) {
-			if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISM) {
-				return false;
-			}
-		}
-		else {
-			return false;
-		}
-		float radius = random_power_source.radius;
+		float radius = power_sources.front().radius;
 		float rx = GetRandomScalar();
 		float ry = GetRandomScalar();
-		Point2D build_location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
-		return TryBuildStructure(ability_type_for_structure, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+		Point2D location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
+		return TryBuildStructure(ability_type_for_structure, UNIT_TYPEID::PROTOSS_PROBE, location);
 	}
 
 	bool TryBuildStructureNearPylonWithUnit(const Unit* unit, AbilityID ability_type_for_structure, const Unit* pylon) {
@@ -1082,7 +1203,7 @@ private:
 		Point2D location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
 
 		// Check to see if unit can make it there
-		if (Query()->PathingDistance(unit, location) < 0.1f) {
+		if (Query()->PathingDistance(unit, location) < 0.01f) {
 			return false;
 		}
 
@@ -1092,9 +1213,8 @@ private:
 			return true;
 		}
 		return false;
-
 	}
-
+	
 	bool TryBuildForge(const Unit* unit, const Unit* pylon) {
 
 		if (unit == nullptr) return false;
@@ -1111,11 +1231,11 @@ private:
 		float ry = GetRandomScalar();
 		Point2D location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
 
-		if (abs(location.x - front_expansion.x) < 3.99f || abs(location.y - front_expansion.y) < 3.99f) {
+		if (abs(location.x - front_expansion.x) < 3.99f && abs(location.y - front_expansion.y) < 3.99f) {
 			return false;
 		}
 		// Check to see if unit can make it there
-		if (Query()->PathingDistance(unit, location) < 0.1f) {
+		if (Query()->PathingDistance(unit, location) < 0.01f) {
 			return false;
 		}
 		// Check to see if unit can build there
@@ -1125,6 +1245,7 @@ private:
 		}
 		return false;
 	}
+	*/
 
 	bool TryBuildGas(Point2D base_location) {
 		const ObservationInterface* observation = Observation();
@@ -1205,7 +1326,7 @@ private:
 		return TryBuildPylon(location, 8.0f, MaxBuildAtOnce);
 	}
 
-	void MineIdleWorkers(const Unit* worker) {
+	void MineIdleWorkers(const Unit* worker, bool reassigning = false) {
 		if (worker == probe_scout || worker == probe_forge) return;
 
 		const ObservationInterface* observation = Observation();
@@ -1217,11 +1338,15 @@ private:
 		if (bases.empty()) {
 			return;
 		}
-		
+
+		// TODO: make workers gather only if the nexus is built
 		for (const auto& geyser : geysers) {
 			if (geyser->build_progress != 1.0) continue;
 			if (geyser->assigned_harvesters < geyser->ideal_harvesters) {
-				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, geyser);
+				if (reassigning) {
+					Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_RETURN);
+				}
+				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, geyser, reassigning);
 				return;
 			}
 		}
@@ -1233,7 +1358,11 @@ private:
 			}
 			if (base->assigned_harvesters < base->ideal_harvesters) {
 				valid_mineral_patch = FindNearestMineralPatch(base->pos);
-				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, valid_mineral_patch);
+				if (valid_mineral_patch == nullptr) continue;
+				if (reassigning) {
+					Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_RETURN);
+				}
+				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, valid_mineral_patch, reassigning);
 				return;
 			}
 		}
@@ -1245,6 +1374,8 @@ private:
 		//If all workers are spots are filled just go to any base.
 		const Unit* random_base = GetRandomEntry(bases);
 		valid_mineral_patch = FindNearestMineralPatch(random_base->pos);
+		if (valid_mineral_patch == nullptr) return;
+		if (reassigning) return;
 		Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, valid_mineral_patch);
 	}
 
@@ -1293,8 +1424,9 @@ private:
 				for (const auto& worker : workers) {
 					if (worker == probe_scout || worker == probe_forge) continue;
 					if (!worker->orders.empty()) {
-						if (worker->orders.front().target_unit_tag == base->tag){
-							//This should allow them to be picked up by mineidleworkers()
+						if (worker->orders.front().target_unit_tag == base->tag &&
+							!IsCarryingMinerals(*worker) && !IsCarryingVespene(*worker)) {
+							//assign worker to return and (queue) harvest
 							MineIdleWorkers(worker);
 							return;
 						}
@@ -1309,19 +1441,21 @@ private:
 				for (const auto& worker : workers) {
 					if (!worker->orders.empty()) {
 						if (worker->orders.front().target_unit_tag == geyser->tag) {
-							//This should allow them to be picked up by mineidleworkers()
+							//not yet built so mine other things
 							MineIdleWorkers(worker);
 						}
 					}
 				}
 				continue;
 			}
+
 			if (geyser->assigned_harvesters > geyser->ideal_harvesters) {
 				for (const auto& worker : workers) {
 					if (worker == probe_scout || worker == probe_forge) continue;
 					if (!worker->orders.empty()) {
-						if (worker->orders.front().target_unit_tag == geyser->tag) {
-							//This should allow them to be picked up by mineidleworkers()
+						if (worker->orders.front().target_unit_tag == geyser->tag &&
+							!IsCarryingMinerals(*worker) && !IsCarryingVespene(*worker)) {
+							//assign worker to return and (queue) harvest
 							MineIdleWorkers(worker);
 							return;
 						}
@@ -1331,12 +1465,13 @@ private:
 			else if (geyser->assigned_harvesters < geyser->ideal_harvesters) {
 				for (const auto& worker : workers) {
 					if (!worker->orders.empty()) {
-						//This should move a worker that isn't mining gas to gas
 						const Unit* target = observation->GetUnit(worker->orders.front().target_unit_tag);
 						if (target == nullptr) {
 							continue;
 						}
-						if (target->unit_type != UNIT_TYPEID::PROTOSS_ASSIMILATOR && target->unit_type != UNIT_TYPEID::PROTOSS_NEXUS) {
+						//This should move a worker that isn't mining gas to gas and holding nothing.
+						if (target->unit_type != UNIT_TYPEID::PROTOSS_ASSIMILATOR && target->unit_type != UNIT_TYPEID::PROTOSS_NEXUS
+							&& !IsCarryingMinerals(*target) && !IsCarryingVespene(*target)) {
 							//This should allow them to be picked up by mineidleworkers()
 							MineIdleWorkers(worker);
 							return;
@@ -1399,7 +1534,7 @@ private:
 			return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
 		}
 		//Only build another nexus if we are floating extra minerals
-		int CurrentStargate = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STARGATE);
+		int CurrentStargate = CountUnitType(UNIT_TYPEID::PROTOSS_STARGATE);
 
 		if (!EnemyRush && observation->GetMinerals() > CurrentStargate * 350 + 400) {
 			return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
@@ -1411,7 +1546,7 @@ private:
 		const ObservationInterface* observation = Observation();
 		Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
 
-		if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_ASSIMILATOR) >= observation->GetUnits(Unit::Alliance::Self, IsTownHall()).size() * 2) {
+		if (CountUnitType(UNIT_TYPEID::PROTOSS_ASSIMILATOR) >= observation->GetUnits(Unit::Alliance::Self, IsTownHall()).size() * 2) {
 			return false;
 		}
 
@@ -1484,7 +1619,6 @@ private:
 	const Unit* probe_scout = nullptr;
 	const Unit* pylon_first = nullptr;
 	const Unit* probe_forge = nullptr;
-	Point2D probe_scout_dest = Point2D(0,0);
 
 	bool find_enemy_location = false;
 	std::vector<Point2D>::iterator iter_esl = game_info_.enemy_start_locations.begin();
@@ -1494,8 +1628,4 @@ private:
 	uint16_t stage_number = 0;
 	const Unit* base = nullptr;
 	const size_t max_worker_count_ = 65;
-	/*
-	bool GetAllUnitsNear(Units& units, const Unit* unit, ) {
-		for (unit)
-	}*/
 };

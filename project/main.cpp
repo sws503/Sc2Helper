@@ -8,7 +8,12 @@
 #include <iostream>
 
 #ifdef DEBUG
-static bool VsHuman = false;
+static const bool VsHuman = false;
+static const int stepsize = 10;
+static const bool realtime = true;
+
+// TODO: 버전 세팅
+// TODO: DEBUG용 printf
 
 class Human : public sc2::Agent {
 public:
@@ -17,6 +22,7 @@ public:
 		Debug()->SendDebug();
 	}
 };
+
 
 int main(int argc, char* argv[])
 {
@@ -30,9 +36,7 @@ int main(int argc, char* argv[])
 	coordinator.SetStepSize(10); //Control
 								 //게임속도 빠르게 speed faster
 	coordinator.SetMultithreaded(true);
-	if (VsHuman) {
-		//coordinator.SetRealtime(true);
-	}
+	coordinator.SetRealtime(realtime);
 
 	// Add the custom bot, it will control the players.
 	MEMIBot bot;
@@ -56,7 +60,7 @@ int main(int argc, char* argv[])
 
 	bool do_break = false;
 	while (!do_break) {
-		if (!coordinator.StartGame("(2)CatalystLE.SC2Map")) {
+		if (!coordinator.StartGame("AcidPlantLE.SC2Map")) {
 			break;
 		}
 		while (coordinator.Update() && !do_break) {
