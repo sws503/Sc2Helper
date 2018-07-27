@@ -23,7 +23,7 @@ bool MEMIBot::EarlyStrategy() {
 #endif
 
     if (find_enemy_location) {
-        advance_pylon_location = Point2D((startLocation_.x*1.5 + game_info_.enemy_start_locations.front().x*2.5)/4, (startLocation_.y*1.5 + game_info_.enemy_start_locations.front().y*2.5)/4);
+        advance_pylon_location = Point2D((startLocation_.x*1.8 + game_info_.enemy_start_locations.front().x*2.2)/4, (startLocation_.y*1.8 + game_info_.enemy_start_locations.front().y*2.2)/4);
     }
 
     if (stage_number>2) {
@@ -57,15 +57,47 @@ bool MEMIBot::EarlyStrategy() {
 		}
 	}
 
-	if (stage_number>14) {
-        TryWarpAdept();
+
+	if (stage_number<24) {
+        if (observation->GetFoodWorkers()<23) {
+            TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+        }
+	}
+	else{
+        for (const auto& b : bases) {
+            if (b->build_progress < 1.0) {
+                if(observation->GetFoodWorkers() < max_worker_count_) {
+                    TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+                }
+            }
+        }
+
+        if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) >= observation->GetFoodWorkers() && observation->GetFoodWorkers() < max_worker_count_) {
+            TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+        }
+	}
+	if (stage_number>24) {
+        if (forge_count<1) {
+            TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_PROBE);
+        }
+        //TryBuildAssimilator();
         TryBuildPylonIfNeeded(2);
-
+        if (gateway_count<bases.size()*3 && gateway_count<10) {
+            TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_PROBE);
+        }
+        else if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() ) {
+            for (const auto& b : bases) {
+                if (b->build_progress < 1.0) {
+                    return TryWarpStalker();
+                }
+            }
+            TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+        }
+        else{
+            TryWarpStalker();
+        }
 	}
 
-	if (observation->GetFoodWorkers()<23) {
-        TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
-	}
 
 
 	switch (stage_number) {
@@ -111,11 +143,12 @@ bool MEMIBot::EarlyStrategy() {
 			return false;
 		}
 		if (observation->GetMinerals()>150) {
+		    TryChronoboost(base);
             return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_PROBE);
 		}
 		return false;
 	case 3:
-		if (assimilator_count>1) {
+		if (assimilator_count>0) {
 			stage_number++;
 			return false;
 		}
@@ -133,6 +166,15 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return false;
     case 5:
+        if (pylons.size()>1) {
+            stage_number++;
+            return false;
+        }
+        if (observation->GetMinerals()>100) {
+            return TryBuildPylon(startLocation_,20.0);
+        }
+        return false;
+    case 6:
 		if (cybernetics_count>0) {
 			stage_number++;
 			return false;
@@ -141,35 +183,62 @@ bool MEMIBot::EarlyStrategy() {
 			return TryBuildStructureNearPylon(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_PROBE);
 		}
 		return false;
-    case 6:
-        if (pylons.size()>1) {
-            stage_number++;
-            return false;
-        }
-        if (observation->GetFoodUsed()>20) {
-            return TryBuildPylon(startLocation_,20.0);
-        }
-        return false;
     case 7:
+		if (assimilator_count>1) {
+			stage_number++;
+			return false;
+		}
+		if (observation->GetMinerals()>75) {
+			return TryBuildGas(base->pos);
+		}
+		return false;
+    case 8:
         if (cores.front()->build_progress == 1.0) {
             stage_number++;
             return false;
         }
         return false;
-    case 8:
-        if (TryBuildUnit(ABILITY_ID::RESEARCH_WARPGATE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE)) {
-            stage_number++;
-            return false;
-        }
     case 9:
         for (const auto& gate : gateways) {
+            if (gate->build_progress < 1.0) {
+                continue;
+            }
+            if (observation->GetMinerals() < 125 || observation->GetVespene() < 50) {
+                return false;
+            }
             if (gate->orders.empty()){
-                return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY);
+                return TryBuildUnitChrono(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY);
             }
         }
         stage_number++;
         return false;
     case 10:
+        if (TryBuildUnit(ABILITY_ID::RESEARCH_WARPGATE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE)) {
+            stage_number++;
+            return false;
+        }
+    case 11:
+        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY)) {
+            stage_number++;
+            return false;
+        }
+        return false;
+    case 12:
+        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY)) {
+            stage_number++;
+            return false;
+        }
+        return false;
+    case 13:
+        if (pylons.size()>2) {
+            stage_number++;
+            return false;
+        }
+        if (observation->GetMinerals()>100) {
+            return TryBuildPylon(startLocation_,20.0);
+        }
+        return false;
+	case 14:
         if (twilight_council_count>0) {
             stage_number++;
             return false;
@@ -177,10 +246,20 @@ bool MEMIBot::EarlyStrategy() {
         if(observation->GetMinerals()>=150&&observation->GetVespene()>=100){
             return TryBuildStructureNearPylon(ABILITY_ID::BUILD_TWILIGHTCOUNCIL, UNIT_TYPEID::PROTOSS_PROBE);
         }
+    case 15:
+        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY)) {
+            stage_number++;
+            return false;
+        }
         return false;
-	case 11:
-	    Actions()->UnitCommand(probe_forward, ABILITY_ID::MOVE, advance_pylon_location);
-		if (gateway_count>3) {
+    case 16:
+        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY)) {
+            stage_number++;
+            return false;
+        }
+        return false;
+    case 17:
+		if (gateway_count>2) {
 			stage_number++;
 			return false;
 		}
@@ -188,24 +267,49 @@ bool MEMIBot::EarlyStrategy() {
             return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_PROBE);
 		}
 		return false;
-	case 12:
-        /*if (TryBuildUnit(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)) {
+    case 18:
+        if (pylons.size()>3) {
             stage_number++;
             return false;
-        }*/
-        stage_number++;
-    case 13:
-        for (const auto& gate : gateways) {
-            if (gate->build_progress < 1.0) {
-                continue;
-            }
-            if (gate->orders.empty()){
-                return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY);
-            }
         }
-        stage_number++;
+        if (observation->GetMinerals()>100) {
+            return TryBuildPylon(startLocation_,20.0);
+        }
         return false;
-    case 14:
+    case 19:
+        Actions()->UnitCommand(probe_forward, ABILITY_ID::MOVE, advance_pylon_location);
+        if (TryBuildUnit(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)) {
+            stage_number++;
+            return false;
+        }
+    case 20:
+        if (observation->GetMinerals() < 100 || observation->GetVespene() < 50) {
+            return false;
+        }
+        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY)) {
+            stage_number++;
+            return false;
+        }
+        return false;
+    case 21:
+        if (observation->GetMinerals() < 100 || observation->GetVespene() < 50) {
+            return false;
+        }
+        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY)) {
+            stage_number++;
+            return false;
+        }
+        return false;
+    case 22:
+        if (observation->GetMinerals() < 100 || observation->GetVespene() < 50) {
+            return false;
+        }
+        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY)) {
+            stage_number++;
+            return false;
+        }
+        return false;
+    case 23:
         if (advance_pylon != nullptr) {
             stage_number++;
             return false;
@@ -219,13 +323,24 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildPylon(advance_pylon_location, 10.0);
         }
         return false;
-    case 15:
-        break;
+    case 24:
+        if (bases.size()>1) {
+            stage_number++;
+            return false;
+        }
+        if (observation->GetMinerals()>400) {
+            TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+        }
+    case 25:
+        if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_ADEPT)>9) {
+            stage_number++;
+            return false;
+        }
+        TryWarpAdept();
 
 
 
 	}
-
 
 	return false;
 }
