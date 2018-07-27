@@ -18,8 +18,66 @@ struct IsAdeptShade {
 	}
 };
 
-struct IsNearbyArmy {
-	IsNearbyArmy(const ObservationInterface* obs, Point2D MyPosition, int Radius) : 
+struct IsNearbyWorker {
+	IsNearbyWorker(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
+		observation_(obs), mp(MyPosition), radius(Radius) {}
+
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::ZERG_DRONE:
+		case UNIT_TYPEID::TERRAN_SCV:
+		case UNIT_TYPEID::TERRAN_MULE:
+		case UNIT_TYPEID::PROTOSS_PROBE:return Distance2D(mp, unit.pos) < radius;
+
+
+		default: return false;
+		}
+	}
+private:
+	const ObservationInterface* observation_;
+	Point2D mp;
+	int radius;
+};
+
+struct IsNearbyArmies {
+	IsNearbyArmies(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
+		observation_(obs), mp(MyPosition), radius(Radius) {}
+
+	bool operator()(const Unit& unit) {
+		auto attributes = observation_->GetUnitTypeData().at(unit.unit_type).attributes;
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::ZERG_OVERLORD: return false;
+		case UNIT_TYPEID::ZERG_LARVA: return false;
+		case UNIT_TYPEID::ZERG_EGG: return false;
+		case UNIT_TYPEID::TERRAN_MULE: return false;
+		case UNIT_TYPEID::TERRAN_NUKE: return false;
+		case UNIT_TYPEID::ZERG_DRONE:
+		case UNIT_TYPEID::TERRAN_SCV:
+		case UNIT_TYPEID::PROTOSS_PROBE:return false;
+
+		case UNIT_TYPEID::PROTOSS_PHOTONCANNON:
+		case UNIT_TYPEID::TERRAN_BUNKER:
+		case UNIT_TYPEID::ZERG_SPINECRAWLER:
+		case UNIT_TYPEID::TERRAN_PLANETARYFORTRESS: return Distance2D(mp, unit.pos) < radius;
+
+
+		default:
+			for (const auto& attribute : attributes) {
+				if (attribute == Attribute::Structure) {
+					return false;
+				}
+			}
+			return Distance2D(mp, unit.pos) < radius;
+		}
+	}
+private:
+	const ObservationInterface* observation_;
+	Point2D mp;
+	int radius;
+};
+
+struct IsNearbyEnemies {
+	IsNearbyEnemies(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
 		observation_(obs), mp(MyPosition), radius(Radius) {}
 
 	bool operator()(const Unit& unit) {
@@ -54,6 +112,9 @@ private:
 
 std::map<uint64_t, uint32_t> adept_map;
 
+bool MustAttack = false;
+bool StalkerMustAttack = false;
+
 void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 	const ObservationInterface* observation = Observation();
 	Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
@@ -62,6 +123,7 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 	Units Adepts = observation->GetUnits(Unit::Alliance::Self, IsAdept());
 	Units AdeptShades = observation->GetUnits(Unit::Alliance::Self, IsAdeptShade());
 	Units EnemyWorker = observation->GetUnits(Unit::Alliance::Enemy, IsWorker());
+	size_t CurrentStalker = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER);
 	size_t CurrentAdept = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ADEPT);
 
 	
@@ -70,16 +132,26 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 
 	Units rangedunits = observation->GetUnits(Unit::Alliance::Self, IsRanged(observation));
 	Units ShadeNearEnemies;
+	Units ShadeNearArmies;
 
 	for (const auto& unit : AdeptShades) {
-		ShadeNearEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmy(observation, unit->pos, 15));
-
+		ShadeNearArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 15));
+		ShadeNearEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 15));
+		Units ShadeNearWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyWorker(observation, unit->pos, 15));
 		
+		for (const auto & ShadeNearWorker : ShadeNearWorkers)
+		{
+			/*if (unit->orders.empty()) {
+				Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, ShadeNearWorker->pos);
+			}*/
+			
+		}
 	}
 
 	for (const auto& unit : rangedunits) {
-		
-		Units NearbyEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmy(observation, unit->pos, 20)); //각 유닛의 근처에 있는 
+		Units NearbyWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyWorker(observation, unit->pos, 7));
+		Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 15));
+		Units NearbyEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 15)); //각 유닛의 근처에 있는 
 		float TargetAttackRange = 0.0f;
 		float UnitAttackRange = getAttackRangeGROUND(unit);
 
@@ -88,15 +160,32 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 		
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_STALKER)
 		{
-			float UnitHealth = unit->health + unit->shield;
-
-			if (UnitHealth < 30)
+			if (BlinkResearched && CurrentStalker > 10)
 			{
-				StalkerBlinkEscape(unit, target);
+				if (target == nullptr) {}
+				else
+					ManageBlink(unit, target);
 			}
-			if (getDpsGROUND(target) == 0.0f)
+
+			if (CurrentStalker < 12 && !StalkerMustAttack)
 			{
-				StalkerBlinkForward(unit, target);
+				RetreatWithUnit(unit, advance_pylon_location);
+			}
+			else if (CurrentStalker == 1 && StalkerMustAttack)
+			{
+				StalkerMustAttack = false;
+			}
+			else //(CurrentStalker >= 12)
+			{
+				StalkerMustAttack = true;
+				if (target == nullptr)
+				{
+					ScoutWithUnit(unit, observation);
+				}
+				else // 타겟이 존재할 때
+				{
+					Kiting(unit, target);
+				}
 			}
 
 		}
@@ -104,44 +193,48 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_ADEPT)
 		{
-			if (CurrentAdept < 8)
+			bool ComeOn = false;
+			if (NearbyWorkers.size() > 0) // 만약 주변에 진짜 가까운 일꾼이 있으면
+			{
+				const Unit * Workertarget = GetTarget(unit, NearbyWorkers);
+				Chat("FrontKiting Activating");
+				FrontKiting(unit, Workertarget);
+
+				AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
+			}
+			else if (CurrentAdept < 8 && !MustAttack)
 			{
 				RetreatWithUnit(unit, advance_pylon_location);
 			}
-			else if (CurrentAdept >= 8)
+			else if (CurrentAdept == 1 && MustAttack)
 			{
+				MustAttack = false;
+			}
+			else //(CurrentAdept >= 8)
+			{
+				MustAttack = true;
 				if (target == nullptr)
 				{
 					ScoutWithUnit(unit, observation);
 				}
-				if (target != nullptr)
+				else // 타겟이 존재할 때
 				{
-					AdeptPhaseShift(unit, ShadeNearEnemies, NearbyEnemies);
-					Kiting(unit, target);
+					
+					AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
+
+					if (ComeOn)
+					{
+						ComeOnKiting(unit, target); // 적을 유인하는 Kiting
+					}
+					else
+					{
+						Kiting(unit, target);
+					}
+					
 				}
 				
 			}
 		}
-
-
-		if (target == nullptr)
-		{
-			/*if (enemy_units.empty())
-			{
-				ScoutWithUnit(unit, observation);
-			}
-			else
-			{
-				AttackWithUnit(unit, observation);
-			}*/
-		}
-		else
-		{
-			Kiting(unit, target);
-		}
-
-
-
 		/*bool enemiesnear = false;
 		Point2D KitingLocation;
 		Point2D EnemyAveragePosition;
@@ -149,7 +242,6 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 		{
 		return;
 		}*/
-
 
 		/*for (const auto& enemyarmy : NearbyEnemies)
 		{
@@ -178,30 +270,39 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 	}
 }
 
-void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units NearbyEnemies)
+void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units NearbyEnemies, bool & ComeOn)
 {
 	bool Timer = false;
-	if (Distance2D(game_info_.enemy_start_locations.front(), unit->pos) <= 10) //적 기지근처에 있으면 우리 집으로 분신을 날린다
+
+	// **********************TEST 용 입니다 **************************
+	bool ControlTest = false; 
+	if (ControlTest)
 	{
-		AdeptPhaseToLocation(unit, startLocation_, Timer);
+		Chat("Warning!! TEST MODE");
+		AdeptPhaseToLocation(unit, Point2D(100,50), Timer, ComeOn);
+	}
+	// **********************TEST 용 입니다 **************************
+	else if (Distance2D(game_info_.enemy_start_locations.front(), unit->pos) <= 20) //적 기지근처에 있으면 적 앞마당으로 분신을 날린다
+	{
+		AdeptPhaseToLocation(unit, Enemy_front_expansion, Timer, ComeOn);
 	}
 	else // 그 경우가 아니면 일반적으로 적 기지로 분신을 날린다
 	{
-		AdeptPhaseToLocation(unit, game_info_.enemy_start_locations.front(), Timer);
+		AdeptPhaseToLocation(unit, game_info_.enemy_start_locations.front(), Timer, ComeOn);
 	}
 
 	if (Timer)
 	{
 		std::cout << ShadeNearEnemies.size() << ">=" << NearbyEnemies.size() << "=" << (ShadeNearEnemies.size() >= NearbyEnemies.size()) << std::endl;
 
-		if (ShadeNearEnemies.size() > NearbyEnemies.size())
+		if (ShadeNearEnemies.size() > NearbyEnemies.size()) // TODO : DPS로 계산하기
 		{
 			Actions()->UnitCommand(unit, ABILITY_ID::CANCEL_ADEPTPHASESHIFT);
 		}
 	}
 }
 
-void MEMIBot::AdeptPhaseToLocation(const Unit* unit, Point2D Location , bool & Timer)
+void MEMIBot::AdeptPhaseToLocation(const Unit* unit, Point2D Location , bool & Timer, bool & ComeOn)
 {
 	Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_ADEPTPHASESHIFT, Location);
 
@@ -212,10 +313,30 @@ void MEMIBot::AdeptPhaseToLocation(const Unit* unit, Point2D Location , bool & T
 		adept_map.insert(std::make_pair((unit->tag), observation->GetGameLoop()));
 		Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_ADEPTPHASESHIFT, Location);
 	}
-	if (adept_map.find(unit->tag)->second + 140 <= game_loop)
+	if (adept_map.find(unit->tag)->second + 145 <= game_loop)
 	{
 		Timer = true;
 		adept_map.erase(unit->tag);
+	}
+	else
+	{
+		ComeOn = true;
+	}
+}
+
+void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
+{
+	std::cout << "Manage BLINK !!";
+
+	float UnitHealth = unit->health + unit->shield;
+
+	if (UnitHealth < 30)
+	{
+		StalkerBlinkEscape(unit, target);
+	}
+	if (getDpsGROUND(target) == 0.0f)
+	{
+		StalkerBlinkForward(unit, target);
 	}
 }
 
@@ -237,6 +358,67 @@ void MEMIBot::StalkerBlinkForward(const Unit* unit, const Unit* enemyarmy)
 	Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_BLINK, BlinkLocation);
 }
 
+void MEMIBot::FrontKiting(const Unit* unit, const Unit* enemyarmy)
+{
+	//Distance to target
+	float dist = Distance2D(unit->pos, enemyarmy->pos);
+	float DIST = dist - unit->radius - enemyarmy->radius;
+
+	//Our range
+	float unitattackrange = getAttackRangeGROUND(unit);
+
+	const Unit& ENEMYARMY = *enemyarmy;
+
+	if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
+	{
+		Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemyarmy->pos);
+	}
+	else
+	{
+		sc2::Point2D KitingLocation = unit->pos;
+		//If its a building we want range -1 distance
+		//The same is true if it outranges us. We dont want to block following units
+		KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos);
+		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+	}
+}
+
+void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
+{
+	//std::cout << ShadeNearEnemies.size() << ">=" << NearbyEnemies.size() << "=" << (ShadeNearEnemies.size() >= NearbyEnemies.size()) << std::endl;
+
+	//Distance to target
+	float dist = Distance2D(unit->pos, enemyarmy->pos);
+	float DIST = dist - unit->radius - enemyarmy->radius;
+
+	//Our range
+	float unitattackrange = getAttackRangeGROUND(unit);
+
+	const Unit& ENEMYARMY = *enemyarmy;
+
+	std::cout << getAttackRangeGROUND(enemyarmy) << "<" << unitattackrange << "=" << (getAttackRangeGROUND(enemyarmy) < unitattackrange) << "           1이면 공격합니다 ^^" <<std::endl;
+
+	if ( (unit->weapon_cooldown == 0.0f && (getAttackRangeGROUND(enemyarmy) < unitattackrange)) || DIST > 10) //적 공격사거리가 나보다 짧으면 공격한다
+	{
+		Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemyarmy->pos);
+	}
+	else
+	{
+		sc2::Point2D KitingLocation = unit->pos;
+		//If its a building we want range -1 distance
+		//The same is true if it outranges us. We dont want to block following units
+		if (IsStructure(Observation())(ENEMYARMY)) // 건물이면 달라붙죠 ㅇㅋ?
+		{
+			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos);
+		}
+		else // 적 공격사거리가 나랑 같거나 길면
+		{
+			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos); // 적을 데려나오기 위해 뒤로 빼게 했습니다.
+		}
+		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+	}
+}
+
 void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 {
 	//Distance to target
@@ -248,7 +430,7 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 
 	const Unit& ENEMYARMY = *enemyarmy;
 
-	if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 0.5f)
+	if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
 	{
 		Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemyarmy->pos);
 	}
@@ -259,7 +441,7 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 		//The same is true if it outranges us. We dont want to block following units
 		if (IsStructure(Observation())(ENEMYARMY)) // 건물이면
 		{
-			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos);
+			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos);
 		}
 		else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
 		{

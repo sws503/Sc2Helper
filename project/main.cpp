@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 	}
 
 
-	coordinator.SetStepSize(2); //Control
+	coordinator.SetStepSize(3); //Control
 								 //게임속도 빠르게 speed faster
 
 	coordinator.SetMultithreaded(true);
@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Terran, Difficulty::Easy),
+			CreateComputer(Race::Protoss, Difficulty::HardVeryHard),
 			});
 	}
 
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 	bool do_break = false;
 	while (!do_break) {
 		//if (!coordinator.StartGame("StalkerMicroMarine.SC2Map")) {
-		if (!coordinator.StartGame("AcidPlantLE.SC2Map")) {
+		if (!coordinator.StartGame("CatalystLE.SC2Map")) {
 			break;
 		}
 		while (coordinator.Update() && !do_break) {

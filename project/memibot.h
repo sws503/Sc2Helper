@@ -294,8 +294,26 @@ public:
 		startLocation_ = Observation()->GetStartLocation();
 		staging_location_ = startLocation_;
 
-		if (game_info_.enemy_start_locations.size() == 1) find_enemy_location = true;
+		if (game_info_.enemy_start_locations.size() == 1)
+		{
+			find_enemy_location = true;
 
+			float minimum_distance = std::numeric_limits<float>::max();
+			for (const auto& expansion : expansions_) {
+				float Enemy_distance = Distance2D(game_info_.enemy_start_locations.front(), expansion);
+				if (Enemy_distance < .01f) {
+					continue;
+				}
+
+				if (Enemy_distance < minimum_distance) {
+					if (Query()->Placement(ABILITY_ID::BUILD_NEXUS, expansion)) {
+						Enemy_front_expansion = expansion;
+						minimum_distance = Enemy_distance;
+					}
+				}
+			}
+			//std::cout << Enemy_front_expansion.x << "  " << Enemy_front_expansion.y << "  " << Enemy_front_expansion.z << std::endl;
+		}
 
 
 		float minimum_distance = std::numeric_limits<float>::max();
@@ -312,6 +330,7 @@ public:
 				}
 			}
 		}
+		//std::cout << front_expansion.x << "  " << front_expansion.y << "  " << front_expansion.z << std::endl;
 		staging_location_ = Point3D(((staging_location_.x + front_expansion.x) / 2), ((staging_location_.y + front_expansion.y) / 2),
 			((staging_location_.z + front_expansion.z) / 2));
 	}
@@ -370,6 +389,10 @@ public:
             case UPGRADE_ID::WARPGATERESEARCH: {
                 warpgate_researched = true;
             }
+			case UPGRADE_ID::BLINKTECH: {
+				std::cout << "BLINK UPGRADE DONE!!";
+				BlinkResearched = true;
+			}
             default:
                 break;
         }
@@ -381,6 +404,7 @@ public:
 	Point3D staging_location_;
 
 	Point3D front_expansion;
+	Point3D Enemy_front_expansion;
 
 	Point2D RushLocation;
 	Point2D EnemyLocation;
@@ -392,7 +416,7 @@ public:
 	float base_range = 35;
 
 private:
-
+	bool BlinkResearched = false;
 
 	void Chat(std::string Message) // 6.29 채팅 함수
 	{
@@ -495,17 +519,21 @@ private:
 	const Unit* WorkerKiller = nullptr;
 	const Unit* oracle_first = nullptr;
 
-	bool MEMIBot::OracleCanWin(const Unit* Oracle, Units enemyunits, bool OracleCanAttack);
 	void ManageRush();
 
-	void AdeptPhaseShift(const Unit * unit, Units ShadeNearEnemies, Units NearbyEnemies);
+	void AdeptPhaseShift(const Unit * unit, Units ShadeNearEnemies, Units NearbyEnemies, bool & ComeOn);
 
-	void AdeptPhaseToLocation(const Unit * unit, Point2D Location, bool & Timer);
+	void AdeptPhaseToLocation(const Unit * unit, Point2D Location, bool & Timer, bool & ComeOn);
 
+	void ManageBlink(const Unit * unit, const Unit * enemyarmy);
 
 	void StalkerBlinkEscape(const Unit * unit, const Unit * enemyarmy);
 
 	void StalkerBlinkForward(const Unit * unit, const Unit * enemyarmy);
+
+	void FrontKiting(const Unit * unit, const Unit * enemyarmy);
+
+	void ComeOnKiting(const Unit * unit, const Unit * enemyarmy);
 
 	void Kiting(const Unit * unit, const Unit * enemyarmy);
 
@@ -522,6 +550,8 @@ private:
 	bool GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D & position);
 
 	int getAttackPriority(const Unit * u);
+
+	const Unit * GetHighPrioTarget(const Unit * rangedUnit, Units & targets);
 
 	const Unit * GetTarget(const Unit * rangedUnit, Units & targets);
 
