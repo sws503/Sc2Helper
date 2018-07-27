@@ -92,6 +92,10 @@ bool MEMIBot::OracleCanWin(const Unit* Oracle , Units enemyunits, bool OracleCan
 bool mustattack = false;
 
 void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
+
+	const float TempestRange = 3.0f;
+	const float CarrierRange = 3.0f;
+
 	const ObservationInterface* observation = Observation();
 	Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
 	Units enemy_army = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
@@ -156,8 +160,6 @@ void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
 		float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
 		float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
 
-
-		//
 		for (const auto& u : AirAttackers2) {
 			float d = Distance2D(u->pos, unit->pos);
 			if (d < distance) {

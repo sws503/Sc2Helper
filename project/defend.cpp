@@ -45,7 +45,7 @@ void MEMIBot::Defend() {
 			Chat("OK~");
 			float rx = GetRandomScalar();
 			float ry = GetRandomScalar();
-			StasisLocation = Point2D(pylonlocation.x + rx * 5, pylonlocation.y + ry * 5);
+			Point2D StasisLocation = Point2D(pylonlocation.x + rx * 5, pylonlocation.y + ry * 5);
 			Actions()->UnitCommand(oracle_second, ABILITY_ID::BUILD_STASISTRAP, StasisLocation);
 		}
 		else {

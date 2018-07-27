@@ -24,7 +24,7 @@ bool MEMIBot::EarlyStrategy() {
 	}
 
 	// Todo: 프로브 상납 방지
-	while (workers.size() > 2 && (probe_scout == nullptr || !probe_scout->is_alive)) {
+	while (workers.size() > 2 && (probe_scout == nullptr /*|| !probe_scout->is_alive*/)) {
 		//정찰 프로브 지정
 		const Unit* probe_candidate;
 		GetRandomUnit(probe_candidate, observation, UNIT_TYPEID::PROTOSS_PROBE);
@@ -58,7 +58,7 @@ bool MEMIBot::EarlyStrategy() {
 			}
 			else {
 				if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<7) {
-					iter_esl = game_info_.enemy_start_locations.begin();
+					std::vector<Point2D>::iterator iter_esl = game_info_.enemy_start_locations.begin();
 					game_info_.enemy_start_locations.erase(iter_esl);
 				}
 			}
