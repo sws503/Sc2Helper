@@ -127,44 +127,6 @@ struct AirAttacker2 { // 공중 공격 가능한 적들: 예언자가 기피해야하는 적. 완성이
 	}
 };
 
-struct IsOracle { // 예언자인지 감지
-	bool operator()(const Unit& unit) {
-
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_ORACLE: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsTempest {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_TEMPEST: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsVoidray {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_VOIDRAY: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsCarrier {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_CARRIER: return true;
-		default: return false;
-		}
-	}
-};
-
-
 struct IsAttackable {
 	bool operator()(const Unit& unit) {
 		switch (unit.unit_type.ToType()) {
@@ -187,6 +149,26 @@ struct IsWorker {
 	}
 };
 
+struct IsRanged {
+	IsRanged(const ObservationInterface* obs) : observation_(obs) {}
+
+	bool operator()(const Unit& unit) {
+		auto Weapon = observation_->GetUnitTypeData().at(unit.unit_type).weapons;
+		for (const auto& weapon : Weapon) {
+			if (weapon.range < 1.0f) {
+				return false;
+			}
+		}
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT: return false;
+		default: return true;
+		}
+	}
+private:
+	const ObservationInterface* observation_;
+};
+
+
 struct IsArmy {
 	IsArmy(const ObservationInterface* obs) : observation_(obs) {}
 
@@ -199,13 +181,13 @@ struct IsArmy {
 		}
 		switch (unit.unit_type.ToType()) {
 		case UNIT_TYPEID::ZERG_OVERLORD: return false;
-		//case UNIT_TYPEID::PROTOSS_PROBE: return false;
-		//case UNIT_TYPEID::ZERG_DRONE: return false;
-		//case UNIT_TYPEID::TERRAN_SCV: return false;
+		case UNIT_TYPEID::PROTOSS_PROBE: return false;
+		case UNIT_TYPEID::ZERG_DRONE: return false;
+		case UNIT_TYPEID::TERRAN_SCV: return false;
 		case UNIT_TYPEID::ZERG_QUEEN: return false;
 		case UNIT_TYPEID::ZERG_LARVA: return false;
 		case UNIT_TYPEID::ZERG_EGG: return false;
-		//case UNIT_TYPEID::TERRAN_MULE: return false;
+		case UNIT_TYPEID::TERRAN_MULE: return false;
 		case UNIT_TYPEID::TERRAN_NUKE: return false;
 		default: return true;
 		}
@@ -335,8 +317,12 @@ public:
 	}
 
 	virtual void OnStep() final {
+		
+
 
 		const ObservationInterface* observation = Observation();
+		ActionInterface* action = Actions();
+
 		Units units = observation->GetUnits(Unit::Self, IsArmy(observation));
 		ConvertGateWayToWarpGate();
 
@@ -356,6 +342,7 @@ public:
 		Defend();
 		//ManageArmy();
 		ManageRush();
+		
 
 		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
@@ -511,6 +498,37 @@ private:
 	bool MEMIBot::OracleCanWin(const Unit* Oracle, Units enemyunits, bool OracleCanAttack);
 	void ManageRush();
 
+	void AdeptPhaseShift(const Unit * unit, Units ShadeNearEnemies, Units NearbyEnemies);
+
+	void AdeptPhaseToLocation(const Unit * unit, Point2D Location, bool & Timer);
+
+
+	void StalkerBlinkEscape(const Unit * unit, const Unit * enemyarmy);
+
+	void StalkerBlinkForward(const Unit * unit, const Unit * enemyarmy);
+
+	void Kiting(const Unit * unit, const Unit * enemyarmy);
+
+	void KiteEnemy(const Unit * unit, Units enemy_army, Units enemy_units, Point2D KitingLocation, bool enemiesnear, const ObservationInterface * observation);
+
+
+	float MinimumDistance2D(const Unit * unit, const Unit * enemyarmy);
+
+
+	Point2D CalcKitingPosition(Point2D Mypos, Point2D EnemyPos);
+
+	bool GetPosition(Units Enemyunits, Unit::Alliance alliace, Point2D & position);
+
+	bool GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D & position);
+
+	int getAttackPriority(const Unit * u);
+
+	const Unit * GetTarget(const Unit * rangedUnit, Units & targets);
+
+	const float getDpsGROUND(const Unit * target) const;
+
+	const float getAttackRangeGROUND(const Unit * target) const;
+
 	void RetreatWithCarrier(const Unit* unit) {
 		if (pylonlocation != Point2D(0, 0))
 			Actions()->UnitCommand(unit, ABILITY_ID::PATROL, pylonlocation);
@@ -638,21 +656,23 @@ private:
 		}
 		Point2D target_pos;
 
-		if (FindEnemyPosition(target_pos)) {
-			if (Distance2D(unit->pos, target_pos) < 20 && enemy_units.empty()) {
-				if (TryFindRandomPathableLocation(unit, target_pos)) {
-					Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos);
+		if (FindEnemyPosition(target_pos)) { //적 기지를 알고있는 상황이면
+			if (Distance2D(unit->pos, target_pos) < 20 && enemy_units.empty()) { //적 유닛이 없는 상황에서 적 기지가 근처에 있으면
+				if (TryFindRandomPathableLocation(unit, target_pos)) { //유닛별로 맵 전체적으로 퍼지는 위치를 배정받고
+					Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos); //그 위치로 간다
 					return;
 				}
 			}
-			else if (!enemy_units.empty())
+			else if (!enemy_units.empty()) // 적 유닛이 있는 상황이면 또는 이 유닛이 적 기지 근처에 없는상황이면
 			{
-				Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemy_units.front());
+				Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemy_units.front()); //적 유닛을 공격하러 간다
 				return;
 			}
-			Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos);
+			// TODO : 가장 마지막으로 본 적의 위치를 target_pos 로 리턴하는 함수를 만들자
+
+			Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos); //위 작업이 끝나면 적 기지를 다시한번 간다
 		}
-		else {
+		else { //적 기지도 모르면 막 돌아다녀라
 			if (TryFindRandomPathableLocation(unit, target_pos)) {
 				Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos);
 			}
@@ -695,7 +715,7 @@ private:
 			return false;
 		}
 		target_pos = game_info_.enemy_start_locations.front();
-		return true;
+		return find_enemy_location;
 	}
 
 	bool TryFindRandomPathableLocation(const Unit* unit, Point2D& target_pos) {

@@ -77,7 +77,7 @@ bool MEMIBot::EarlyStrategy() {
 				}
 			}
 		}
-		else {
+		else if (bases.size() == 1){
 			base = bases.front();
 		}//본진 넥서스 지정
 
