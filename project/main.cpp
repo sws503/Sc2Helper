@@ -28,8 +28,10 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	coordinator.SetStepSize(1); //Control
-							 //게임속도 빠르게 speed faster
+
+	coordinator.SetStepSize(2); //Control
+								 //게임속도 빠르게 speed faster
+
 	coordinator.SetMultithreaded(true);
 	if (VsHuman) {
 		//coordinator.SetRealtime(true);
@@ -64,6 +66,7 @@ int main(int argc, char* argv[])
 			break;
 		}
 		while (coordinator.Update() && !do_break) {
+            //sc2::SleepFor(50);
 			if (sc2::PollKeyPress()) {
 				do_break = true;
 			}

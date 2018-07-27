@@ -332,7 +332,7 @@ public:
 		if (!early_strategy) {
 			EarlyStrategy();
 		}
-		if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_PYLON)>0 && iter_exp < expansions_.end() && find_enemy_location == true) {
+		if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_GATEWAY)>0 && iter_exp < expansions_.end() && find_enemy_location == true) {
 			scoutprobe();
 		}
 
@@ -1069,6 +1069,9 @@ private:
 		}
 
 		const PowerSource& random_power_source = GetRandomEntry(power_sources);
+		if (advance_pylon !=nullptr && Distance2D(random_power_source.position,advance_pylon->pos)<10) {
+            return false;
+		}
 		if (observation->GetUnit(random_power_source.tag) != nullptr) {
 			if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISM) {
 				return false;
@@ -1395,6 +1398,7 @@ private:
 		const ObservationInterface* observation = Observation();
 		auto upgrades = observation->GetUpgrades();
 		TryBuildUnit(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
+		TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
 		for (const auto& upgrade : upgrades) {
 		}
 	}
@@ -1548,6 +1552,44 @@ private:
                 for (const auto& ability : abilities.abilities) {
                     if (ability.ability_id == ABILITY_ID::TRAINWARP_ADEPT) {
                         Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    bool TryWarpStalker(){
+        const ObservationInterface* observation = Observation();
+        std::vector<PowerSource> power_sources = observation->GetPowerSources();
+        Units warpgates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE));
+
+        if (power_sources.empty()) {
+            return false;
+        }
+
+        const PowerSource& random_power_source = GetRandomEntry(power_sources);
+        if (Distance2D(random_power_source.position,front_expansion)>15) {
+            return false;
+        }
+
+        float radius = random_power_source.radius;
+        float rx = GetRandomScalar();
+        float ry = GetRandomScalar();
+        Point2D build_location = Point2D(random_power_source.position.x + rx * radius, random_power_source.position.y + ry * radius);
+
+
+        if (Query()->PathingDistance(build_location, game_info_.enemy_start_locations.front())) {
+            return false;
+        }
+
+        for (const auto& warpgate : warpgates) {
+            //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
+            if (warpgate->build_progress == 1) {
+                AvailableAbilities abilities = Query()->GetAbilitiesForUnit(warpgate);
+                for (const auto& ability : abilities.abilities) {
+                    if (ability.ability_id == ABILITY_ID::TRAINWARP_STALKER) {
+                        Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_STALKER, build_location);
                         return true;
                     }
                 }
