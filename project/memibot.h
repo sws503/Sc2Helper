@@ -1124,6 +1124,54 @@ private:
 		return true;
 	}
 
+	bool TryWarpUnitPrism(AbilityID ability_type_for_unit) {
+        const ObservationInterface* observation = Observation();
+        std::vector<PowerSource> power_sources = observation->GetPowerSources();
+        Units warpgates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE));
+        if (observation->GetFoodUsed() >= observation->GetFoodCap()) {
+			return false;
+		}
+		if (power_sources.empty()) {
+            return false;
+        }
+
+        float radius = 0.0f;
+        Point2D build_location;
+        for (const auto& power__source : power_sources) {
+            if (observation->GetUnit(power__source.tag) != nullptr) {
+                if (observation->GetUnit(power__source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISMPHASING) {
+                    radius = power__source.radius;
+                    build_location = power__source.position;
+                    break;
+                }
+            }
+        }
+
+        if (radius < 0.1f) {
+            return false;
+        }
+
+
+        float rx = GetRandomScalar();
+        float ry = GetRandomScalar();
+        build_location = Point2D(build_location.x + rx * radius, build_location.y + ry * radius);
+
+        for (const auto& warpgate : warpgates) {
+            if (warpgate->build_progress == 1) {
+                AvailableAbilities abilities = Query()->GetAbilitiesForUnit(warpgate);
+                for (const auto& ability : abilities.abilities) {
+                    if (ability.ability_id == ability_type_for_unit) {
+                        Actions()->UnitCommand(warpgate, ability_type_for_unit, build_location);
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+
+
+	}
+
 	// if isExpansion is false, then consider expansion sites and avoid these places.
 	bool TryBuildStructure(AbilityID ability_type_for_structure, UnitTypeID unit_type, Point2D location, bool isExpansion = false) {
 		const ObservationInterface* observation = Observation();
@@ -2106,11 +2154,6 @@ private:
         float ry = GetRandomScalar();
         Point2D build_location = Point2D(advance_pylon->pos.x + rx * radius, advance_pylon->pos.y + ry * radius);
 
-
-        if (Query()->PathingDistance(build_location, game_info_.enemy_start_locations.front())) {
-            return false;
-        }
-
         for (const auto& warpgate : warpgates) {
             //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
             if (warpgate->build_progress == 1) {
@@ -2143,11 +2186,6 @@ private:
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
         Point2D build_location = Point2D(random_power_source.position.x + rx * radius, random_power_source.position.y + ry * radius);
-
-
-        if (Query()->PathingDistance(build_location, game_info_.enemy_start_locations.front())) {
-            return false;
-        }
 
         for (const auto& warpgate : warpgates) {
             //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);

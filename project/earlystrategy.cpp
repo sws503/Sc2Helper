@@ -10,6 +10,7 @@ bool MEMIBot::EarlyStrategy() {
 	Units enemy_structures = observation->GetUnits(Unit::Alliance::Enemy, IsStructure(observation));
 	Units enemy_townhalls = observation->GetUnits(Unit::Alliance::Enemy, IsTownHall());
     Units warpprisms = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPPRISM));
+	Units warpprisms_phasing = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPPRISMPHASING));
 	Units stalkers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_STALKER));
 
 	/*
@@ -40,7 +41,10 @@ bool MEMIBot::EarlyStrategy() {
 #ifdef DEBUG
 	std::cout << stage_number << std::endl;
 #endif
-    std::cout<<"stalker_count = "<<stalkers.size()<<std::endl;
+    const Point2D& enemy = game_info_.enemy_start_locations.front();
+    //std::cout<<Query()->PathingDistance(bases.front(),game_info_.enemy_start_locations.front())<<std::endl;
+    if (base != nullptr) std::cout<<Query()->PathingDistance(front_expansion,enemy)<<std::endl;
+
     if (find_enemy_location) {
         advance_pylon_location = Point2D((startLocation_.x*1.8 + game_info_.enemy_start_locations.front().x*2.2)/4, (startLocation_.y*1.8 + game_info_.enemy_start_locations.front().y*2.2)/4);
     }
@@ -97,6 +101,9 @@ bool MEMIBot::EarlyStrategy() {
 	}
 	if (branch<2 && stage_number>29) {
         TryBuildPylonIfNeeded(2);
+        if ((bases.size()-1)*2>assimilator_count) {
+            TryBuildAssimilator();
+        }
         if (forge_count<1) {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_PROBE);
         }
@@ -118,10 +125,9 @@ bool MEMIBot::EarlyStrategy() {
             TryWarpStalker();
         }
 	}
-	if (branch==2) {
-        if (warpprisms.size()>0) {
-            Actions()->UnitCommand(warpprisms.front(),ABILITY_ID::LOAD,stalkers.front());
-        }
+
+	if (branch == 2 && stage_number > 109) {
+        TryBuildPylonIfNeeded(2);
 	}
 
 
@@ -507,6 +513,31 @@ bool MEMIBot::EarlyStrategy() {
             return TryBuildPylon(startLocation_,20.0);
         }
         return false;
+	case 108:
+	    if (CountUnitType(UNIT_TYPEID::PROTOSS_WARPPRISM)<1) {
+            stage_number=105;
+            return false;
+	    }
+	    if (warpprisms.front()->cargo_space_taken==warpprisms.front()->cargo_space_max) {
+            Actions()->UnitCommand(warpprisms.front(), ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
+            stage_number++;
+            return false;
+	    }
+        Actions()->UnitCommand(warpprisms.front(),ABILITY_ID::LOAD,stalkers.front());
+        return false;
+	case 109:
+	    if (warpprisms.empty()) {
+            stage_number++;
+            return false;
+	    }
+	    else{
+            std::cout<<Query()->PathingDistance(warpprisms.front()->pos,game_info_.enemy_start_locations.front())<<std::endl;
+
+            //Actions()->UnitCommand(warpprisms.front(), ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
+            return false;
+	    }
+	case 110:
+        TryWarpUnitPrism(ABILITY_ID::TRAINWARP_STALKER);
 	}
 
 	return false;
