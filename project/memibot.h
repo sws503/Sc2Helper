@@ -1549,7 +1549,7 @@ private:
         }
 
         const PowerSource& random_power_source = GetRandomEntry(power_sources);
-        if (Distance2D(random_power_source.position,front_expansion)>15) {
+        if (Distance2D(random_power_source.position,front_expansion)>20) {
             return false;
         }
 
