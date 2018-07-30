@@ -6,52 +6,7 @@ void MEMIBot::Defend() {
 	Units nexus = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 	size_t CurrentOracle = Oracles.size();
 
-	// deal with nullptrs
-	// remove oracles if dead
-	if (oracle_second != nullptr && !oracle_second->is_alive) {
-		oracle_second = nullptr;
-	}
-	// oracle first is alive and second is dead -> make second to first
-	if (oracle_first != nullptr && !oracle_first->is_alive) {
-		oracle_first = nullptr;
-	}
-	// assign oracles
-	if (!Oracles.empty())
-	{
-		// find first oracle
-		if (oracle_first == nullptr) {
-			for (const auto & o : Oracles) {
-				if (oracle_second == nullptr || o->tag != oracle_second->tag) {
-					oracle_first = o;
-					break;
-				}
-			}
-		}
-		// find second oracle
-		if (oracle_second == nullptr && CurrentOracle >= 2) {
-			for (const auto & o : Oracles) {
-				if (oracle_first == nullptr || o->tag != oracle_first->tag) {
-					oracle_second = o;
-					break;
-				}
-			}
-		}
-	}
-	// oracle second goes to
-	if (oracle_second != nullptr)
-	{
-		if (oracle_second->energy > 50 &&
-			(oracle_second->orders.empty() || oracle_second->orders.front().ability_id != ABILITY_ID::BUILD_STASISTRAP)) {
-			Chat("OK~");
-			float rx = GetRandomScalar();
-			float ry = GetRandomScalar();
-			StasisLocation = Point2D(pylonlocation.x + rx * 5, pylonlocation.y + ry * 5);
-			Actions()->UnitCommand(oracle_second, ABILITY_ID::BUILD_STASISTRAP, StasisLocation);
-		}
-		else {
-			ScoutWithUnit(oracle_second, observation);
-		}
-	}
+
 
 	Units Workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
 	Units EnemyWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsWorker());
@@ -78,7 +33,7 @@ void MEMIBot::Defend() {
 		}
 	}
 
-	if (!OracleTrained)
+	if (!0)
 	{
 		if (Killers.size() < enemyUnitsInRegion.size()) {
 			Killers.resize(enemyUnitsInRegion.size(), nullptr);

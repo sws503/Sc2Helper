@@ -21,6 +21,7 @@ bool MEMIBot::EarlyStrategy() {
 #ifdef DEBUG
 	std::cout << stage_number << std::endl;
 #endif
+	
 
     if (find_enemy_location) {
         advance_pylon_location = Point2D((startLocation_.x*1.8 + game_info_.enemy_start_locations.front().x*2.2)/4, (startLocation_.y*1.8 + game_info_.enemy_start_locations.front().y*2.2)/4);
@@ -109,7 +110,7 @@ bool MEMIBot::EarlyStrategy() {
 				}
 			}
 		}
-		else {
+		else if (bases.size() == 1){
 			base = bases.front();
 		}//본진 넥서스 지정
 

@@ -9,6 +9,7 @@
 
 #ifdef DEBUG
 static bool VsHuman = false;
+static bool ControlTest = false;
 
 class Human : public sc2::Agent {
 public:
@@ -27,13 +28,17 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	coordinator.SetStepSize(2); //Control
+
+	coordinator.SetStepSize(3); //Control
 								 //게임속도 빠르게 speed faster
+
 	coordinator.SetMultithreaded(true);
 	if (VsHuman) {
 		//coordinator.SetRealtime(true);
 	}
-
+	if (ControlTest) {
+		coordinator.SetRealtime(true);
+	}
 	// Add the custom bot, it will control the players.
 	MEMIBot bot;
 	Human human_bot;
@@ -47,7 +52,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Terran, Difficulty::HardVeryHard),
+			CreateComputer(Race::Protoss, Difficulty::HardVeryHard),
 			});
 	}
 
@@ -56,7 +61,8 @@ int main(int argc, char* argv[])
 
 	bool do_break = false;
 	while (!do_break) {
-		if (!coordinator.StartGame("(2)DreamcatcherLE.SC2Map")) {
+		//if (!coordinator.StartGame("StalkerMicroMarine.SC2Map")) {
+		if (!coordinator.StartGame("CatalystLE.SC2Map")) {
 			break;
 		}
 		while (coordinator.Update() && !do_break) {
