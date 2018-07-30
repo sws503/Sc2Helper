@@ -313,7 +313,7 @@ struct IsUnpowered {
 class MEMIBot : public Agent {
 public:
 
-	MEMIBot(std::string botname, std::string version) 
+	MEMIBot(std::string botname, std::string version)
 		: botname(botname), version(version) {}
 
 	virtual void OnGameStart() final {
@@ -330,11 +330,13 @@ public:
 		ep.radiuses_.push_back(5.9f);
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
+        branch = 1;
 		stage_number = 0;
 		iter_exp = expansions_.begin();
 
 		early_strategy = false;
 		warpgate_researched = false;
+		BlinkResearched = false;
 		advance_pylon = nullptr;
 		probe_scout = nullptr;
 		pylon_first = nullptr;
@@ -394,7 +396,7 @@ public:
 	}
 
 	virtual void OnStep() final {
-		
+
 
 		const ObservationInterface* observation = Observation();
 		ActionInterface* action = Actions();
@@ -421,7 +423,7 @@ public:
 		Defend();
 		//ManageArmy();
 		ManageRush();
-		
+
 
 		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
@@ -459,13 +461,15 @@ public:
 	}
     void OnUpgradeCompleted(UpgradeID upgrade) {
         switch (upgrade.ToType()) {
-            case UPGRADE_ID::WARPGATERESEARCH: {
-                warpgate_researched = true;
-            }
-			case UPGRADE_ID::BLINKTECH: {
+            case UPGRADE_ID::BLINKTECH: {
 				std::cout << "BLINK UPGRADE DONE!!";
 				BlinkResearched = true;
+				return;
 			}
+            case UPGRADE_ID::WARPGATERESEARCH: {
+                warpgate_researched = true;
+                return;
+            }
             default:
                 break;
         }
@@ -489,7 +493,6 @@ public:
 	const float base_range = 35;
 
 private:
-
 	void ChatVersion() {
 		Actions()->SendChat(botname + " " + version);
 	}
@@ -499,8 +502,6 @@ private:
 		std::cout << Message << std::endl;
 #endif
 	}
-
-	bool BlinkResearched = false;
 
 	void Chat(std::string Message) // 6.29 채팅 함수
 	{
@@ -1054,7 +1055,7 @@ private:
 
 	bool TryBuildUnitChrono(AbilityID ability_type_for_unit, UnitTypeID unit_type) {
 		const ObservationInterface* observation = Observation();
-
+		
 		//If we are at supply cap, don't build anymore units, unless its an overlord.
 		if (observation->GetFoodUsed() >= observation->GetFoodCap() && ability_type_for_unit != ABILITY_ID::TRAIN_OVERLORD) {
 			return false;
@@ -1165,7 +1166,7 @@ private:
 			if (nearExpansion) {
 				Filter f = [](const Unit& u) {
 					return IsMineral()(u) || IsVespeneGeyser()(u)
-						|| (IsUnits({UNIT_TYPEID::PROTOSS_ASSIMILATOR, UNIT_TYPEID::TERRAN_REFINERY, UNIT_TYPEID::ZERG_EXTRACTOR})(u) 
+						|| (IsUnits({UNIT_TYPEID::PROTOSS_ASSIMILATOR, UNIT_TYPEID::TERRAN_REFINERY, UNIT_TYPEID::ZERG_EXTRACTOR})(u)
 							&& u.alliance == Unit::Alliance::Self);
 				};
 				Units ms = observation->GetUnits(f);
@@ -1207,7 +1208,7 @@ private:
 		if (!Query()->Placement(ability_type_for_structure, location)) {
 			return false;
 		}
-		
+
 		// If no worker is already building one, get a nearest worker to build one
 		Tag probe_forge_tag = (probe_forge == nullptr) ? NullTag : probe_forge->tag;
 		Tag builder_tag = NullTag;
@@ -1237,7 +1238,7 @@ private:
 		float min_distance = std::numeric_limits<float>::max();
 		for (size_t i = 0; i < size; i++) {
 			float d = distances.at(i);
-			
+
 			// Check to see if unit can make it there
 			if (d < 0.01f) {
 				continue;
@@ -1258,7 +1259,7 @@ private:
 		if (builder == nullptr) {
 			return false;
 		}
-		
+
 		Actions()->UnitCommand(builder, ability_type_for_structure, location);
 		return true;
 		/*
@@ -1469,7 +1470,7 @@ private:
 		}
 		return false;
 	}
-	
+
 	bool TryBuildForge(const Unit* unit, const Unit* pylon) {
 
 		if (unit == nullptr) return false;
@@ -1577,8 +1578,29 @@ private:
 		return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
 	}
 
-	bool TryBuildPylonWide(Point2D location, size_t MaxBuildAtOnce = 1) {
-		return TryBuildPylon(location, 8.0f, MaxBuildAtOnce);
+	bool TrybuildFirstPylon() {
+        const ObservationInterface* observation = Observation();
+
+        Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
+
+        if (observation->GetMinerals() < 100) {
+			return false;
+		}
+
+		if (units.size()>0) {
+            return false;
+		}
+
+		float x = 8.0f;
+		float y = 8.0f;
+		if ((float)game_info_.width/2 < startLocation_.x) {
+            x = -8.0f;
+		}
+		if ((float)game_info_.height/2 < startLocation_.y) {
+            y = -8.0f;
+		}
+		Point2D build_location = Point2D(startLocation_.x + x, startLocation_.y + y);
+        return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
 	}
 
 	void MineIdleWorkers(const Unit* worker, bool reassigning = false) {
@@ -1662,7 +1684,7 @@ private:
 			Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
 			return;
 		}
-		
+
 		// Search for a base that does not have full of gas workers.
 		for (const auto& base : bases) {
 			Units target_geysers = FindUnitsNear(base->pos, 11.5f, geysers);
@@ -1820,7 +1842,7 @@ private:
 					for (const auto& base : bases) {
 						Units target_minerals = FindUnitsNear(base->pos, 11.5f, minerals);
 						Units target_geysers = FindUnitsNear(base->pos, 11.5f, geysers);
-						
+
 						if (std::find_if(target_minerals.begin(), target_minerals.end(), f) != target_minerals.end() ||
 							std::find_if(target_geysers.begin(), target_geysers.end(), f) != target_geysers.end()) {
 							assigned_well = true;
@@ -2113,7 +2135,7 @@ private:
         }
 
         const PowerSource& random_power_source = GetRandomEntry(power_sources);
-        if (Distance2D(random_power_source.position,front_expansion)>15) {
+        if (Distance2D(random_power_source.position,front_expansion)>20) {
             return false;
         }
 
@@ -2142,6 +2164,7 @@ private:
         return false;
     }
 
+
 	Point2D probe_scout_dest = Point2D(0,0);
 	Point2D advance_pylon_location = Point2D((float)game_info_.width/2,(float)game_info_.height/2);
 
@@ -2155,6 +2178,7 @@ private:
 
 	bool early_strategy;
 	bool warpgate_researched;
+	bool BlinkResearched;
 	const Unit* advance_pylon;
 	const Unit* probe_scout;
 	const Unit* pylon_first;
@@ -2167,5 +2191,6 @@ private:
 
 	uint16_t stage_number;
 	const Unit* base;
+	uint16_t branch;
 	const size_t max_worker_count_ = 65;
 };
