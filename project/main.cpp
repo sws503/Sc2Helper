@@ -8,12 +8,12 @@
 #include <iostream>
 
 static const std::string bot_name = "AdeptBot";
-static const std::string current_version = "v1.0";
+static const std::string current_version = "v0.5";
 
 #ifdef DEBUG
 static const bool VsHuman = false;
 static const int stepsize = 3;
-static const bool ControlTest = true;
+static const bool ControlTest = false;
 static const std::string map_name = "AcidPlantLE.SC2Map";
 
 class Human : public sc2::Agent {
@@ -35,13 +35,12 @@ int main(int argc, char* argv[])
 	}
 
 	coordinator.SetStepSize(3); //Control
-								//게임속도 빠르게 speed faster
-
+								 //게임속도 빠르게 speed faster
 	coordinator.SetMultithreaded(true);
+
 	if (ControlTest) {
 		coordinator.SetRealtime(true);
 	}
-
 	// Add the custom bot, it will control the players.
 	MEMIBot bot(bot_name, current_version);
 	Human human_bot;
@@ -55,7 +54,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Terran, Difficulty::HardVeryHard),
+			CreateComputer(Race::Protoss, Difficulty::HardVeryHard),
 			});
 	}
 
@@ -68,6 +67,7 @@ int main(int argc, char* argv[])
 			break;
 		}
 		while (coordinator.Update() && !do_break) {
+            //sc2::SleepFor(50);
 			if (sc2::PollKeyPress()) {
 				do_break = true;
 			}

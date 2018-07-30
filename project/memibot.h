@@ -142,44 +142,6 @@ struct AirAttacker2 { // 공중 공격 가능한 적들: 예언자가 기피해야하는 적. 완성이
 	}
 };
 
-struct IsOracle { // 예언자인지 감지
-	bool operator()(const Unit& unit) {
-
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_ORACLE: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsTempest {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_TEMPEST: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsVoidray {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_VOIDRAY: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsCarrier {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_CARRIER: return true;
-		default: return false;
-		}
-	}
-};
-
-
 struct IsAttackable {
 	bool operator()(const Unit& unit) {
 		switch (unit.unit_type.ToType()) {
@@ -189,6 +151,25 @@ struct IsAttackable {
 		default: return true;
 		}
 	}
+};
+
+struct IsRanged {
+	IsRanged(const ObservationInterface* obs) : observation_(obs) {}
+
+	bool operator()(const Unit& unit) {
+		auto Weapon = observation_->GetUnitTypeData().at(unit.unit_type).weapons;
+		for (const auto& weapon : Weapon) {
+			if (weapon.range < 1.0f) {
+				return false;
+			}
+		}
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT: return false;
+		default: return true;
+		}
+	}
+private:
+	const ObservationInterface* observation_;
 };
 
 struct IsWorker {
@@ -215,13 +196,13 @@ struct IsArmy {
 		}
 		switch (unit.unit_type.ToType()) {
 		case UNIT_TYPEID::ZERG_OVERLORD: return false;
-		//case UNIT_TYPEID::PROTOSS_PROBE: return false;
-		//case UNIT_TYPEID::ZERG_DRONE: return false;
-		//case UNIT_TYPEID::TERRAN_SCV: return false;
-		//case UNIT_TYPEID::ZERG_QUEEN: return false;
+		case UNIT_TYPEID::PROTOSS_PROBE: return false;
+		case UNIT_TYPEID::ZERG_DRONE: return false;
+		case UNIT_TYPEID::TERRAN_SCV: return false;
+		case UNIT_TYPEID::ZERG_QUEEN: return false;
 		case UNIT_TYPEID::ZERG_LARVA: return false;
 		case UNIT_TYPEID::ZERG_EGG: return false;
-		//case UNIT_TYPEID::TERRAN_MULE: return false;
+		case UNIT_TYPEID::TERRAN_MULE: return false;
 		case UNIT_TYPEID::TERRAN_NUKE: return false;
 		default: return true;
 		}
@@ -352,24 +333,41 @@ public:
 		stage_number = 0;
 		iter_exp = expansions_.begin();
 
-		base = nullptr;
 		early_strategy = false;
+		warpgate_researched = false;
+		advance_pylon = nullptr;
 		probe_scout = nullptr;
 		pylon_first = nullptr;
 		probe_forge = nullptr;
-		TimetoAttack = false;
+		probe_forward = nullptr;
+		base = nullptr;
 		OracleTrained = false;
-		oracle_second = nullptr;
-		WorkerKiller = nullptr;
-		oracle_first = nullptr;
 		find_enemy_location = false;
 
 		//Temporary, we can replace this with observation->GetStartLocation() once implemented
 		startLocation_ = Observation()->GetStartLocation();
 		staging_location_ = startLocation_;
 
-		if (game_info_.enemy_start_locations.size() == 1) find_enemy_location = true;
+		if (game_info_.enemy_start_locations.size() == 1)
+		{
+			find_enemy_location = true;
 
+			float minimum_distance = std::numeric_limits<float>::max();
+			for (const auto& expansion : expansions_) {
+				float Enemy_distance = Distance2D(game_info_.enemy_start_locations.front(), expansion);
+				if (Enemy_distance < .01f) {
+					continue;
+				}
+
+				if (Enemy_distance < minimum_distance) {
+					if (Query()->Placement(ABILITY_ID::BUILD_NEXUS, expansion)) {
+						Enemy_front_expansion = expansion;
+						minimum_distance = Enemy_distance;
+					}
+				}
+			}
+			//std::cout << Enemy_front_expansion.x << "  " << Enemy_front_expansion.y << "  " << Enemy_front_expansion.z << std::endl;
+		}
 
 
 		float minimum_distance = std::numeric_limits<float>::max();
@@ -386,24 +384,30 @@ public:
 				}
 			}
 		}
+/*
 		for (const auto& e : expansions_) {
 			std::cout << e.x << ", " << e.y << ", " << e.z << std::endl;
 		}
+*/
 		staging_location_ = Point3D(((staging_location_.x + front_expansion.x) / 2), ((staging_location_.y + front_expansion.y) / 2),
 			((staging_location_.z + front_expansion.z) / 2));
 	}
 
 	virtual void OnStep() final {
+		
 
 		const ObservationInterface* observation = Observation();
+		ActionInterface* action = Actions();
+
 		Units units = observation->GetUnits(Unit::Self, IsArmy(observation));
+		ConvertGateWayToWarpGate();
 
 		ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE);
 
 		if (!early_strategy) {
 			EarlyStrategy();
 		}
-		if (CountUnitType(UNIT_TYPEID::PROTOSS_PYLON)>0 && iter_exp < expansions_.end() && find_enemy_location == true) {
+		if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_GATEWAY)>0 && iter_exp < expansions_.end() && find_enemy_location == true) {
 			scoutprobe();
 		}
 
@@ -417,6 +421,7 @@ public:
 		Defend();
 		//ManageArmy();
 		ManageRush();
+		
 
 		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
@@ -452,6 +457,19 @@ public:
 		}
 		return;
 	}
+    void OnUpgradeCompleted(UpgradeID upgrade) {
+        switch (upgrade.ToType()) {
+            case UPGRADE_ID::WARPGATERESEARCH: {
+                warpgate_researched = true;
+            }
+			case UPGRADE_ID::BLINKTECH: {
+				std::cout << "BLINK UPGRADE DONE!!";
+				BlinkResearched = true;
+			}
+            default:
+                break;
+        }
+    }
 
 	GameInfo game_info_;
 	std::vector<Point3D> expansions_;
@@ -459,6 +477,7 @@ public:
 	Point3D staging_location_;
 
 	Point3D front_expansion;
+	Point3D Enemy_front_expansion;
 
 	Point2D RushLocation;
 	Point2D EnemyLocation;
@@ -480,6 +499,8 @@ private:
 		std::cout << Message << std::endl;
 #endif
 	}
+
+	bool BlinkResearched = false;
 
 	void Chat(std::string Message) // 6.29 채팅 함수
 	{
@@ -596,8 +617,43 @@ private:
 		}
 	}
 
-	bool OracleCanWin(const Unit* Oracle, Units enemyunits, bool OracleCanAttack);
 	void ManageRush();
+
+	void AdeptPhaseShift(const Unit * unit, Units ShadeNearEnemies, Units NearbyEnemies, bool & ComeOn);
+
+	void AdeptPhaseToLocation(const Unit * unit, Point2D Location, bool & Timer, bool & ComeOn);
+
+	void ManageBlink(const Unit * unit, const Unit * enemyarmy);
+
+	void StalkerBlinkEscape(const Unit * unit, const Unit * enemyarmy);
+
+	void StalkerBlinkForward(const Unit * unit, const Unit * enemyarmy);
+
+	void FrontKiting(const Unit * unit, const Unit * enemyarmy);
+
+	void ComeOnKiting(const Unit * unit, const Unit * enemyarmy);
+
+	void Kiting(const Unit * unit, const Unit * enemyarmy);
+
+	void KiteEnemy(const Unit * unit, Units enemy_army, Units enemy_units, Point2D KitingLocation, bool enemiesnear, const ObservationInterface * observation);
+
+
+	float MinimumDistance2D(const Unit * unit, const Unit * enemyarmy);
+
+
+	Point2D CalcKitingPosition(Point2D Mypos, Point2D EnemyPos);
+
+	bool GetPosition(Units Enemyunits, Unit::Alliance alliace, Point2D & position);
+
+	bool GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D & position);
+
+	int getAttackPriority(const Unit * u);
+
+	const Unit * GetTarget(const Unit * rangedUnit, Units & targets);
+
+	const float getDpsGROUND(const Unit * target) const;
+
+	const float getAttackRangeGROUND(const Unit * target) const;
 
 	void RetreatWithCarrier(const Unit* unit) {
 		if (pylonlocation != Point2D(0, 0))
@@ -726,21 +782,23 @@ private:
 		}
 		Point2D target_pos;
 
-		if (FindEnemyPosition(target_pos)) {
-			if (Distance2D(unit->pos, target_pos) < 20 && enemy_units.empty()) {
-				if (TryFindRandomPathableLocation(unit, target_pos)) {
-					Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos);
+		if (FindEnemyPosition(target_pos)) { //적 기지를 알고있는 상황이면
+			if (Distance2D(unit->pos, target_pos) < 20 && enemy_units.empty()) { //적 유닛이 없는 상황에서 적 기지가 근처에 있으면
+				if (TryFindRandomPathableLocation(unit, target_pos)) { //유닛별로 맵 전체적으로 퍼지는 위치를 배정받고
+					Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos); //그 위치로 간다
 					return;
 				}
 			}
-			else if (!enemy_units.empty())
+			else if (!enemy_units.empty()) // 적 유닛이 있는 상황이면 또는 이 유닛이 적 기지 근처에 없는상황이면
 			{
-				Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemy_units.front());
+				Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemy_units.front()); //적 유닛을 공격하러 간다
 				return;
 			}
-			Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos);
+			// TODO : 가장 마지막으로 본 적의 위치를 target_pos 로 리턴하는 함수를 만들자
+
+			Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos); //위 작업이 끝나면 적 기지를 다시한번 간다
 		}
-		else {
+		else { //적 기지도 모르면 막 돌아다녀라
 			if (TryFindRandomPathableLocation(unit, target_pos)) {
 				Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos);
 			}
@@ -783,7 +841,7 @@ private:
 			return false;
 		}
 		target_pos = game_info_.enemy_start_locations.front();
-		return true;
+		return find_enemy_location;
 	}
 
 	bool TryFindRandomPathableLocation(const Unit* unit, Point2D& target_pos) {
@@ -833,7 +891,7 @@ private:
 		return Observation()->GetUnits(Unit::Alliance::Self, IsUnit(unit_type)).size();
 	}
 
-	size_t CountUnitType(ObservationInterface* observation, UnitTypeID unit_type) {
+	size_t CountUnitType(const ObservationInterface* observation, UnitTypeID unit_type) {
 		return observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type)).size();
 	}
 
@@ -1008,7 +1066,6 @@ private:
 			if (candidate_unit->build_progress != 1.0f) continue;
 			// is doing something?
 			if (!candidate_unit->orders.empty()) continue;
-
 			unit = candidate_unit;
 			// pick prioritized structures first
 			if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
@@ -1022,6 +1079,19 @@ private:
 		Chronoboost(unit);
 		return true;
 	}
+
+	void ConvertGateWayToWarpGate() {
+        const ObservationInterface* observation = Observation();
+        Units gateways = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_GATEWAY));
+
+        if (warpgate_researched) {
+            for (const auto& gateway : gateways) {
+                if (gateway->build_progress == 1) {
+                    Actions()->UnitCommand(gateway, ABILITY_ID::MORPH_WARPGATE);
+                }
+            }
+        }
+    }
 
 	bool TryBuildUnit(AbilityID ability_type_for_unit, UnitTypeID unit_type, Filter priority_filter = {}) {
 		const ObservationInterface* observation = Observation();
@@ -1247,7 +1317,7 @@ private:
 
 		// find nearest worker near geyser
 		for (const auto& worker : workers) {
-			if (worker == probe_scout || worker == probe_forge) continue;
+			if (worker == probe_scout || worker == probe_forward) continue;
 			// consider idle or mining workers only
 			if (!worker->orders.empty()) {
 				auto abilityid = worker->orders.front().ability_id;
@@ -1323,6 +1393,9 @@ private:
 		}
 
 		const PowerSource& random_power_source = GetRandomEntry(power_sources);
+		if (advance_pylon !=nullptr && Distance2D(random_power_source.position,advance_pylon->pos)<10) {
+            return false;
+		}
 		if (observation->GetUnit(random_power_source.tag) != nullptr) {
 			if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISM) {
 				return false;
@@ -1888,13 +1961,9 @@ private:
 	void ManageUpgrades() {
 		const ObservationInterface* observation = Observation();
 		auto upgrades = observation->GetUpgrades();
+		TryBuildUnit(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
+		TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
 		for (const auto& upgrade : upgrades) {
-			if (upgrade == UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL1 || upgrade == UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL2) {
-				TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
-			}
-			else if (upgrade == UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL3 || upgrade == UPGRADE_ID::PROTOSSAIRARMORSLEVEL1 || upgrade == UPGRADE_ID::PROTOSSAIRARMORSLEVEL2) {
-				TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSAIRARMOR, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
-			}
 		}
 	}
 
@@ -1925,31 +1994,11 @@ private:
 
 	}
 
-	bool TryBuildExpansionNexus() {
-		const ObservationInterface* observation = Observation();
-
-		//Don't have more active bases than we can provide workers for
-		if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) > max_worker_count_) {
-			return false;
-		}
-		// If we have extra workers around, try and build another nexus.
-		if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) < observation->GetFoodWorkers() - 16) {
-			return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
-		}
-		//Only build another nexus if we are floating extra minerals
-		int CurrentStargate = CountUnitType(UNIT_TYPEID::PROTOSS_STARGATE);
-
-		if (!EnemyRush && observation->GetMinerals() > CurrentStargate * 350 + 400) {
-			return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
-		}
-		return false;
-	}
-
 	bool TryBuildAssimilator() {
 		const ObservationInterface* observation = Observation();
 		Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
 
-		if (CountUnitType(UNIT_TYPEID::PROTOSS_ASSIMILATOR) >= observation->GetUnits(Unit::Alliance::Self, IsTownHall()).size() * 2) {
+		if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_ASSIMILATOR) >= observation->GetUnits(Unit::Alliance::Self, IsTownHall()).size() * 2) {
 			return false;
 		}
 
@@ -2016,26 +2065,101 @@ private:
 		if (Distance2D(probe_scout->pos, tag_pos)<1) {
 			iter_exp++;
 		}
+
 	}
 
-	float OracleRange; // 절대적으로 생존
+	bool TryWarpAdept(){
+        const ObservationInterface* observation = Observation();
+        std::vector<PowerSource> power_sources = observation->GetPowerSources();
+        Units warpgates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE));
+
+        if (power_sources.empty()) {
+            return false;
+        }
+
+        const PowerSource& random_power_source = GetRandomEntry(power_sources);
+
+        float radius = random_power_source.radius;
+        float rx = GetRandomScalar();
+        float ry = GetRandomScalar();
+        Point2D build_location = Point2D(advance_pylon->pos.x + rx * radius, advance_pylon->pos.y + ry * radius);
+
+
+        if (Query()->PathingDistance(build_location, game_info_.enemy_start_locations.front())) {
+            return false;
+        }
+
+        for (const auto& warpgate : warpgates) {
+            //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
+            if (warpgate->build_progress == 1) {
+                AvailableAbilities abilities = Query()->GetAbilitiesForUnit(warpgate);
+                for (const auto& ability : abilities.abilities) {
+                    if (ability.ability_id == ABILITY_ID::TRAINWARP_ADEPT) {
+                        Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    bool TryWarpStalker(){
+        const ObservationInterface* observation = Observation();
+        std::vector<PowerSource> power_sources = observation->GetPowerSources();
+        Units warpgates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE));
+
+        if (power_sources.empty()) {
+            return false;
+        }
+
+        const PowerSource& random_power_source = GetRandomEntry(power_sources);
+        if (Distance2D(random_power_source.position,front_expansion)>15) {
+            return false;
+        }
+
+        float radius = random_power_source.radius;
+        float rx = GetRandomScalar();
+        float ry = GetRandomScalar();
+        Point2D build_location = Point2D(random_power_source.position.x + rx * radius, random_power_source.position.y + ry * radius);
+
+
+        if (Query()->PathingDistance(build_location, game_info_.enemy_start_locations.front())) {
+            return false;
+        }
+
+        for (const auto& warpgate : warpgates) {
+            //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
+            if (warpgate->build_progress == 1) {
+                AvailableAbilities abilities = Query()->GetAbilitiesForUnit(warpgate);
+                for (const auto& ability : abilities.abilities) {
+                    if (ability.ability_id == ABILITY_ID::TRAINWARP_STALKER) {
+                        Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_STALKER, build_location);
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+	Point2D probe_scout_dest = Point2D(0,0);
+	Point2D advance_pylon_location = Point2D((float)game_info_.width/2,(float)game_info_.height/2);
 
 	std::string version;
 	std::string botname;
 	bool EnemyRush;
 	bool PhotonRush;
-	bool TimetoAttack;
 	bool OracleTrained;
 	Point2D pylonlocation;
 	Units Killers;
-	const Unit* WorkerKiller;
-	const Unit* oracle_first;
-	const Unit* oracle_second;
 
 	bool early_strategy;
+	bool warpgate_researched;
+	const Unit* advance_pylon;
 	const Unit* probe_scout;
 	const Unit* pylon_first;
 	const Unit* probe_forge;
+	const Unit* probe_forward;
 
 	bool find_enemy_location;
 	std::vector<Point3D>::iterator iter_exp;

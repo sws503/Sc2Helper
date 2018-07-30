@@ -1,470 +1,671 @@
 #include "memibot.h"
-bool MEMIBot::OracleCanWin(const Unit* Oracle , Units enemyunits, bool OracleCanAttack)
-{
-	const ObservationInterface* observation = Observation();
-	//Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy); 
-	
-	float OracleHP = Oracle->health + Oracle->shield;
-	float TotalEnemyHP = 0.1f;
-	float TotalDPS = 0.1f;
-	float AirRange = 0.0f;
-	float dps = 0.0f;
 
-	//TODO 경장갑과 무장갑이 섞여있는 경우 생각하기 & 방어력 생각하기
-	float gap = !OracleCanAttack * 25;
-	float OracleDPS = 15 * 1.1;
-	float OracleDeal = (Oracle->energy - gap) / 2 * OracleDPS;
+struct IsAdept {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_ADEPT: return true;
+		default: return false;
+		}
+	}
+};
 
-	float EnemyHP = 0.0f;
+struct IsAdeptShade {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT: return true;
+		default: return false;
+		}
+	}
+};
 
-	for (const auto & enemy : enemyunits)
-	{
-		bool isLight = false;
-		// if it's a combat unit
+struct IsNearbyWorker {
+	IsNearbyWorker(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
+		observation_(obs), mp(MyPosition), radius(Radius) {}
+
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::ZERG_DRONE:
+		case UNIT_TYPEID::TERRAN_SCV:
+		case UNIT_TYPEID::TERRAN_MULE:
+		case UNIT_TYPEID::PROTOSS_PROBE:return Distance2D(mp, unit.pos) < radius;
+
+
+		default: return false;
+		}
+	}
+private:
+	const ObservationInterface* observation_;
+	Point2D mp;
+	int radius;
+};
+
+struct IsNearbyArmies {
+	IsNearbyArmies(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
+		observation_(obs), mp(MyPosition), radius(Radius) {}
+
+	bool operator()(const Unit& unit) {
+		auto attributes = observation_->GetUnitTypeData().at(unit.unit_type).attributes;
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::ZERG_OVERLORD: return false;
+		case UNIT_TYPEID::ZERG_LARVA: return false;
+		case UNIT_TYPEID::ZERG_EGG: return false;
+		case UNIT_TYPEID::TERRAN_MULE: return false;
+		case UNIT_TYPEID::TERRAN_NUKE: return false;
+		case UNIT_TYPEID::ZERG_DRONE:
+		case UNIT_TYPEID::TERRAN_SCV:
+		case UNIT_TYPEID::PROTOSS_PROBE:return false;
+
+		case UNIT_TYPEID::PROTOSS_PHOTONCANNON:
+		case UNIT_TYPEID::TERRAN_BUNKER:
+		case UNIT_TYPEID::ZERG_SPINECRAWLER:
+		case UNIT_TYPEID::TERRAN_PLANETARYFORTRESS: return Distance2D(mp, unit.pos) < radius;
+
+
+		default:
+			for (const auto& attribute : attributes) {
+				if (attribute == Attribute::Structure) {
+					return false;
+				}
+			}
+			return Distance2D(mp, unit.pos) < radius;
+		}
+	}
+private:
+	const ObservationInterface* observation_;
+	Point2D mp;
+	int radius;
+};
+
+struct IsNearbyEnemies {
+	IsNearbyEnemies(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
+		observation_(obs), mp(MyPosition), radius(Radius) {}
+
+	bool operator()(const Unit& unit) {
+		auto attributes = observation_->GetUnitTypeData().at(unit.unit_type).attributes;
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::ZERG_OVERLORD: return false;
+		case UNIT_TYPEID::ZERG_LARVA: return false;
+		case UNIT_TYPEID::ZERG_EGG: return false;
+		case UNIT_TYPEID::TERRAN_MULE: return false;
+		case UNIT_TYPEID::TERRAN_NUKE: return false;
 		
+		case UNIT_TYPEID::PROTOSS_PHOTONCANNON: 
+		case UNIT_TYPEID::TERRAN_BUNKER:
+		case UNIT_TYPEID::ZERG_SPINECRAWLER: 
+		case UNIT_TYPEID::TERRAN_PLANETARYFORTRESS: return Distance2D(mp, unit.pos) < radius;
 
-		//TODO : 체력 다 합치기 (지금은 그냥 테스트라서 냅둠)
-
-		//적 방어타입을 계산 (경장갑인지 확인하기위해)
-		for (const auto & Attribute : Observation()->GetUnitTypeData()[enemy->unit_type].attributes)
-		{
-			if (Attribute == Attribute::Light)
-			{
-				isLight = true;
+		
+		default:  
+			for (const auto& attribute : attributes) {
+				if (attribute == Attribute::Structure) {
+					return false;
+				}
 			}
+			return Distance2D(mp, unit.pos) < radius;
 		}
-
-
-		if (isLight) // 적이 경장갑인 경우
-		{
-			OracleDPS = 22 * 1.1;
-			OracleDeal = (Oracle->energy - gap) / 2 * OracleDPS;
-		}
-
-		//Get its weapon
-		AirRange = getAttackRange(enemy);
-
-		if (AirRange) // 공중공격 못하면 0이므로
-		{
-			EnemyHP = enemy->health + enemy->shield;
-			TotalEnemyHP += EnemyHP;
-
-			//DPS를 계산
-			for (const auto & Weapon : Observation()->GetUnitTypeData()[enemy->unit_type].weapons)
-			{
-				if (Weapon.type == Weapon::TargetType::Ground)
-					continue;
-
-				dps = Weapon.attacks * Weapon.damage_ / Weapon.speed;
-			}
-		}
-		else //적이 공중공격을 할수 없음  > 무조건 내가 이김
-		{
-			dps = 0.0;
-		}
-		TotalDPS += dps;
 	}
-#ifdef DEBUG
-	std::cout << TotalEnemyHP << "<" << OracleDeal << (TotalEnemyHP < OracleDeal) << std::endl;
+private:
+	const ObservationInterface* observation_;
+	Point2D mp;
+	int radius;
+};
 
-	std::cout << TotalEnemyHP << "/" << OracleDPS << "<" <<  OracleHP << "/" << TotalDPS << "=" << ((TotalEnemyHP / OracleDPS) < (OracleHP / TotalDPS)) << std::endl;
-#endif
+std::map<uint64_t, uint32_t> adept_map;
 
-
-	if (TotalEnemyHP < OracleDeal) // 일단 적을 죽일만큼 딜이 나올 경우
-		if (TotalEnemyHP / OracleDPS < OracleHP / TotalDPS) // 내가 적보다 빨리 죽일 수 있으면
-		{
-			//Chat("I can fight");
-			return true;
-		}
-		else
-		{
-			//Chat("I can't win");
-			return false; // false
-		}
-	else
-	{
-		//Chat("I can kill no one");
-		return false; // false
-	}
-}
-
-bool mustattack = false;
+bool MustAttack = false;
+bool StalkerMustAttack = false;
 
 void MEMIBot::ManageRush() { // 5.17 오라클 유닛 관리 +6.25 폭풍함 유닛 관리
-
-	const float TempestRange = 3.0f;
-	const float CarrierRange = 3.0f;
 
 	const ObservationInterface* observation = Observation();
 	Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
 	Units enemy_army = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
-	Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsOracle());
-	Units Tempests = observation->GetUnits(Unit::Alliance::Self, IsTempest());
-	Units Voidrays = observation->GetUnits(Unit::Alliance::Self, IsVoidray());
-	Units Carriers = observation->GetUnits(Unit::Alliance::Self, IsCarrier());
+
+	Units Adepts = observation->GetUnits(Unit::Alliance::Self, IsAdept());
+	Units AdeptShades = observation->GetUnits(Unit::Alliance::Self, IsAdeptShade());
 	Units EnemyWorker = observation->GetUnits(Unit::Alliance::Enemy, IsWorker());
-	Units AirAttackers = observation->GetUnits(Unit::Alliance::Enemy, AirAttacker()); //적 방어 유닛 및 건물
-	Units AirAttackers2 = observation->GetUnits(Unit::Alliance::Enemy, AirAttacker2());
-	//Units ProxyEnemy = observation->GetUnits(Unit::Alliance::Enemy, ExceptBuilding());
-	float rx = GetRandomScalar();
-	float ry = GetRandomScalar();
+	size_t CurrentStalker = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER);
+	size_t CurrentAdept = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ADEPT);
 
 	
 
-	for (const auto& unit : Oracles) {
-		bool OracleFight = false; //false
+	Units RangedUnitTargets;
 
-		if (unit == oracle_second)
-			continue;
-		bool OracleCanAttack = false;
+	Units rangedunits = observation->GetUnits(Unit::Alliance::Self, IsRanged(observation));
+	Units ShadeNearEnemies;
+	Units ShadeNearArmies;
 
-
-		if (!unit->orders.empty()) { // 펄서광선  ON / OFF
-			float distance = std::numeric_limits<float>::max();
-
-
-
-			for (const auto& u : enemy_army) {
-				float d = Distance2D(u->pos, unit->pos);
-				if (d < distance) {
-					distance = d;
-				}
-			}
-			if (unit->energy == 1)
-				OracleCanAttack = false;
-			else if (distance < 6 && unit->energy >= 45) {
-				Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMON);
-				OracleCanAttack = true;
-			}
-			else if (distance < 10 && unit->energy >= 40 || OracleFight) {
-				Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMON);
-				OracleCanAttack = true;
-			}
-			else if (distance > 20) {
-				Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);
-				OracleCanAttack = false;
-			}
-		}
-
-		if (find_enemy_location == 1) {
-			if (enemy_units.empty()) {
-				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
-			}
+	for (const auto& unit : AdeptShades) {
+		ShadeNearArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 15));
+		ShadeNearEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 15));
+		Units ShadeNearWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyWorker(observation, unit->pos, 15));
+		
+		for (const auto & ShadeNearWorker : ShadeNearWorkers)
+		{
+			/*if (unit->orders.empty()) {
+				Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, ShadeNearWorker->pos);
+			}*/
 			
 		}
-
-		bool evade = false;
-
-		float distance = std::numeric_limits<float>::max(); // 5.21 방어 건물,유닛이 근처로 가지 않는다
-		float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
-		float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
-
-		for (const auto& u : AirAttackers2) {
-			float d = Distance2D(u->pos, unit->pos);
-			if (d < distance) {
-				distance = d; // 가장 가까운 거리의 적을 고른다
-			}
-
-			float TargetAttackRange = getAttackRange(u);
-
-			Vector2D diff = unit->pos - u->pos; // 7.3 적 유닛과의 반대 방향으로 도망
-			Normalize2D(diff);
-			KitingLocation = unit->pos + diff * 7.0f;
-
-			float add = OracleRange;
-
-			if (u->unit_type == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || u->unit_type == sc2::UNIT_TYPEID::ZERG_SPORECRAWLER || u->unit_type == sc2::UNIT_TYPEID::TERRAN_MISSILETURRET)
-			{
-				add = 1.0f;
-			}
-
-			// 공격해야되는지 피해야 되는지 판단.
-			// 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-			// 7.5 OracleRange 는 안전거리 (적도 나를 향해 움직이기 때문)
-			if (distance <= TargetAttackRange + add) {
-				evade = true;
-				break;
-			}
-		}
-
-		//적들을 내가 이길수 있는지 판단
-		if (!OracleCanWin(unit, AirAttackers2, OracleCanAttack)) // 이길수없으면 아예 덤비지말고
-		{
-			OracleFight = false;
-			//Chat("OMG! It's too scary..@@@@@@@@@@@@@@@");
-		}
-		/*if (!OracleCanAttack && unit->energy < 60) // 위협적인 적이 아닌데 펄서광선 켤 에너지가 모자라면 덤비지말고
-		{
-			OracleFight = false;
-			Chat("Not enough energy!!!!!!!!!!!!!!!!!!!");
-		}*/
-		else // 위협적인 적이 아닐때 에너지도 충분하면 덤비자
-		{
-			OracleFight = true;
-			//Chat("Come on~ Let's fight#################");
-		}
-
-		// 적 유닛 피하기
-		// 펄서빔이 꺼져있을 땐 
-		if (!OracleCanAttack) {				
-			//이길수 없는 적이 있으면 뒤로 도망간다
-			if (!OracleFight && evade)
-			{
-				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-				Chat("It's dangerous EVADE!!");
-			}
-			//이길 수 있는 적이 있으면 가까이 다가간다
-			else
-				ScoutWithUnit(unit, observation);
-		}
-
-		// 스킬 피하기
-		else if (EvadeEffect(unit)) {}
-
-		//펄서빔이 켜져있을 때 
-		else if (OracleCanAttack)
-		{
-			//이길 수 없는 적 유닛이 가까이 오면
-			if (!OracleFight && evade)
-			{
-				//도망간다
-				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-				Chat("It's dangerous EVADE!!");
-			}
-			//반대로 이길수 있는 상황에선
-			else
-			{
-				//나를 공격하러 오면
-				if (evade)
-				{
-					//그 유닛을 죽인다
-					Chat("Come on~ fight");
-					for (const auto& Proxy1 : AirAttackers2) {
-						if (!Proxy1->is_alive) continue;
-						Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, Proxy1);
-						break;
-					}
-				}
-				//위협이 없는 상황에선
-				else
-				{
-					//일꾼을 우선 죽인다
-					for (const auto& Proxy1 : EnemyWorker) {
-						if (!Proxy1->is_alive) continue;
-						Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, Proxy1);
-						Chat("Worker Attack!");
-						break;
-					}
-				}
-			}
-		}
-#ifdef DEBUG
-		if (OracleFight) std::cout << "Fight";
-		else std::cout << "No Fight";
-#endif
-	}
-	for (const auto& unit : Voidrays) {
-		float distance = std::numeric_limits<float>::max(); // 6.25 공허포격기 거리유지
-		float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
-		float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
-
-		if (EvadeEffect(unit)) continue;
-
-		bool enemiesnear = false;
-
-		bool IsArmored = false;
-		for (const auto& u : AirAttackers) {
-
-
-			if (!u->is_alive)
-			{
-				continue;
-			}
-
-			float d = Distance2D(u->pos, unit->pos);
-			if (d < distance) {
-				distance = d;
-			}
-
-			float TargetAttackRange = getAttackRange(u);
-
-			Vector2D diff = unit->pos - u->pos; // 7.3 적 유닛과의 반대 방향으로 도망
-			Normalize2D(diff);
-			KitingLocation = unit->pos + diff * 7.0f;
-
-			if (distance < 6) // 공허포격기는 되도록 최대 사거리(=6)에서 공격한다
-			{
-				for (const auto & Attribute : Observation()->GetUnitTypeData()[u->unit_type].attributes)
-				{
-					if (Attribute == Attribute::Armored)
-					{
-						IsArmored = true;
-					}
-				}
-
-
-				enemiesnear = true;
-				break;
-			}
-		}
-
-		// 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-		if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
-			if(IsArmored)
-				Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_VOIDRAYPRISMATICALIGNMENT); // 적 유닛 중 중장갑 유닛이 있으면 분광정렬 사용
-			if(EnemyRush)
-				RetreatWithVoidray(unit);
-
-			if (unit->orders.empty())
-				RetreatWithCarrier(unit);
-		}
-		// 가까우면 도망간다.
-		else {
-			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-		}
-
-
 	}
 
+	for (const auto& unit : rangedunits) {
+		Units NearbyWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyWorker(observation, unit->pos, 7));
+		Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 15));
+		Units NearbyEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 15)); //각 유닛의 근처에 있는 
+		float TargetAttackRange = 0.0f;
+		float UnitAttackRange = getAttackRangeGROUND(unit);
 
-	for (const auto& unit : Tempests) {
-		float distance = std::numeric_limits<float>::max(); // 6.25 폭풍함은 사거리를 활용해 방어 건물,유닛 근처로 가지 않는다
-		float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
-		float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
-
-		if (EvadeEffect(unit)) continue;
-
-		for (const auto& u : AirAttackers) {
-			float d = Distance2D(u->pos, unit->pos);
-			if (d < distance) {
-				distance = d;
-			}
-
-			float TargetAttackRange = getAttackRange(u);
-
-			Vector2D diff = unit->pos - u->pos; // 7.3 적 유닛과의 반대 방향으로 도망
-			Normalize2D(diff);
-			KitingLocation = unit->pos + diff * 7.0f;
-
-			if (unit->weapon_cooldown == 0.0f || TargetAttackRange + TempestRange < distance) // 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-			{
-
-				for (const auto& Proxy2 : AirAttackers) {
-					//Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-					Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
-
-					break; // 타겟할 유닛을 찾고 찾으면 공격하는 걸로
-				}
-
-			}
-			else if (distance <= TargetAttackRange + TempestRange) {
-				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-				break;
-			}
-			else
-			{
-				for (const auto& Proxy1 : EnemyWorker) {
-					//Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, EnemyWorker.front()->pos);
-					Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, Proxy1->pos);
-
-					break;
-				}
-			}
-		}
-	}
-
-	size_t CurrentCarrier = CountUnitType(UNIT_TYPEID::PROTOSS_CARRIER);
-
-	if (CurrentCarrier <= 3) {
-		OracleRange = 3.0f;
-	}
-	else {
-		OracleRange = 4.0f;
-		TimetoAttack = true;
-	}
-
-	for (const auto& unit : Carriers) {
-		float distance = std::numeric_limits<float>::max(); // 6.25 캐리어 거리유지
-		float UnitAttackRange = getAttackRange(unit); // 7.3 이 유닛의 공격사정거리
-		float TargetAttackRange = 0.0f; // 7.3 나를 공격할 수 있는 유닛의 공격 사정거리
-
-		if (EvadeEffect(unit)) continue;
-
-		bool enemiesnear = false;
-		for (const auto& u : AirAttackers) {
-			if (!u->is_alive)
-			{
-				continue;
-			}
-
-			float d = Distance2D(u->pos, unit->pos);
-			if (d < distance) {
-				distance = d;
-			}
-
-			float TargetAttackRange = getAttackRange(u);
-
-			Vector2D diff = unit->pos - u->pos; // 7.3 적 유닛과의 반대 방향으로 도망
-			Normalize2D(diff);
-			KitingLocation = unit->pos + diff * 7.0f;
-
-			float RealCarrierRange = (unit->shield < 10) ? 7.5f : CarrierRange;
-
-			// 하나라도 가까이 있는 경우.
-			if (distance <= TargetAttackRange + RealCarrierRange) // 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-			{
-				enemiesnear = true;
-				break;
-			}
-		}
-
+		// 타겟을 받아옵니다 *^^*
+		const Unit * target = GetTarget(unit, NearbyEnemies);
 		
-		if (CurrentCarrier < 10 && !mustattack) {
-			// 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-			if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
-				if (unit->orders.empty())
-					RetreatWithCarrier(unit);
-			}
-			// 가까우면 도망간다.
-			else {
-				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-			}
-		}
-		else if (CurrentCarrier < 4 && mustattack) {
-			mustattack = false;
-			if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
-				if (unit->orders.empty())
-					RetreatWithCarrier(unit);
-			}
-			// 가까우면 도망간다.
-			else {
-				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-			}
-		}
-
-		else { //if (CurrentCarrier >= 10)
-			mustattack = true;
-
-			if (AirAttackers.empty())
+		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_STALKER)
+		{
+			if (BlinkResearched && CurrentStalker > 10)
 			{
-				AttackWithUnit(unit, observation);
+				if (target == nullptr) {}
+				else
+					ManageBlink(unit, target);
 			}
-			else if (!enemy_units.empty()) {
-				// 내가 공격할 수 있고 적 사거리보다 멀리 있을 때 공격한다
-				if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
-					Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, AirAttackers.front()->pos);
+
+			if (CurrentStalker < 12 && !StalkerMustAttack)
+			{
+				RetreatWithUnit(unit, advance_pylon_location);
+			}
+			else if (CurrentStalker == 1 && StalkerMustAttack)
+			{
+				StalkerMustAttack = false;
+			}
+			else //(CurrentStalker >= 12)
+			{
+				StalkerMustAttack = true;
+				if (target == nullptr)
+				{
+					ScoutWithUnit(unit, observation);
 				}
-				// 가까우면 도망간다.
-				else {
-					Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+				else // 타겟이 존재할 때
+				{
+					Kiting(unit, target);
 				}
 			}
-			else // 지도상에 적 유닛이 아예 없는 상황에선 캐리어가 주도적으로 탐색해야함
+
+		}
+
+
+		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_ADEPT)
+		{
+			bool ComeOn = false;
+			if (NearbyWorkers.size() > 0) // 만약 주변에 진짜 가까운 일꾼이 있으면
 			{
-				ScoutWithUnit(unit, observation);
-				scoutprobe();
+				const Unit * Workertarget = GetTarget(unit, NearbyWorkers);
+				Chat("FrontKiting Activating");
+				FrontKiting(unit, Workertarget);
+
+				AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
 			}
+			else if (CurrentAdept < 8 && !MustAttack)
+			{
+				RetreatWithUnit(unit, advance_pylon_location);
+			}
+			else if (CurrentAdept == 1 && MustAttack)
+			{
+				MustAttack = false;
+			}
+			else //(CurrentAdept >= 8)
+			{
+				MustAttack = true;
+				if (target == nullptr)
+				{
+					ScoutWithUnit(unit, observation);
+				}
+				else // 타겟이 존재할 때
+				{
+					
+					AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
+
+					if (ComeOn)
+					{
+						ComeOnKiting(unit, target); // 적을 유인하는 Kiting
+					}
+					else
+					{
+						Kiting(unit, target);
+					}
+					
+				}
+				
+			}
+		}
+		/*bool enemiesnear = false;
+		Point2D KitingLocation;
+		Point2D EnemyAveragePosition;
+		if (!GetPosition(NearbyEnemies, Unit::Alliance::Enemy, EnemyAveragePosition))
+		{
+		return;
+		}*/
+
+		/*for (const auto& enemyarmy : NearbyEnemies)
+		{
+			if (!enemyarmy->is_alive)
+			{
+				continue;
+			}
+
+			float TargetAttackRange = getAttackRangeGROUND(enemyarmy);
+			float distance = MinimumDistance2D(unit, enemyarmy);
+
+
+			if (distance <= TargetAttackRange) //근처에 있을때만 KitingLocation을 업데이트한다
+			{
+				enemiesnear = true;
+				KitingLocation = CalcKitingPosition(unit->pos, enemyarmy->pos);
+				break;
+			}
+		}*/
+
+		/*else if(!IsStructure(Observation())(* target) && Distance2D(unit->pos, target->pos) <= UnitAttackRange)
+		{
+			Kiting(unit, target);
+		}*/
+
+	}
+}
+
+void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units NearbyEnemies, bool & ComeOn)
+{
+	bool Timer = false;
+
+	// **********************TEST 용 입니다 **************************
+	bool ControlTest = false; 
+	if (ControlTest)
+	{
+		Chat("Warning!! TEST MODE");
+		AdeptPhaseToLocation(unit, Point2D(100,50), Timer, ComeOn);
+	}
+	// **********************TEST 용 입니다 **************************
+	else if (Distance2D(game_info_.enemy_start_locations.front(), unit->pos) <= 20) //적 기지근처에 있으면 적 앞마당으로 분신을 날린다
+	{
+		AdeptPhaseToLocation(unit, Enemy_front_expansion, Timer, ComeOn);
+	}
+	else // 그 경우가 아니면 일반적으로 적 기지로 분신을 날린다
+	{
+		AdeptPhaseToLocation(unit, game_info_.enemy_start_locations.front(), Timer, ComeOn);
+	}
+
+	if (Timer)
+	{
+		std::cout << ShadeNearEnemies.size() << ">=" << NearbyEnemies.size() << "=" << (ShadeNearEnemies.size() >= NearbyEnemies.size()) << std::endl;
+
+		if (ShadeNearEnemies.size() > NearbyEnemies.size()) // TODO : DPS로 계산하기
+		{
+			Actions()->UnitCommand(unit, ABILITY_ID::CANCEL_ADEPTPHASESHIFT);
 		}
 	}
 }
+
+void MEMIBot::AdeptPhaseToLocation(const Unit* unit, Point2D Location , bool & Timer, bool & ComeOn)
+{
+	Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_ADEPTPHASESHIFT, Location);
+
+	const ObservationInterface* observation = Observation();
+	uint32_t game_loop = Observation()->GetGameLoop();
+
+	if (adept_map.count(unit->tag) == 0) {
+		adept_map.insert(std::make_pair((unit->tag), observation->GetGameLoop()));
+		Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_ADEPTPHASESHIFT, Location);
+	}
+	if (adept_map.find(unit->tag)->second + 145 <= game_loop)
+	{
+		Timer = true;
+		adept_map.erase(unit->tag);
+	}
+	else
+	{
+		ComeOn = true;
+	}
+}
+
+void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
+{
+	std::cout << "Manage BLINK !!";
+
+	float UnitHealth = unit->health + unit->shield;
+
+	if (UnitHealth < 30)
+	{
+		StalkerBlinkEscape(unit, target);
+	}
+	if (getDpsGROUND(target) == 0.0f)
+	{
+		StalkerBlinkForward(unit, target);
+	}
+}
+
+void MEMIBot::StalkerBlinkEscape(const Unit* unit , const Unit* enemyarmy)
+{
+	Point2D BlinkLocation = unit->pos;
+	Point2D KitingLocation = CalcKitingPosition(unit->pos, enemyarmy->pos);
+	BlinkLocation += KitingLocation * 7.0f;
+
+	Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_BLINK, BlinkLocation);
+}
+
+void MEMIBot::StalkerBlinkForward(const Unit* unit, const Unit* enemyarmy)
+{
+	Point2D BlinkLocation = unit->pos;
+	Point2D KitingLocation = CalcKitingPosition(unit->pos, enemyarmy->pos);
+	BlinkLocation -= KitingLocation * 7.0f;
+
+	Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_BLINK, BlinkLocation);
+}
+
+void MEMIBot::FrontKiting(const Unit* unit, const Unit* enemyarmy)
+{
+	//Distance to target
+	float dist = Distance2D(unit->pos, enemyarmy->pos);
+	float DIST = dist - unit->radius - enemyarmy->radius;
+
+	//Our range
+	float unitattackrange = getAttackRangeGROUND(unit);
+
+	const Unit& ENEMYARMY = *enemyarmy;
+
+	if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
+	{
+		Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemyarmy->pos);
+	}
+	else
+	{
+		sc2::Point2D KitingLocation = unit->pos;
+		//If its a building we want range -1 distance
+		//The same is true if it outranges us. We dont want to block following units
+		KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos);
+		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+	}
+}
+
+void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
+{
+	//std::cout << ShadeNearEnemies.size() << ">=" << NearbyEnemies.size() << "=" << (ShadeNearEnemies.size() >= NearbyEnemies.size()) << std::endl;
+
+	//Distance to target
+	float dist = Distance2D(unit->pos, enemyarmy->pos);
+	float DIST = dist - unit->radius - enemyarmy->radius;
+
+	//Our range
+	float unitattackrange = getAttackRangeGROUND(unit);
+
+	const Unit& ENEMYARMY = *enemyarmy;
+
+	std::cout << getAttackRangeGROUND(enemyarmy) << "<" << unitattackrange << "=" << (getAttackRangeGROUND(enemyarmy) < unitattackrange) << "           1이면 공격합니다 ^^" <<std::endl;
+
+	if ( (unit->weapon_cooldown == 0.0f && (getAttackRangeGROUND(enemyarmy) < unitattackrange)) || DIST > 10) //적 공격사거리가 나보다 짧으면 공격한다
+	{
+		Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemyarmy->pos);
+	}
+	else
+	{
+		sc2::Point2D KitingLocation = unit->pos;
+		//If its a building we want range -1 distance
+		//The same is true if it outranges us. We dont want to block following units
+		if (IsStructure(Observation())(ENEMYARMY)) // 건물이면 달라붙죠 ㅇㅋ?
+		{
+			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos);
+		}
+		else // 적 공격사거리가 나랑 같거나 길면
+		{
+			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos); // 적을 데려나오기 위해 뒤로 빼게 했습니다.
+		}
+		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+	}
+}
+
+void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
+{
+	//Distance to target
+	float dist = Distance2D(unit->pos, enemyarmy->pos);
+	float DIST = dist - unit->radius - enemyarmy->radius;
+
+	//Our range
+	float unitattackrange = getAttackRangeGROUND(unit);
+
+	const Unit& ENEMYARMY = *enemyarmy;
+
+	if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
+	{
+		Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemyarmy->pos);
+	}
+	else
+	{
+		sc2::Point2D KitingLocation = unit->pos;
+		//If its a building we want range -1 distance
+		//The same is true if it outranges us. We dont want to block following units
+		if (IsStructure(Observation())(ENEMYARMY)) // 건물이면
+		{
+			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos);
+		}
+		else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
+		{
+			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos);
+			//KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos); //TODO : 적을 데려나오기 위해 임시로 뒤로 빼게 했습니다.
+		}
+		else
+		{
+			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos);
+		}
+		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+	}
+}
+
+void MEMIBot::KiteEnemy(const Unit* unit, Units enemy_army, Units enemy_units, Point2D KitingLocation, bool enemiesnear, const ObservationInterface* observation)
+{
+	if (enemy_units.empty()) // 적이 아예 없는 경우
+	{
+		ScoutWithUnit(unit, observation);
+	}
+	else if (enemy_army.empty()) //적 군대가 없는 경우
+	{
+		AttackWithUnit(unit, observation);
+	}
+
+	else if (!enemy_army.empty()) //적 군대가 있을 때
+	{
+		if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
+			Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemy_army.front()->pos);
+		}
+		else {
+			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+		}
+	}
+}
+
+float MEMIBot::MinimumDistance2D(const Unit* unit ,const Unit* enemyarmy)
+{
+	float distance = std::numeric_limits<float>::max();
+
+	float d = Distance2D(enemyarmy->pos, unit->pos);
+	if (d < distance) {
+		distance = d;
+	}
+	return distance;
+}
+
+Point2D MEMIBot::CalcKitingPosition(Point2D Mypos, Point2D EnemyPos) {
+	Vector2D diff = Mypos - EnemyPos; // 7.3 적 유닛과의 반대 방향으로 도망
+	Normalize2D(diff);
+	return diff;
+	//Point2D KitingLocation = Mypos + diff * 7.0f;
+	//return KitingLocation;
+}
+
+bool MEMIBot::GetPosition(Units Enemyunits, Unit::Alliance alliace, Point2D& position) {
+
+	const ObservationInterface* observation = Observation();
+	if (Enemyunits.empty()) {
+		return false;
+	}
+	position = Point2D(0.0f, 0.0f);
+	unsigned int count = 0;
+
+	for (const auto& u : Enemyunits) {
+		position += u->pos;
+		++count;
+	}
+	position /= (float)count;
+	return true;
+}
+
+bool MEMIBot::GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D& position) {
+
+	const ObservationInterface* observation = Observation();
+	Units units = observation->GetUnits(alliace);
+	if (units.empty()) {
+		return false;
+	}
+	position = Point2D(0.0f, 0.0f);
+	unsigned int count = 0;
+
+	for (const auto& u : units) {
+		if (u->unit_type == unit_type) {
+			position += u->pos;
+			++count;
+		}
+	}
+	position /= (float)count;
+	return true;
+}
+
+int MEMIBot::getAttackPriority(const Unit * u)
+{
+	if (u == nullptr) return 0;
+	const Unit& unit = *u;
+	if (IsArmy(Observation())(unit))
+	{
+		if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_BANELING)
+		{
+			return 12;
+		}
+		if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_LURKERMPBURROWED)
+		{
+			return 11;
+		}
+		return 10;
+	}
+	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_SPINECRAWLER)
+	{
+		return 10;
+	}
+	if (IsWorker()(unit))
+	{
+		return 31;
+	}
+	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_PYLON || unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_SPORECRAWLER || unit.unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_MISSILETURRET)
+	{
+		return 5;
+	}
+	if (IsTownHall()(unit))
+	{
+		return 4;
+	}
+	return 1;
+}
+
+ const Unit * MEMIBot::GetTarget(const Unit * rangedUnit, Units & targets)
+{
+	int highPriorityFar = 0;
+	int highPriorityNear = 0;
+	double closestDist = std::numeric_limits<double>::max();
+	double lowestHealth = std::numeric_limits<double>::max();
+	const Unit * closestTargetOutsideRange = nullptr;
+	const Unit * weakestTargetInsideRange = nullptr;
+
+	for (const auto & targetUnit : targets)
+	{
+		if (!targetUnit->is_alive)
+		{
+			continue;
+		}
+		const float range = getAttackRangeGROUND(rangedUnit); //rangedUnit->getAttackRange(targetUnit); 사도 사거리 4
+		int priority = getAttackPriority(targetUnit);
+		const float distance = Distance2D(rangedUnit->pos, targetUnit->pos);
+
+		if (distance > range) //적과 나 사이의 거리 > 나의 사정거리 // 거리가 멀어서 때릴 수 없는 경우
+		{
+			// If in sight we just add 20 to prio. This should make sure that a unit in sight has higher priority than any unit outside of range
+			//
+			float SightRange = Observation()->GetUnitTypeData()[rangedUnit->unit_type].sight_range;
+
+			if (distance <= SightRange)
+			{
+				priority += 20;
+			}
+			// 우선순위가 높거나 또는 거리가 가까우면 설정한다
+			if (!closestTargetOutsideRange || (priority > highPriorityFar) || (priority == highPriorityFar && distance < closestDist))
+			{
+				if (getDpsGROUND(targetUnit)) // 위협되는 적인가?
+				{
+					closestDist = distance;
+					highPriorityFar = priority;
+					closestTargetOutsideRange = targetUnit;
+				}
+			}
+		}
+		else
+		{
+			if (!weakestTargetInsideRange || (priority > highPriorityNear) || (priority == highPriorityNear && targetUnit->health < lowestHealth))
+			{
+				if (getDpsGROUND(targetUnit)) // 위협되는 적인가?
+				{
+					lowestHealth = targetUnit->health;
+					highPriorityNear = priority;
+					weakestTargetInsideRange = targetUnit;
+				}
+			}
+		}
+	}
+	return weakestTargetInsideRange && highPriorityNear>1 ? weakestTargetInsideRange : closestTargetOutsideRange;
+}
+
+const float MEMIBot::getDpsGROUND(const Unit* target) const
+{
+
+	const ObservationInterface* observation = Observation();
+
+	float dps = 0.0f;
+
+	for (const auto & Weapon : Observation()->GetUnitTypeData()[target->unit_type].weapons)
+	{
+		if (Weapon.type == Weapon::TargetType::Air)
+			continue;
+
+		dps = Weapon.attacks * Weapon.damage_ / Weapon.speed;
+	}
+	return dps;
+}
+
+const float MEMIBot::getAttackRangeGROUND(const Unit* target) const
+{
+
+	const ObservationInterface* observation = Observation();
+	sc2::Weapon groundWeapons;
+	sc2::Weapon AirWeapons;
+
+	for (const auto & Weapon : Observation()->GetUnitTypeData()[target->unit_type].weapons)
+	{
+		if (Weapon.type == sc2::Weapon::TargetType::Air || Weapon.type == sc2::Weapon::TargetType::Any)
+		{
+			AirWeapons = Weapon;
+		}
+		if (Weapon.type == sc2::Weapon::TargetType::Ground || Weapon.type == sc2::Weapon::TargetType::Any)//Siege tanks
+		{
+			groundWeapons = Weapon;
+			if (groundWeapons.range < 0.11f)//melee. Not exactly 0.1
+			{
+				groundWeapons.range += target->radius;
+			}
+		}
+	}
+	//return AirWeapons.range; // 7.5 이건 오로지 공중유닛을 위한 함수!!
+	return groundWeapons.range; // 7.5 지상유닛을 위한 함수
+}
+
