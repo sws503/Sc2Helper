@@ -330,7 +330,7 @@ public:
 		ep.radiuses_.push_back(5.9f);
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
-        branch = 1;
+        branch = 2;
 		stage_number = 0;
 		iter_exp = expansions_.begin();
 
@@ -1055,7 +1055,7 @@ private:
 
 	bool TryBuildUnitChrono(AbilityID ability_type_for_unit, UnitTypeID unit_type) {
 		const ObservationInterface* observation = Observation();
-		
+
 		//If we are at supply cap, don't build anymore units, unless its an overlord.
 		if (observation->GetFoodUsed() >= observation->GetFoodCap() && ability_type_for_unit != ABILITY_ID::TRAIN_OVERLORD) {
 			return false;
@@ -1591,13 +1591,13 @@ private:
             return false;
 		}
 
-		float x = 8.0f;
-		float y = 8.0f;
+		float x = 7.0f;
+		float y = 7.0f;
 		if ((float)game_info_.width/2 < startLocation_.x) {
-            x = -8.0f;
+            x = -7.0f;
 		}
 		if ((float)game_info_.height/2 < startLocation_.y) {
-            y = -8.0f;
+            y = -7.0f;
 		}
 		Point2D build_location = Point2D(startLocation_.x + x, startLocation_.y + y);
         return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
