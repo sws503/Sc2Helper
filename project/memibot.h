@@ -336,7 +336,7 @@ public:
 	}
 
 	virtual void OnStep() final {
-		
+
 
 
 		const ObservationInterface* observation = Observation();
@@ -361,7 +361,7 @@ public:
 		Defend();
 		//ManageArmy();
 		ManageRush();
-		
+
 
 		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
@@ -386,13 +386,15 @@ public:
 	}
     void OnUpgradeCompleted(UpgradeID upgrade) {
         switch (upgrade.ToType()) {
-            case UPGRADE_ID::WARPGATERESEARCH: {
-                warpgate_researched = true;
-            }
-			case UPGRADE_ID::BLINKTECH: {
+            case UPGRADE_ID::BLINKTECH: {
 				std::cout << "BLINK UPGRADE DONE!!";
 				BlinkResearched = true;
+				return;
 			}
+            case UPGRADE_ID::WARPGATERESEARCH: {
+                warpgate_researched = true;
+                return;
+            }
             default:
                 break;
         }
@@ -416,8 +418,6 @@ public:
 	float base_range = 35;
 
 private:
-	bool BlinkResearched = false;
-
 	void Chat(std::string Message) // 6.29 채팅 함수
 	{
 #ifdef DEBUG
@@ -845,11 +845,11 @@ private:
 		return observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type)).size();
 	}
 
-	size_t CountUnitTypeNearLocation(const ObservationInterface* observation, UnitTypeID unit_type, Point2D location) {
+	size_t CountUnitTypeNearLocation(const ObservationInterface* observation, UnitTypeID unit_type, Point2D location, float radius = 10.0f) {
 		Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
 		int number=0;
 		for (const auto& u : units){
-            if(Distance2D(u->pos,location)<15){
+            if (Distance2D(u->pos,location)<=radius) {
                 number++;
             }
 		}
@@ -1278,8 +1278,29 @@ private:
 		return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
 	}
 
-	bool TryBuildPylonWide(Point2D location, size_t MaxBuildAtOnce = 1) {
-		return TryBuildPylon(location, 8.0f, MaxBuildAtOnce);
+	bool TrybuildFirstPylon() {
+        const ObservationInterface* observation = Observation();
+
+        Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
+
+        if (observation->GetMinerals() < 100) {
+			return false;
+		}
+
+		if (units.size()>0) {
+            return false;
+		}
+
+		float x = 8.0f;
+		float y = 8.0f;
+		if ((float)game_info_.width/2 < startLocation_.x) {
+            x = -8.0f;
+		}
+		if ((float)game_info_.height/2 < startLocation_.y) {
+            y = -8.0f;
+		}
+		Point2D build_location = Point2D(startLocation_.x + x, startLocation_.y + y);
+        return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
 	}
 
 	void MineIdleWorkers(const Unit* worker) {
@@ -1631,6 +1652,7 @@ private:
 
 	bool early_strategy = false;
 	bool warpgate_researched = false;
+	bool BlinkResearched = false;
 	const Unit* advance_pylon = nullptr;
 	const Unit* probe_scout = nullptr;
 	const Unit* pylon_first = nullptr;
@@ -1645,6 +1667,7 @@ private:
 	Point3D enemy_expansion;
 
 	uint16_t stage_number = 0;
+	uint16_t branch = 1;
 	const Unit* base = nullptr;
 	const size_t max_worker_count_ = 65;
 	/*

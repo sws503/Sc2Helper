@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Protoss, Difficulty::HardVeryHard),
+			CreateComputer(Race::Protoss, Difficulty::CheatInsane),
 			});
 	}
 
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 	bool do_break = false;
 	while (!do_break) {
 		//if (!coordinator.StartGame("StalkerMicroMarine.SC2Map")) {
-		if (!coordinator.StartGame("CatalystLE.SC2Map")) {
+		if (!coordinator.StartGame("(2)CatalystLE.SC2Map")) {
 			break;
 		}
 		while (coordinator.Update() && !do_break) {
