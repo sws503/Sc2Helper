@@ -7,13 +7,14 @@
 
 #include <iostream>
 
-static const std::string bot_name = "MEMIBot";
-static const std::string current_version = "v1.3";
+static const std::string bot_name = "AdeptBot";
+static const std::string current_version = "v1.0";
 
 #ifdef DEBUG
 static const bool VsHuman = false;
-static const int stepsize = 10;
-static const bool realtime = true;
+static const int stepsize = 3;
+static const bool ControlTest = true;
+static const std::string map_name = "AcidPlantLE.SC2Map";
 
 class Human : public sc2::Agent {
 public:
@@ -33,10 +34,13 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	//coordinator.SetStepSize(10); //Control
-								 //게임속도 빠르게 speed faster
+	coordinator.SetStepSize(3); //Control
+								//게임속도 빠르게 speed faster
+
 	coordinator.SetMultithreaded(true);
-	coordinator.SetRealtime(realtime);
+	if (ControlTest) {
+		coordinator.SetRealtime(true);
+	}
 
 	// Add the custom bot, it will control the players.
 	MEMIBot bot(bot_name, current_version);
@@ -60,7 +64,7 @@ int main(int argc, char* argv[])
 
 	bool do_break = false;
 	while (!do_break) {
-		if (!coordinator.StartGame("AcidPlantLE.SC2Map")) {
+		if (!coordinator.StartGame(map_name)) {
 			break;
 		}
 		while (coordinator.Update() && !do_break) {
