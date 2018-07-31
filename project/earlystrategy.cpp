@@ -41,9 +41,6 @@ bool MEMIBot::EarlyStrategy() {
 #ifdef DEBUG
 	std::cout << stage_number << std::endl;
 #endif
-    const Point2D& enemy = game_info_.enemy_start_locations.front();
-    //std::cout<<Query()->PathingDistance(bases.front(),game_info_.enemy_start_locations.front())<<std::endl;
-    if (base != nullptr) std::cout<<Query()->PathingDistance(front_expansion,enemy)<<std::endl;
 
     if (find_enemy_location) {
         advance_pylon_location = Point2D((startLocation_.x*1.8 + game_info_.enemy_start_locations.front().x*2.2)/4, (startLocation_.y*1.8 + game_info_.enemy_start_locations.front().y*2.2)/4);
@@ -294,6 +291,7 @@ bool MEMIBot::EarlyStrategy() {
                 return false;
             }
             if (gate->orders.empty()){
+                //return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_STALKER);
                 return TryBuildUnitChrono(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY);
             }
         }
@@ -383,6 +381,11 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 26:
+        if (branch==3) {
+            stage_number=
+            return false;
+        }
+
         if (advance_pylon != nullptr) {
             stage_number++;
             return false;
@@ -425,6 +428,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         TryWarpAdept();
 
+
+
+    case 50:
+
     //branch 2
     case 100:
         for (const auto& gate : gateways) {
@@ -435,7 +442,8 @@ bool MEMIBot::EarlyStrategy() {
                 return false;
             }
             if (gate->orders.empty()){
-                return TryBuildUnitChrono(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY);
+                return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY);
+                //return TryBuildUnitChrono(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY);
             }
         }
         if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER)<2) {
@@ -474,7 +482,7 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return false;
     case 104:
-        TryChronoboost(cores.front());
+        //TryChronoboost(cores.front());
         for (const auto& gate : gateways) {
             if (gate->build_progress < 1.0) {
                 continue;
@@ -485,7 +493,7 @@ bool MEMIBot::EarlyStrategy() {
             if (observation->GetMinerals() < 125 || observation->GetVespene() < 50) {
                 return false;
             }
-            return TryBuildUnitChrono(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY);
+            return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY);
         }
         if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER)<4) {
             return false;
@@ -531,7 +539,13 @@ bool MEMIBot::EarlyStrategy() {
             return false;
 	    }
 	    else{
-            std::cout<<Query()->PathingDistance(warpprisms.front()->pos,game_info_.enemy_start_locations.front())<<std::endl;
+            if (Query()->PathingDistance(warpprisms.front()->pos,Point2D(game_info_.enemy_start_locations.front().x+3,game_info_.enemy_start_locations.front().y))<20) {
+                Actions()->UnitCommand(warpprisms.front(), ABILITY_ID::UNLOADALLAT_WARPPRISM, warpprisms.front()->pos);
+                if (warpprisms.front()->cargo_space_taken==0) {
+                    Actions()->UnitCommand(warpprisms.front(), ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
+                }
+            }
+            //std::cout<<Query()->PathingDistance(warpprisms.front()->pos,game_info_.enemy_start_locations.front())<<std::endl;
 
             //Actions()->UnitCommand(warpprisms.front(), ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
             return false;
