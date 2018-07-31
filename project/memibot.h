@@ -330,7 +330,7 @@ public:
 		ep.radiuses_.push_back(5.9f);
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
-        branch = 2;
+        branch = 3;
 		stage_number = 0;
 		iter_exp = expansions_.begin();
 
@@ -2194,6 +2194,36 @@ private:
                 for (const auto& ability : abilities.abilities) {
                     if (ability.ability_id == ABILITY_ID::TRAINWARP_STALKER) {
                         Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_STALKER, build_location);
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    bool TryWarpTemplar(){
+        const ObservationInterface* observation = Observation();
+        std::vector<PowerSource> power_sources = observation->GetPowerSources();
+        Units warpgates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE));
+
+        if (power_sources.empty()) {
+            return false;
+        }
+
+        const PowerSource& random_power_source = GetRandomEntry(power_sources);
+
+        float radius = random_power_source.radius;
+        float rx = GetRandomScalar();
+        float ry = GetRandomScalar();
+        Point2D build_location = Point2D(advance_pylon->pos.x + rx * radius, advance_pylon->pos.y + ry * radius);
+
+        for (const auto& warpgate : warpgates) {
+            //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
+            if (warpgate->build_progress == 1) {
+                AvailableAbilities abilities = Query()->GetAbilitiesForUnit(warpgate);
+                for (const auto& ability : abilities.abilities) {
+                    if (ability.ability_id == ABILITY_ID::TRAINWARP_HIGHTEMPLAR) {
+                        Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_HIGHTEMPLAR, build_location);
                         return true;
                     }
                 }
