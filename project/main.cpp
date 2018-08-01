@@ -19,7 +19,10 @@ static const std::vector<std::string> map_names( {
 	"DreamcatcherLE", "LostAndFoundLE", "Redshift" } );
 static const std::string ControlMap = "StalkerMicroMarine.SC2Map";
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 37762f5f161d9f6857b5fb28df65562c6d3f7fe9
 class Human : public sc2::Agent {
 public:
 	void OnGameStart() final {
@@ -38,8 +41,14 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+<<<<<<< HEAD
 	coordinator.SetStepSize(5); //Control
 								 //게임속도 빠르게 speed faster
+=======
+	coordinator.SetStepSize(3); //Control
+								 //게임속도 빠르게 speed faster
+
+>>>>>>> 37762f5f161d9f6857b5fb28df65562c6d3f7fe9
 
 
 	coordinator.SetMultithreaded(true);
