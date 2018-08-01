@@ -1,19 +1,20 @@
 #pragma once
-#include <unordered_set>
+#include <unordered_map>
 class Flags {
-	std::unordered_set<std::string> flag_set;
+	std::unordered_map<std::string, int> flag_map;
 
 public:
 	void reset() {
-		flag_set.clear();
+		flag_map.clear();
 	}
 
 	bool status(std::string name) {
-		return flag_set.count(name);
+		return flag_map.count(name);
 	}
 
 	void raise(std::string name) {
-		flag_set.insert(name);
+		flag_map.emplace(name, 1);
+		//flag_map.insert(name, 1);
 	}
 
 	void set(std::string name, bool status=true) {
@@ -22,6 +23,12 @@ public:
 	}
 
 	void clear(std::string name) {
-		flag_set.erase(name);
+		flag_map.erase(name);
+	}
+
+	void print() {
+#ifdef DEBUG
+		
+#endif
 	}
 };

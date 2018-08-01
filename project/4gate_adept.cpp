@@ -50,7 +50,7 @@ bool MEMIBot::EarlyStrategy() {
 			}
 			else {
 				if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<7) {
-					iter_esl = game_info_.enemy_start_locations.begin();
+					std::vector<Point2D>::iterator iter_esl = game_info_.enemy_start_locations.begin();
 					game_info_.enemy_start_locations.erase(iter_esl);
 				}
 			}

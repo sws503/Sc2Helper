@@ -10,7 +10,7 @@
 #include <typeinfo>
 
 static inline float round_to_halfint(float f) {
-	return float(std::round(double(f+0.5))-0.5);
+	return float(std::floor(double(f))+0.5);
 }
 
 static inline float round_to_int(float f) {
@@ -34,14 +34,14 @@ enum class EFFECT_ID
 	GUARDIANSHIELD = 2,
 	TEMPORALFIELDGROWING = 3,
 	TEMPORALFIELD = 4,
-	THERMALLANCES = 5,
+	THERMALLANCES = 5, // 거신
 	SCANNERSWEEP = 6,
 	NUKEDOT = 7,
 	LIBERATORMORPHING = 8,
 	LIBERATORMORPHED = 9,
 	BLINDINGCLOUD = 10,
 	CORROSIVEBILE = 11,
-	LURKERATTACK = 12
+	LURKERATTACK = 12   
 };
 typedef SC2Type<EFFECT_ID>  EffectID;
 // Control 끝
@@ -323,7 +323,6 @@ public:
 		std::cout << "Game started!" << std::endl;
 		ChatVersion();
 		search::ExpansionParameters ep;
-		ep.radiuses_.push_back(0.1f);
 		ep.radiuses_.push_back(1.0f);
 		ep.radiuses_.push_back(2.1f);
 		ep.radiuses_.push_back(3.2f);
@@ -343,10 +342,8 @@ public:
 		advance_pylon = nullptr;
 		probe_scout = nullptr;
 		pylon_first = nullptr;
-		probe_forge = nullptr;
 		probe_forward = nullptr;
 		base = nullptr;
-		OracleTrained = false;
 		find_enemy_location = false;
 
 		//Temporary, we can replace this with observation->GetStartLocation() once implemented
@@ -378,7 +375,7 @@ public:
 		float minimum_distance = std::numeric_limits<float>::max();
 		for (const auto& expansion : expansions_) {
 			float current_distance = Distance2D(startLocation_, expansion);
-			if (current_distance < .01f) {
+			if (current_distance < 5.0f) {
 				continue;
 			}
 
@@ -389,11 +386,24 @@ public:
 				}
 			}
 		}
-/*
+
+		// 본진 좌표가 (0,0)으로 나오는 것 수정. 
+		for (auto& e : expansions_) {
+			if (Point2D(e) == Point2D(0, 0)) {
+				e.x = startLocation_.x;
+				e.y = startLocation_.y;
+				break;
+			}
+		}
+
 		for (const auto& e : expansions_) {
 			std::cout << e.x << ", " << e.y << ", " << e.z << std::endl;
 		}
-*/
+
+		for (const auto& e : Observation()->GetEffectData()) {
+			std::cout << e.friendly_name << e.effect_id << e.name << std::endl;
+		}
+
 		staging_location_ = Point3D(((staging_location_.x + front_expansion.x) / 2), ((staging_location_.y + front_expansion.y) / 2),
 			((staging_location_.z + front_expansion.z) / 2));
 	}
@@ -439,9 +449,32 @@ public:
 			if (probe_scout != nullptr && probe_scout->tag == unit->tag) {
 				return;
 			}
-			if (probe_forge != nullptr && probe_forge->tag == unit->tag) {
-				if (EnemyRush)
+			if (probe_forward != nullptr && probe_forward->tag == unit->tag) {
+				if (EnemyRush) {
 					Actions()->UnitCommand(unit, ABILITY_ID::MOVE, startLocation_);
+				}
+				// goto near base or center of mass
+				else {
+					const ObservationInterface* observation = Observation();
+					Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+					Units mystructures = observation->GetUnits(Unit::Alliance::Self, IsStructure(observation));
+					size_t mystructures_size = mystructures.size();
+					bool nearbase = false;
+					for (const auto& e : bases) {
+						if (nearbase |= (DistanceSquared2D(e->pos, unit->pos) < 200)) break;
+					}
+					if (nearbase) return;
+					Point2D avg(0, 0);
+					if (mystructures_size) {
+						for (const auto& e : mystructures) {
+							avg += e->pos;
+						}
+						avg /= static_cast<float>(mystructures_size);
+					}
+					if (DistanceSquared2D(probe_forward->pos, avg) > 200 && advance_pylon != nullptr) {
+						Actions()->UnitCommand(unit, ABILITY_ID::MOVE, avg);
+					}
+				}
 				return;
 			}
 			if (IsCarryingMinerals(*unit) || IsCarryingVespene(*unit)) {
@@ -1232,8 +1265,8 @@ private:
 				Units ms = observation->GetUnits(f);
 				for (const auto& m : ms) {
 					bool is_mineral = IsMineral()(*m);
-					float absx = building_abs(location.x, m->pos.x, Is2x2);
-					float absy = building_abs(location.y, m->pos.y, Is2x2, is_mineral);
+					float absx = building_abs(location.x, m->pos.x, Is2x2, is_mineral);
+					float absy = building_abs(location.y, m->pos.y, Is2x2);
 					if ((is_mineral && absx < 2.51f && absy < 2.01f) ||
 						(!is_mineral && absx < 3.01f && absy < 3.01f)) {
 						return false;
@@ -1270,13 +1303,13 @@ private:
 		}
 
 		// If no worker is already building one, get a nearest worker to build one
-		Tag probe_forge_tag = (probe_forge == nullptr) ? NullTag : probe_forge->tag;
+		Tag probe_forward_tag = (probe_forward == nullptr) ? NullTag : probe_forward->tag;
 		Tag builder_tag = NullTag;
 		std::vector<QueryInterface::PathingQuery> query_vector;
 		for (const auto& worker : workers) {
 			if (probe_scout != nullptr && worker->tag == probe_scout->tag && !probe_scout->orders.empty()) continue;
 			// consider idle or mining workers only
-			if (worker->tag != probe_forge_tag && !worker->orders.empty()) {
+			if (worker->tag != probe_forward_tag && !worker->orders.empty()) {
 				auto ability_id = worker->orders.front().ability_id;
 				if (ability_id != ABILITY_ID::HARVEST_GATHER &&
 					ability_id != ABILITY_ID::HARVEST_RETURN) {
@@ -1306,8 +1339,11 @@ private:
 
 			Tag current_tag = query_vector.at(i).start_unit_tag_;
 
-			// prioritize probe_forge
-			if (current_tag == probe_forge_tag) d -= 8.0f;
+			// prioritize probe_forward
+			if (current_tag == probe_forward_tag) {
+				d *= 0.5f;
+				d -= 6.0f;
+			}
 
 			if (d < min_distance) {
 				min_distance = d;
@@ -1322,35 +1358,6 @@ private:
 
 		Actions()->UnitCommand(builder, ability_type_for_structure, location);
 		return true;
-		/*
-		// if probe_forge then queue back.
-		if (builder_tag == probe_forge_tag) {
-			Actions()->UnitCommand(builder, ability_type_for_structure, location);
-			return true;
-		}
-
-		// if not then queue front.
-		std::vector<UnitOrder> builder_orders;
-		for (const auto& o : builder->orders) {
-			builder_orders.push_back(o);
-		}
-
-		Actions()->UnitCommand(builder, ability_type_for_structure, location);
-
-		Actions()->UnitCommand(builder, ABILITY_ID::HARVEST_RETURN, true);
-		for (const auto& o : builder_orders) {
-			if (o.target_unit_tag != NullTag) {
-				Actions()->UnitCommand(builder, o.ability_id, observation->GetUnit(o.target_unit_tag), true);
-			}
-			else if (Point2D(0.0f, 0.0f) != o.target_pos) {
-				Actions()->UnitCommand(builder, o.ability_id, o.target_pos, true);
-			}
-			else {
-				Actions()->UnitCommand(builder, o.ability_id, true);
-			}
-		}
-		return true;
-		*/
 	}
 
 	bool BuildGas(Tag geyser_tag) {
@@ -1483,85 +1490,6 @@ private:
 	bool TryBuildForge(const Unit* unit, const Unit* pylon) {
 		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, pylon);
 	}
-
-
-	/*bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID, const Unit* pylon) {
-		if (pylon == nullptr) return false;
-
-		const ObservationInterface* observation = Observation();
-		std::vector<PowerSource> power_sources = observation->GetPowerSources();
-
-		if (power_sources.empty()) {
-			return false;
-		}
-
-		float radius = power_sources.front().radius;
-		float rx = GetRandomScalar();
-		float ry = GetRandomScalar();
-		Point2D location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
-		return TryBuildStructure(ability_type_for_structure, UNIT_TYPEID::PROTOSS_PROBE, location);
-	}
-
-	bool TryBuildStructureNearPylonWithUnit(const Unit* unit, AbilityID ability_type_for_structure, const Unit* pylon) {
-		if (unit == nullptr) return false;
-		if (pylon == nullptr) return false;
-
-		const ObservationInterface* observation = Observation();
-		std::vector<PowerSource> power_sources = observation->GetPowerSources();
-
-		if (power_sources.empty()) {
-			return false;
-		}
-
-		float radius = power_sources.front().radius;
-		float rx = GetRandomScalar();
-		float ry = GetRandomScalar();
-		Point2D location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
-
-		// Check to see if unit can make it there
-		if (Query()->PathingDistance(unit, location) < 0.01f) {
-			return false;
-		}
-
-		// Check to see if unit can build there
-		if (Query()->Placement(ability_type_for_structure, location)) {
-			Actions()->UnitCommand(unit, ability_type_for_structure, location);
-			return true;
-		}
-		return false;
-	}
-
-	bool TryBuildForge(const Unit* unit, const Unit* pylon) {
-
-		if (unit == nullptr) return false;
-		if (pylon == nullptr) return false;
-		const ObservationInterface* observation = Observation();
-		Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
-
-		std::vector<PowerSource> power_sources = observation->GetPowerSources();
-		if (power_sources.empty()) {
-			return false;
-		}
-		float radius = power_sources.front().radius;
-		float rx = GetRandomScalar();
-		float ry = GetRandomScalar();
-		Point2D location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
-
-		if (abs(location.x - front_expansion.x) < 3.99f && abs(location.y - front_expansion.y) < 3.99f) {
-			return false;
-		}
-		// Check to see if unit can make it there
-		if (Query()->PathingDistance(unit, location) < 0.01f) {
-			return false;
-		}
-		// Check to see if unit can build there
-		if (Query()->Placement(ABILITY_ID::BUILD_FORGE, location)) {
-			Actions()->UnitCommand(unit, ABILITY_ID::BUILD_FORGE, location);
-			return true;
-		}
-		return false;
-	}
-	*/
 
 	bool TryBuildGas(Point2D base_location) {
 		const ObservationInterface* observation = Observation();
@@ -1884,7 +1812,7 @@ private:
 			// reassign workers that mines resources far from nexuses. (get all)
 			bool reassigned = false;
 			for (const auto& worker : workers) {
-				if (worker == probe_scout || worker == probe_forge) continue;
+				if (worker == probe_scout || worker == probe_forward) continue;
 				if (worker->orders.empty()) {
 					MineIdleWorkers(worker);
 					reassigned = true;
@@ -1926,7 +1854,7 @@ private:
 				Units target_minerals = FindUnitsNear(base->pos, 11.5f, minerals);
 
 				for (const auto& worker : workers) {
-					if (worker == probe_scout || worker == probe_forge) continue;
+					if (worker == probe_scout || worker == probe_forward) continue;
 					// pick mineral mining workers first.
 					if (worker->orders.empty()) continue;
 					const UnitOrder& o = worker->orders.front();
@@ -1954,7 +1882,7 @@ private:
 				if (surplus <= 0) continue;
 
 				for (const auto& worker : workers) {
-					if (worker == probe_scout || worker == probe_forge) continue;
+					if (worker == probe_scout || worker == probe_forward) continue;
 					// pick gas mining workers
 					if (worker->orders.empty()) continue;
 					const UnitOrder& o = worker->orders.front();
@@ -1977,7 +1905,7 @@ private:
 				if (geyser->assigned_harvesters == 0) continue;
 
 				for (const auto& worker : workers) {
-					if (worker == probe_scout || worker == probe_forge) continue;
+					if (worker == probe_scout || worker == probe_forward) continue;
 					// pick gas mining workers
 					if (worker->orders.empty()) continue;
 					const UnitOrder& o = worker->orders.front();
@@ -2010,7 +1938,7 @@ private:
 				float min_distance = std::numeric_limits<float>::max();
 
 				for (const auto& worker : workers) {
-					if (worker == probe_scout || worker == probe_forge) continue;
+					if (worker == probe_scout || worker == probe_forward) continue;
 					// pick mineral mining workers first.
 					if (worker->orders.empty()) continue;
 					const UnitOrder& o = worker->orders.front();
@@ -2132,26 +2060,7 @@ private:
 
 	bool EarlyStrategy();
 
-	void scoutprobe() {
-		const ObservationInterface* observation = Observation();
-		if (observation->GetFoodUsed() < 15) return;
-
-		const Unit* mineralp = FindNearestMineralPatch(*iter_exp);
-		if (mineralp == nullptr) {
-			return;
-		}
-		Point2D tag_pos = mineralp->pos;
-
-		if (Distance2D(game_info_.enemy_start_locations.front(), tag_pos)<7 || Distance2D(enemy_expansion, tag_pos)<7) {
-			iter_exp++;
-			return;
-		}
-		Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, tag_pos);
-		if (Distance2D(probe_scout->pos, tag_pos)<1) {
-			iter_exp++;
-		}
-
-	}
+	void scoutprobe();
 
 	bool TryWarpAdept(){
         const ObservationInterface* observation = Observation();
@@ -2301,6 +2210,7 @@ private:
         return false;
     }
 
+	void scout_all();
 
 	Point2D probe_scout_dest = Point2D(0,0);
 	Point2D advance_pylon_location = Point2D((float)game_info_.width/2,(float)game_info_.height/2);
@@ -2309,7 +2219,6 @@ private:
 	std::string botname;
 	bool EnemyRush;
 	bool PhotonRush;
-	bool OracleTrained;
 	Point2D pylonlocation;
 	Units Killers;
 
@@ -2319,7 +2228,6 @@ private:
 	const Unit* advance_pylon;
 	const Unit* probe_scout;
 	const Unit* pylon_first;
-	const Unit* probe_forge;
 	const Unit* probe_forward;
 
 	bool find_enemy_location;
@@ -2330,4 +2238,5 @@ private:
 	const Unit* base;
 	uint16_t branch;
 	const size_t max_worker_count_ = 65;
+
 };

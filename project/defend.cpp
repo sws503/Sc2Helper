@@ -31,7 +31,7 @@ void MEMIBot::Defend() {
 		}
 	}
 
-	if (!0)
+	if (false)
 	{
 		if (Killers.size() < enemyUnitsInRegion.size()) {
 			Killers.resize(enemyUnitsInRegion.size(), nullptr);
@@ -76,9 +76,6 @@ void MEMIBot::Defend() {
 			}
 			PhotonRush = false;
 		}
-	}
-	if (OracleTrained) {
-
 	}
 
 	if (enemyUnitsInRegion.size() > 3)
