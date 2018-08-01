@@ -7,6 +7,8 @@ void MEMIBot::scout_all() {
 		scoutprobe();
 	}
 
+	scoutenemylocation();
+
 	Point2D position;
 	enemy_expansion;
 	
@@ -15,11 +17,11 @@ void MEMIBot::scout_all() {
 	}
 }
 
-void MEMIBot::scoutprobe() {
+void MEMIBot::scoutenemylocation() {
 	const ObservationInterface* observation = Observation();
-	Units pylons = observation->GetUnits(IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
 	Units enemy_structures = observation->GetUnits(Unit::Alliance::Enemy, IsStructure(observation));
 	Units enemy_townhalls = observation->GetUnits(Unit::Alliance::Enemy, IsTownHall());
+	Units pylons = observation->GetUnits(IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
 
 	if (find_enemy_location) {
 		advance_pylon_location = Point2D((startLocation_.x*1.8 + game_info_.enemy_start_locations.front().x*2.2) / 4, (startLocation_.y*1.8 + game_info_.enemy_start_locations.front().y*2.2) / 4);
@@ -55,6 +57,10 @@ void MEMIBot::scoutprobe() {
 			}
 		}
 	}
+}
+
+void MEMIBot::scoutprobe() {
+	const ObservationInterface* observation = Observation();
 
 	if (observation->GetFoodUsed() < 15) return;
 
