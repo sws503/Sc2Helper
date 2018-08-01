@@ -11,10 +11,12 @@ static const std::string bot_name = "AdeptBot";
 static const std::string current_version = "v0.5";
 
 #ifdef DEBUG
-static const bool VsHuman = false;
+static const bool VsHuman = true;
 static const int stepsize = 3;
 static const bool ControlTest = false;
-static const std::string map_name = "CatalystLE.SC2Map";
+static const std::vector<std::string> map_names( { 
+	"CatalystLE", "AcidPlantLE", "DarknessSanctuary", 
+	"DreamcatcherLE", "LostAndFoundLE", "Redshift" } );
 static const std::string ControlMap = "StalkerMicroMarine.SC2Map";
 
 class Human : public sc2::Agent {
@@ -39,7 +41,6 @@ int main(int argc, char* argv[])
 								 //게임속도 빠르게 speed faster
 
 
-
 	coordinator.SetMultithreaded(true);
 
 	if (ControlTest) {
@@ -51,7 +52,7 @@ int main(int argc, char* argv[])
 
 	if (VsHuman) {
 		coordinator.SetParticipants({
-			CreateParticipant(sc2::Race::Terran, &human_bot),
+			CreateParticipant(sc2::Race::Protoss, &human_bot),
 			CreateParticipant(sc2::Race::Protoss, &bot),
 			});
 	}
@@ -62,11 +63,23 @@ int main(int argc, char* argv[])
 			});
 	}
 
+	size_t num_maps = map_names.size();
+	if (!num_maps) {
+		std::cout << "Please set map names!" << std::endl;
+		return 1;
+	}
+	
+	std::string map_name;
+
 	// Start the game.
 	coordinator.LaunchStarcraft();
 
 	bool do_break = false;
 	while (!do_break) {
+		int i = GetRandomInteger(0, static_cast<int>(num_maps - 1));
+		map_name = map_names.at(i) + ".SC2Map";
+		std::cout << map_names.at(i) << std::endl;
+
 		//if (!coordinator.StartGame(ControlMap)) {
 		if (!coordinator.StartGame(map_name)) {
 			break;

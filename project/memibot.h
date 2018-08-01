@@ -312,6 +312,8 @@ struct IsUnpowered {
 
 class MEMIBot : public Agent {
 public:
+	const Unit * TestColossus = nullptr;
+
 
 	MEMIBot(std::string botname, std::string version)
 		: botname(botname), version(version) {}
@@ -420,9 +422,8 @@ public:
 		if (!early_strategy) {
 			EarlyStrategy();
 		}
-		if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_GATEWAY)>0 && iter_exp < expansions_.end() && find_enemy_location == true) {
-			scoutprobe();
-		}
+
+		scout_all();
 
 #ifdef DEBUG
 		PrintCursor();
@@ -652,7 +653,6 @@ private:
 			ReadyLocation2 = startLocation_;
 		}
 	}
-
 	void ManageRush();
 
 	void AdeptPhaseShift(const Unit * unit, Units ShadeNearEnemies, Units NearbyEnemies, bool & ComeOn);
@@ -688,6 +688,10 @@ private:
 	bool GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D & position);
 
 	int getAttackPriority(const Unit * u);
+
+	bool LoadUnitWeaponCooldown(const Unit * unit, const Unit * passenger);
+
+	const Unit * GetPassenger(const Unit * shuttle, Units & targets);
 
 	const Unit * GetTarget(const Unit * rangedUnit, Units & targets);
 
@@ -1957,10 +1961,19 @@ private:
 				if (target_worker != nullptr) {
 					MineIdleWorkers(target_worker);
 					Print("reassigning for gas workers");
-					break;
+					return;
 				}
 			}
 		}
+
+		// uncomment this if probe_forward should mine minerals
+		/* 
+		if (has_space_for_mineral || has_space_for_gas) {
+			if (probe_forward != nullptr && probe_forward->orders.empty()) {
+				MineIdleWorkers(probe_forward);
+			}
+		}
+		*/
 	}
 
 	void ManageUpgrades() {
@@ -2209,6 +2222,8 @@ private:
 
 	Point2D probe_scout_dest = Point2D(0,0);
 	Point2D advance_pylon_location = Point2D((float)game_info_.width/2,(float)game_info_.height/2);
+
+	std::map<Tag, uint32_t> adept_map;
 
 	std::string version;
 	std::string botname;
