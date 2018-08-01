@@ -330,7 +330,7 @@ public:
 		ep.radiuses_.push_back(5.9f);
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
-        branch = 3;
+        branch = 1;
 		stage_number = 0;
 		iter_exp = expansions_.begin();
 
@@ -357,7 +357,7 @@ public:
 			float minimum_distance = std::numeric_limits<float>::max();
 			for (const auto& expansion : expansions_) {
 				float Enemy_distance = Distance2D(game_info_.enemy_start_locations.front(), expansion);
-				if (Enemy_distance < .01f) {
+				if (Enemy_distance < 5.0f) {
 					continue;
 				}
 
@@ -368,7 +368,7 @@ public:
 					}
 				}
 			}
-			//std::cout << Enemy_front_expansion.x << "  " << Enemy_front_expansion.y << "  " << Enemy_front_expansion.z << std::endl;
+			std::cout << "Enemy front expansion :" << Enemy_front_expansion.x << "  " << Enemy_front_expansion.y << "  " << Enemy_front_expansion.z << std::endl;
 		}
 
 
@@ -420,9 +420,9 @@ public:
 		ManageUpgrades();
 
 		// Control ½ÃÀÛ
-		//Defend();
+		Defend();
 		//ManageArmy();
-		//ManageRush();
+		ManageRush();
 
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
@@ -461,11 +461,11 @@ public:
 	}
     void OnUpgradeCompleted(UpgradeID upgrade) {
         switch (upgrade.ToType()) {
-            case UPGRADE_ID::BLINKTECH: {
+            /*case UPGRADE_ID::BLINKTECH: {
 				std::cout << "BLINK UPGRADE DONE!!";
 				BlinkResearched = true;
 				return;
-			}
+			}*/
             case UPGRADE_ID::WARPGATERESEARCH: {
                 warpgate_researched = true;
                 return;
@@ -474,7 +474,7 @@ public:
                 break;
         }
     }
-
+	
 	GameInfo game_info_;
 	std::vector<Point3D> expansions_;
 	Point3D startLocation_;
@@ -482,6 +482,7 @@ public:
 
 	Point3D front_expansion;
 	Point3D Enemy_front_expansion;
+	Point2D EnemyBaseLocation;
 
 	Point2D RushLocation;
 	Point2D EnemyLocation;
@@ -635,6 +636,10 @@ private:
 	void ComeOnKiting(const Unit * unit, const Unit * enemyarmy);
 
 	void Kiting(const Unit * unit, const Unit * enemyarmy);
+
+	void CalcValidPath(const Unit * unit, Point2D KitingLocation);
+
+	void EmergencyKiting(const Unit * unit, const Unit * enemyarmy);
 
 	void KiteEnemy(const Unit * unit, Units enemy_army, Units enemy_units, Point2D KitingLocation, bool enemiesnear, const ObservationInterface * observation);
 
@@ -842,6 +847,7 @@ private:
 			return false;
 		}
 		target_pos = game_info_.enemy_start_locations.front();
+		EnemyBaseLocation = game_info_.enemy_start_locations.front();
 		return find_enemy_location;
 	}
 
