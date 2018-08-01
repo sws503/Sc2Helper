@@ -218,11 +218,15 @@ bool MEMIBot::LoadUnitWeaponCooldown(const Unit * unit, const Unit* passenger)
 {
 	uint32_t game_loop = Observation()->GetGameLoop();
 	
-	float unitWC = unit->weapon_cooldown; // 계산 한 다음에
-	float StepWC = unitWC * 21.7;
+	float unitWC = passenger->weapon_cooldown; // 계산 한 다음에
+	float StepWC = unitWC * 21.7f;
+	std::cout << "WC + StepWC : " << unitWC << "+" << StepWC << std::endl;
+	
 	Actions()->UnitCommand(unit, ABILITY_ID::LOAD, passenger); // 태우고
 	
-	if (unit->last_seen_game_loop + StepWC <= game_loop) //시간이 되면
+
+
+	if (unit->last_seen_game_loop + 25.5 <= game_loop) //시간이 되면
 	{
 		Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit->pos); // 내려준다
 		return true;
@@ -268,10 +272,12 @@ const Unit * MEMIBot::GetPassenger(const Unit * shuttle, Units & passengers)
 		}
 	}
 	//사거리 내의 체력 낮은 아군부터 태우고 다 태우면 가까이 있는 것부터 태운다
-	return weakestTargetInsideRange ? weakestTargetInsideRange : closestTargetOutsideRange;
+	return weakestTargetInsideRange && highWCNear>1 ? weakestTargetInsideRange : closestTargetOutsideRange;
 }
 
 //////////////////////////////////
+
+const Unit * TestCol;
 
 void MEMIBot::ManageRush() { 
 
@@ -299,9 +305,38 @@ void MEMIBot::ManageRush() {
 	{
 		Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 15));
 
-		/*Units NearbyEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 20));
-		const Unit * target = GetTarget(unit, NearbyEnemies);
-		if (target != nullptr) { Kiting(unit, target); }*/
+		const Unit * passenger = GetPassenger(unit, Colossuses);
+		const Unit * target = GetTarget(unit, NearbyArmies);
+
+		const UnitPool unitpool;
+		if (!unit->passengers.empty())
+		{
+			const Unit * PASSENGER = unitpool.GetExistingUnit(unit->passengers.front().tag);
+
+			if (PASSENGER != nullptr)
+			{
+				std::cout << "WC : " << PASSENGER->weapon_cooldown << std::endl;
+			}
+			else
+				std::cout << "It's null" << std::endl;
+		}
+		
+		
+		if (unit->cargo_space_taken == unit->cargo_space_max)
+		{
+			if (target == nullptr)
+			{
+				ScoutWithUnit(unit, observation);
+			}
+			else
+			{
+				FleeKiting(unit, target);
+			}
+		}
+		else if(passenger != nullptr)
+		{
+			LoadUnitWeaponCooldown(unit, passenger);
+		}
 
 		/*if (unit->cargo_space_taken == unit->cargo_space_max) {
 		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
@@ -309,83 +344,12 @@ void MEMIBot::ManageRush() {
 		Actions()->UnitCommand(unit, ABILITY_ID::LOAD, stalkers.front());
 
 		if (Query()->PathingDistance(unit->pos, Point2D(game_info_.enemy_start_locations.front().x + 3, game_info_.enemy_start_locations.front().y)) < 20) {
-			Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit->pos);
+		Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit->pos);
 
-			if (unit->cargo_space_taken == 0) {
-				Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
-			}
+		if (unit->cargo_space_taken == 0) {
+		Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
 		}
-
-		const Unit * passenger = GetPassenger(unit, Colossuses);
-		const Unit * target = GetTarget(unit, NearbyArmies);
-
-		if (unit->cargo_space_taken == unit->cargo_space_max)
-		{
-			ComeOnKiting(unit, target);
-		}
-		else if()
-		{
-
-		}
-
-
-		if (passenger != nullptr)
-		{
-			
-		}
-		else
-		{
-
 		}*/
-
-		
-
-		/*if (LoadUnitCalcWC(unit, ))
-		{
-			Actions()->UnitCommand(unit, ABILITY_ID::LOAD, );
-		}*/
-
-
-		if (!unit->passengers.empty())
-		{
-			
-
-
-			const Unit * PASSENGER = observation->GetUnit(unit->passengers.front().tag);
-			//std::cout << "Passenger : " << unit->passengers.front().tag << std::endl;
-			//std::cout << "WeaponCooldown : " << PASSENGER->weapon_cooldown << std::endl;
-
-
-		}
-
-		if (TestColossus == nullptr)
-		{
-			TestColossus = Colossuses.front();
-		}
-		else
-		{
-			std::cout << "WC  :" << TestColossus->weapon_cooldown << std::endl;
-		}
-
-		if (!Colossuses.empty())
-		{
-			const Unit * COLOSSUS = Colossuses.front();
-
-			//std::cout << "Colossuse : " << Colossuses.front()->tag;
-
-			if (Colossuses.front()->weapon_cooldown == 0)
-			{
-				Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit);
-			}
-			else
-			{
-				Actions()->UnitCommand(unit, ABILITY_ID::LOAD, unit);
-			}
-		}
-
-		
-
-		
 	}
 	for (const auto& unit : AdeptShades) {
 		ShadeNearArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 15));
@@ -485,14 +449,16 @@ void MEMIBot::ManageRush() {
 				if(target != nullptr) AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
 				if (ComeOn)
 				{
-					ComeOnKiting(unit, target); // 적을 유인하는 Kiting
+					const Unit * Armytarget = GetTarget(unit, NearbyArmies);
+
+					ComeOnKiting(unit, Armytarget); // 적을 유인하는 Kiting
 				}
 				else
 				{
 					FrontKiting(unit, Workertarget);
 				}
 			}
-			else if (CurrentAdept < 6 && !MustAttack)
+			else if (CurrentAdept < 9 && !MustAttack)
 			{
 				RetreatWithUnit(unit, advance_pylon_location);
 			}
@@ -500,7 +466,7 @@ void MEMIBot::ManageRush() {
 			{
 				MustAttack = false;
 			}
-			else //(CurrentAdept >= 8)
+			else //(CurrentAdept >= 9)
 			{
 				MustAttack = true;
 				if (target == nullptr)
@@ -640,8 +606,6 @@ void MEMIBot::AdeptPhaseToLocation(const Unit* unit, Point2D Location , bool & T
 
 void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 {
-	std::cout << "Manage BLINK !!";
-
 	float UnitHealth = unit->health + unit->shield;
 
 	if (UnitHealth < 30)
@@ -670,6 +634,65 @@ void MEMIBot::StalkerBlinkForward(const Unit* unit, const Unit* enemyarmy)
 	BlinkLocation -= KitingLocation * 7.0f;
 
 	Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_BLINK, BlinkLocation);
+}
+
+void MEMIBot::FleeKiting(const Unit* unit, const Unit* enemyarmy)
+{
+	const ObservationInterface* observation = Observation();
+	Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 10));
+	Point2D enemyposition;
+	GetPosition(NearbyArmies, Unit::Alliance::Enemy, enemyposition);
+
+	//Distance to target
+	float dist = Distance2D(unit->pos, enemyposition);
+	float DIST = dist - unit->radius - enemyarmy->radius;
+
+	const Unit& ENEMYARMY = *enemyarmy;
+
+	if (DIST > 7.0f) // 거리가 멀어서 추격해야 하는 상황
+	{
+		sc2::Point2D KitingLocation = unit->pos;
+		KitingLocation -= CalcKitingPosition(unit->pos, enemyposition);
+
+		if (!Observation()->IsPathable(KitingLocation)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
+		{
+			EmergencyKiting(unit, enemyarmy);
+		}
+		else if (float pathingdistance = Query()->PathingDistance(unit, KitingLocation) > 10) // 이동할 위치가 멀리 돌아가야하는 곳이라면
+		{
+			EmergencyKiting(unit, enemyarmy);
+		}
+		else if (pathingdistance == 0)
+		{
+			EmergencyKiting(unit, enemyarmy);
+		}
+		else
+		{
+			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+		}
+	}
+	else // 거리가 가까워서 도망가야 하는 상황
+	{
+		sc2::Point2D KitingLocation = unit->pos;
+		KitingLocation += CalcKitingPosition(unit->pos, enemyposition);
+
+		if (!Observation()->IsPathable(KitingLocation)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
+		{
+			EmergencyKiting(unit, enemyarmy);
+		}
+		else if (float pathingdistance = Query()->PathingDistance(unit, KitingLocation) > 10) // 이동할 위치가 멀리 돌아가야하는 곳이라면
+		{
+			EmergencyKiting(unit, enemyarmy);
+		}
+		else if (pathingdistance == 0)
+		{
+			EmergencyKiting(unit, enemyarmy);
+		}
+		else
+		{
+			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+		}
+	}
 }
 
 void MEMIBot::FrontKiting(const Unit* unit, const Unit* enemyarmy)
@@ -702,6 +725,10 @@ void MEMIBot::FrontKiting(const Unit* unit, const Unit* enemyarmy)
 		{
 			EmergencyKiting(unit, enemyarmy);
 		}
+		else if (pathingdistance == 0)
+		{
+			EmergencyKiting(unit, enemyarmy);
+		}
 		else
 		{
 			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
@@ -719,6 +746,10 @@ void MEMIBot::FrontKiting(const Unit* unit, const Unit* enemyarmy)
 			EmergencyKiting(unit, enemyarmy);
 		}
 		else if (float pathingdistance = Query()->PathingDistance(unit, KitingLocation) > 10) // 이동할 위치가 멀리 돌아가야하는 곳이라면
+		{
+			EmergencyKiting(unit, enemyarmy);
+		}
+		else if (pathingdistance == 0)
 		{
 			EmergencyKiting(unit, enemyarmy);
 		}
@@ -759,6 +790,10 @@ void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
 			EmergencyKiting(unit, enemyarmy);
 		}
 		else if (float pathingdistance = Query()->PathingDistance(unit, KitingLocation) > 10) // 이동할 위치가 멀리 돌아가야하는 곳이라면
+		{
+			EmergencyKiting(unit, enemyarmy);
+		}
+		else if (pathingdistance == 0)
 		{
 			EmergencyKiting(unit, enemyarmy);
 		}
@@ -804,11 +839,15 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 7;
 		}
 
-		if (!Observation()->IsPathable(KitingLocation) ) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
+		if (!Observation()->IsPathable(KitingLocation)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
 		{
 			EmergencyKiting(unit, enemyarmy);
 		}
 		else if (float pathingdistance = Query()->PathingDistance(unit, KitingLocation) > 10) // 이동할 위치가 멀리 돌아가야하는 곳이라면
+		{
+			EmergencyKiting(unit, enemyarmy);
+		}
+		else if (pathingdistance == 0)
 		{
 			EmergencyKiting(unit, enemyarmy);
 		}

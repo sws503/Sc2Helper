@@ -11,9 +11,9 @@ static const std::string bot_name = "AdeptBot";
 static const std::string current_version = "v0.5";
 
 #ifdef DEBUG
-static const bool VsHuman = true;
+static const bool VsHuman = false;
 static const int stepsize = 3;
-static const bool ControlTest = false;
+static const bool ControlTest = true;
 static const std::vector<std::string> map_names( { 
 	"CatalystLE", "AcidPlantLE", "DarknessSanctuary", 
 	"DreamcatcherLE", "LostAndFoundLE", "Redshift" } );
@@ -80,8 +80,8 @@ int main(int argc, char* argv[])
 		map_name = map_names.at(i) + ".SC2Map";
 		std::cout << map_names.at(i) << std::endl;
 
-		//if (!coordinator.StartGame(ControlMap)) {
-		if (!coordinator.StartGame(map_name)) {
+		if (!coordinator.StartGame(ControlMap)) {
+		//if (!coordinator.StartGame(map_name)) {
 			break;
 		}
 		while (coordinator.Update() && !do_break) {

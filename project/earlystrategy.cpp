@@ -41,6 +41,7 @@ bool MEMIBot::EarlyStrategy() {
 	size_t stargate_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STARGATE);
     size_t twilight_council_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
     size_t robotics_facility_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+	size_t robotics_bay_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
     size_t templar_archive_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_TEMPLARARCHIVE);
 
 #ifdef DEBUG
@@ -436,7 +437,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 29:
-        if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_ADEPT)>6) {
+        if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_ADEPT)>8) {
             stage_number=30;
             return false;
         }
@@ -492,10 +493,6 @@ bool MEMIBot::EarlyStrategy() {
             }
         }
         return false;
-
-
-=======
->>>>>>> 3d7357cf4b46f50cfe742dad09cf755e1db511a8
 
 
     //branch 3

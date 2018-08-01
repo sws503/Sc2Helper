@@ -312,7 +312,6 @@ struct IsUnpowered {
 
 class MEMIBot : public Agent {
 public:
-	const Unit * TestColossus = nullptr;
 
 
 	MEMIBot(std::string botname, std::string version)
@@ -426,7 +425,9 @@ public:
 		scout_all();
 
 #ifdef DEBUG
-		PrintCursor();
+		//TEST 하려고 송우석이 주석처리함
+		//발견시 주석 제거 추천
+		//PrintCursor();
 #endif
 
 		ManageUpgrades();
@@ -664,6 +665,8 @@ private:
 	void StalkerBlinkEscape(const Unit * unit, const Unit * enemyarmy);
 
 	void StalkerBlinkForward(const Unit * unit, const Unit * enemyarmy);
+
+	void FleeKiting(const Unit * unit, const Unit * enemyarmy);
 
 	void FrontKiting(const Unit * unit, const Unit * enemyarmy);
 
