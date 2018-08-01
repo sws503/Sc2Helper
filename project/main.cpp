@@ -11,11 +11,11 @@ static const std::string bot_name = "AdeptBot";
 static const std::string current_version = "v0.5";
 
 #ifdef DEBUG
-static const bool VsHuman = false;
+static const bool VsHuman = true;
 static const int stepsize = 3;
-static const bool ControlTest = false;
+static const bool ControlTest = true;
 static const std::string map_name = "CatalystLE.SC2Map";
-static const std::string ControlMap = "StalkerMicroMarine.SC2Map";
+static const std::string ControlMap = "MicroMarauder.SC2Map";
 class Human : public sc2::Agent {
 public:
 	void OnGameStart() final {
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 
 	if (VsHuman) {
 		coordinator.SetParticipants({
-			CreateParticipant(sc2::Race::Terran, &human_bot),
+			CreateParticipant(sc2::Race::Protoss, &human_bot),
 			CreateParticipant(sc2::Race::Protoss, &bot),
 			});
 	}

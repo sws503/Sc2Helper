@@ -96,6 +96,25 @@ struct IsAdeptShade {
 	}
 };
 
+struct IsWarpPrism {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_WARPPRISM: return true;
+		case UNIT_TYPEID::PROTOSS_WARPPRISMPHASING: return true;
+		default: return false;
+		}
+	}
+};
+
+struct IsColossus {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_COLOSSUS: return true;
+		default: return false;
+		}
+	}
+};
+
 struct IsNearbyWorker {
 	IsNearbyWorker(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
 		observation_(obs), mp(MyPosition), radius(Radius) {}
@@ -167,18 +186,7 @@ struct IsNearbyEnemies {
 		case UNIT_TYPEID::TERRAN_MULE: return false;
 		case UNIT_TYPEID::TERRAN_NUKE: return false;
 		
-		case UNIT_TYPEID::PROTOSS_PHOTONCANNON: 
-		case UNIT_TYPEID::TERRAN_BUNKER:
-		case UNIT_TYPEID::ZERG_SPINECRAWLER: 
-		case UNIT_TYPEID::TERRAN_PLANETARYFORTRESS: return Distance2D(mp, unit.pos) < radius;
-
-		
 		default:  
-			for (const auto& attribute : attributes) {
-				if (attribute == Attribute::Structure) {
-					return false;
-				}
-			}
 			return Distance2D(mp, unit.pos) < radius;
 		}
 	}
@@ -193,6 +201,80 @@ std::map<uint64_t, uint32_t> adept_map;
 bool MustAttack = false;
 bool StalkerMustAttack = false;
 
+////////////////////////////////
+/*void shuttle::loadPassangers()
+{
+	if (m_shuttle->getCargoSpaceTaken() < m_passengers.size())
+	{
+		Micro::SmartRightClick(m_passengers, m_shuttle, *m_bot);
+		Micro::SmartRightClick(m_shuttle, m_passengers, *m_bot);
+		Micro::SmartCDAbility(m_shuttle, sc2::ABILITY_ID::EFFECT_MEDIVACIGNITEAFTERBURNERS, *m_bot);
+	}
+	else
+	{
+		m_status = ShuttleStatus::OnMyWay;
+	}
+}*/
+
+bool MEMIBot::LoadUnitWeaponCooldown(const Unit * unit, const Unit* passenger)
+{
+	uint32_t game_loop = Observation()->GetGameLoop();
+	
+	float unitWC = unit->weapon_cooldown; // 계산 한 다음에
+	float StepWC = unitWC * 21.7;
+	Actions()->UnitCommand(unit, ABILITY_ID::LOAD, passenger); // 태우고
+	
+	if (unit->last_seen_game_loop + StepWC <= game_loop) //시간이 되면
+	{
+		Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit->pos); // 내려준다
+		return true;
+	}
+}
+
+const Unit * MEMIBot::GetPassenger(const Unit * shuttle, Units & passengers)
+{
+	double closestDist = std::numeric_limits<double>::max();
+	double lowestHealth = std::numeric_limits<double>::max();
+	const Unit * closestTargetOutsideRange = nullptr;
+	const Unit * weakestTargetInsideRange = nullptr;
+	int highWCNear = 0;
+	const float range = 6.0f;
+
+	for (const auto & targetUnit : passengers)
+	{
+		if (!targetUnit->is_alive)
+		{
+			continue;
+		}
+		const float distance = Distance2D(shuttle->pos, targetUnit->pos);
+		float UnitWC = targetUnit->weapon_cooldown;
+
+		if (distance > range) // 거리가 멀어서 바로 태울 수 없는 경우
+		{
+			// 가장 가까운 유닛을 고른다
+			if (!closestTargetOutsideRange || distance < closestDist)
+			{
+				closestDist = distance;
+				closestTargetOutsideRange = targetUnit;
+			}
+		}
+		else // 가까워서 바로 태울 수 있는 경우
+		{
+			// 최근에 공격해서 공격 쿨타임이 긴 유닛을 고른다
+			if (!weakestTargetInsideRange || (UnitWC > highWCNear) || (UnitWC == highWCNear && targetUnit->health < lowestHealth))
+			{
+				lowestHealth = targetUnit->health;
+				highWCNear = UnitWC;
+				weakestTargetInsideRange = targetUnit;
+			}
+		}
+	}
+	//사거리 내의 체력 낮은 아군부터 태우고 다 태우면 가까이 있는 것부터 태운다
+	return weakestTargetInsideRange ? weakestTargetInsideRange : closestTargetOutsideRange;
+}
+
+//////////////////////////////////
+
 void MEMIBot::ManageRush() { 
 
 	const ObservationInterface* observation = Observation();
@@ -201,17 +283,110 @@ void MEMIBot::ManageRush() {
 
 	Units Adepts = observation->GetUnits(Unit::Alliance::Self, IsAdept());
 	Units AdeptShades = observation->GetUnits(Unit::Alliance::Self, IsAdeptShade());
+	Units WarpPrisms = observation->GetUnits(Unit::Alliance::Self, IsWarpPrism());
+	Units Colossuses = observation->GetUnits(Unit::Alliance::Self, IsColossus());
 	Units EnemyWorker = observation->GetUnits(Unit::Alliance::Enemy, IsWorker());
 	size_t CurrentStalker = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER);
 	size_t CurrentAdept = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ADEPT);
-
-	
 
 	Units RangedUnitTargets;
 
 	Units rangedunits = observation->GetUnits(Unit::Alliance::Self, IsRanged(observation));
 	Units ShadeNearEnemies;
 	Units ShadeNearArmies;
+
+	for (const auto& unit : WarpPrisms)
+	{
+		Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 15));
+
+		/*Units NearbyEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 20));
+		const Unit * target = GetTarget(unit, NearbyEnemies);
+		if (target != nullptr) { Kiting(unit, target); }*/
+
+		/*if (unit->cargo_space_taken == unit->cargo_space_max) {
+		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
+		}
+		Actions()->UnitCommand(unit, ABILITY_ID::LOAD, stalkers.front());
+
+		if (Query()->PathingDistance(unit->pos, Point2D(game_info_.enemy_start_locations.front().x + 3, game_info_.enemy_start_locations.front().y)) < 20) {
+			Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit->pos);
+
+			if (unit->cargo_space_taken == 0) {
+				Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
+			}
+		}
+
+		const Unit * passenger = GetPassenger(unit, Colossuses);
+		const Unit * target = GetTarget(unit, NearbyArmies);
+
+		if (unit->cargo_space_taken == unit->cargo_space_max)
+		{
+			ComeOnKiting(unit, target);
+		}
+		else if()
+		{
+
+		}
+
+
+		if (passenger != nullptr)
+		{
+			
+		}
+		else
+		{
+
+		}*/
+
+		
+
+		/*if (LoadUnitCalcWC(unit, ))
+		{
+			Actions()->UnitCommand(unit, ABILITY_ID::LOAD, );
+		}*/
+
+
+		if (!unit->passengers.empty())
+		{
+			
+
+
+			const Unit * PASSENGER = observation->GetUnit(unit->passengers.front().tag);
+			//std::cout << "Passenger : " << unit->passengers.front().tag << std::endl;
+			//std::cout << "WeaponCooldown : " << PASSENGER->weapon_cooldown << std::endl;
+
+
+		}
+
+		if (TestColossus == nullptr)
+		{
+			TestColossus = Colossuses.front();
+		}
+		else
+		{
+			std::cout << "WC  :" << TestColossus->weapon_cooldown << std::endl;
+		}
+
+		if (!Colossuses.empty())
+		{
+			const Unit * COLOSSUS = Colossuses.front();
+
+			//std::cout << "Colossuse : " << Colossuses.front()->tag;
+
+			if (Colossuses.front()->weapon_cooldown == 0)
+			{
+				Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit);
+			}
+			else
+			{
+				Actions()->UnitCommand(unit, ABILITY_ID::LOAD, unit);
+			}
+		}
+
+		
+
+		
+	}
 
 	for (const auto& unit : AdeptShades) {
 		ShadeNearArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 15));
@@ -237,6 +412,32 @@ void MEMIBot::ManageRush() {
 		// 타겟을 받아옵니다 *^^*
 		const Unit * target = GetTarget(unit, NearbyEnemies);
 		
+		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
+		{
+			if (MustAttack == true && target == nullptr)
+			{
+				ScoutWithUnit(unit, observation);
+			}
+
+			if (target != nullptr) // 카이팅은 항상하자
+			{
+				Kiting(unit, target);
+			}
+		}
+
+		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
+		{
+			if (MustAttack == true && target == nullptr)
+			{
+				ScoutWithUnit(unit, observation);
+			}
+
+			if (target != nullptr) // 카이팅은 항상하자
+			{
+				Kiting(unit, target);
+			}
+		}
+
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_STALKER)
 		{
 			if (MustAttack == true && target == nullptr)
@@ -327,7 +528,7 @@ void MEMIBot::ManageRush() {
 		{
 			if (target == nullptr)
 			{
-				ScoutWithUnit(unit, observation);
+				ScoutWithUnit(unit,  observation);
 			}
 			else // 타겟이 존재할 때
 			{
@@ -392,7 +593,7 @@ void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units N
 	{
 		Point2D HarassLocation = EnemyExpansionMineral->pos;
 		Point2D KitingLocation = CalcKitingPosition(EnemyExpansionMineral->pos, Enemy_front_expansion);
-		HarassLocation += KitingLocation * 5.0f;
+		HarassLocation += KitingLocation * 7.0f;
 
 		AdeptPhaseToLocation(unit, HarassLocation, Timer, ComeOn);
 	}
@@ -400,7 +601,7 @@ void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units N
 	{
 		Point2D HarassLocation = EnemyBaseMineral->pos;
 		Point2D KitingLocation = CalcKitingPosition(EnemyBaseMineral->pos, EnemyBaseLocation);
-		HarassLocation += KitingLocation * 5.0f;
+		HarassLocation += KitingLocation * 1.0f;
 
 		AdeptPhaseToLocation(unit, HarassLocation , Timer, ComeOn);
 	}
@@ -542,9 +743,7 @@ void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
 
 	const Unit& ENEMYARMY = *enemyarmy;
 
-	std::cout << getAttackRangeGROUND(enemyarmy) << "<" << unitattackrange << "=" << (getAttackRangeGROUND(enemyarmy) < unitattackrange) << "           1이면 공격합니다 ^^" <<std::endl;
-
-	if ( (unit->weapon_cooldown == 0.0f && (getAttackRangeGROUND(enemyarmy) < unitattackrange)) || DIST > 10) //적 공격사거리가 나보다 짧으면 공격한다
+	if ( (unit->weapon_cooldown == 0.0f && (getAttackRangeGROUND(enemyarmy) < unitattackrange)) || DIST > getAttackRangeGROUND(enemyarmy) + 2) //적 공격사거리가 나보다 짧으면 공격한다
 	{
 		Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemyarmy->pos);
 	}
@@ -631,9 +830,9 @@ void MEMIBot::EmergencyKiting(const Unit* unit, const Unit* enemyarmy)
 {
 	const ObservationInterface* observation = Observation();
 	// 적의 평균 위치를 받아옵니다
-	Units NearbyEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 10));
+	Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 10));
 	Point2D enemyposition;
-	GetPosition(NearbyEnemies, Unit::Alliance::Enemy, enemyposition);
+	GetPosition(NearbyArmies, Unit::Alliance::Enemy, enemyposition);
 
 	//Distance to target
 	float dist = Distance2D(unit->pos, enemyarmy->pos);

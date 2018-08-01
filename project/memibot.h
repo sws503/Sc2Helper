@@ -312,6 +312,8 @@ struct IsUnpowered {
 
 class MEMIBot : public Agent {
 public:
+	const Unit * TestColossus = nullptr;
+
 
 	MEMIBot(std::string botname, std::string version)
 		: botname(botname), version(version) {}
@@ -619,7 +621,6 @@ private:
 			ReadyLocation2 = startLocation_;
 		}
 	}
-
 	void ManageRush();
 
 	void AdeptPhaseShift(const Unit * unit, Units ShadeNearEnemies, Units NearbyEnemies, bool & ComeOn);
@@ -655,6 +656,10 @@ private:
 	bool GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D & position);
 
 	int getAttackPriority(const Unit * u);
+
+	bool LoadUnitWeaponCooldown(const Unit * unit, const Unit * passenger);
+
+	const Unit * GetPassenger(const Unit * shuttle, Units & targets);
 
 	const Unit * GetTarget(const Unit * rangedUnit, Units & targets);
 

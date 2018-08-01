@@ -40,7 +40,6 @@ bool MEMIBot::EarlyStrategy() {
 	size_t stargate_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STARGATE);
     size_t twilight_council_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
     size_t robotics_facility_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
-    size_t robotics_bay_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
     size_t templar_archive_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_TEMPLARARCHIVE);
 
 #ifdef DEBUG
@@ -101,12 +100,12 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
         }
 	}
-	if (branch<2 && stage_number>35) {
+	if (branch<2 && stage_number>29) {
         TryBuildPylonIfNeeded(2);
-        if (bases.size()*2>assimilator_count) {
+        if ((bases.size()-1)*2>assimilator_count) {
             TryBuildAssimilator();
         }
-        if (forge_count<2) {
+        if (forge_count<1) {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_PROBE);
         }
         if (!BlinkResearched && CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER)>5) {
@@ -114,19 +113,19 @@ bool MEMIBot::EarlyStrategy() {
 				BlinkResearched = true;
 			
         }
-        if (gateway_count<=bases.size()*2) {
+        if (gateway_count<bases.size()*3 && gateway_count<10) {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_PROBE);
         }
         else if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() ) {
             for (const auto& b : bases) {
                 if (b->build_progress < 1.0) {
-                    TryBuildArmyBranch0();
+                    return TryWarpStalker();
                 }
             }
             TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
         }
         else{
-            TryBuildArmyBranch0();
+            TryWarpStalker();
         }
 	}
 
@@ -388,7 +387,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 26:
-        if (branch == 3) {
+        if (branch==3) {
             stage_number=50;
             return false;
         }
@@ -408,7 +407,7 @@ bool MEMIBot::EarlyStrategy() {
         return false;
     case 27:
         if (bases.size()>=2) {
-            stage_number=28;
+            stage_number++;
             return false;
         }
         if (observation->GetMinerals()>400) {
@@ -434,59 +433,6 @@ bool MEMIBot::EarlyStrategy() {
             return false;
         }
         TryWarpAdept();
-    case 30:
-        if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_STALKER)>7) {
-            stage_number=31;
-            return false;
-        }
-        TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
-    case 31:
-        if (bases.size()>=3) {
-            stage_number=32;
-            return false;
-        }
-        if (observation->GetMinerals()>400) {
-            TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
-        }
-        return false;
-    case 32:
-        if (robotics_facility_count>=1) {
-            stage_number=33;
-            return false;
-        }
-        if (observation->GetMinerals() > 200 && observation->GetVespene() > 100) {
-            TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_PROBE);
-        }
-        return false;
-    case 33:
-        if (stalkers.size()>=5) {
-            stage_number=34;
-            return false;
-        }
-        TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
-        return false;
-    case 34:
-        if (gateway_count>=7) {
-			stage_number=35;
-			return false;
-		}
-		if (observation->GetMinerals()>150) {
-            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_PROBE);
-		}
-		return false;
-    case 35:
-        if (robotics_bay_count > 0) {
-            stage_number = 36;
-            return false;
-        }
-        if (robotics_facility_count > 0 && robotics_bay_count < 1) {
-            if (observation->GetMinerals() > 200 && observation->GetVespene() > 200) {
-                TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSBAY, UNIT_TYPEID::PROTOSS_PROBE);
-            }
-        }
-        return false;
-
-
 
 
     //branch 3
@@ -584,7 +530,6 @@ bool MEMIBot::EarlyStrategy() {
         if (observation->GetMinerals() > 200 && observation->GetVespene() > 100) {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_PROBE);
         }
-        return false;
     case 103:
         if (robotics_facility_count<1) {
             stage_number=102;
@@ -643,25 +588,13 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=105;
             return false;
 	    }
-	    if (warpprisms.front()->cargo_space_taken==warpprisms.front()->cargo_space_max) {
-            Actions()->UnitCommand(warpprisms.front(), ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
-            stage_number=109;
-            return false;
-	    }
-        Actions()->UnitCommand(warpprisms.front(),ABILITY_ID::LOAD,stalkers.front());
-        return false;
 	case 109:
 	    if (warpprisms.empty()) {
             stage_number=110;
             return false;
 	    }
 	    else{
-            if (Query()->PathingDistance(warpprisms.front()->pos,Point2D(game_info_.enemy_start_locations.front().x+3,game_info_.enemy_start_locations.front().y))<20) {
-                Actions()->UnitCommand(warpprisms.front(), ABILITY_ID::UNLOADALLAT_WARPPRISM, warpprisms.front()->pos);
-                if (warpprisms.front()->cargo_space_taken==0) {
-                    Actions()->UnitCommand(warpprisms.front(), ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
-                }
-            }
+            
             //std::cout<<Query()->PathingDistance(warpprisms.front()->pos,game_info_.enemy_start_locations.front())<<std::endl;
 
             //Actions()->UnitCommand(warpprisms.front(), ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
