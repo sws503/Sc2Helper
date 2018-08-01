@@ -140,6 +140,7 @@
     <ClCompile Include="earlystrategy.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="managerush.cpp" />
+    <ClCompile Include="scout.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="flag.h" />

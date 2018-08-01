@@ -203,7 +203,7 @@ void MEMIBot::ManageRush() { // 5.17 坷扼努 蜡粗 包府 +6.25 气浅窃 蜡粗 包府
 
 				AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
 			}
-			else if (CurrentAdept < 8 && !MustAttack)
+			else if (CurrentAdept < 7 && !MustAttack)
 			{
 				RetreatWithUnit(unit, advance_pylon_location);
 			}
