@@ -41,6 +41,7 @@ int main(int argc, char* argv[])
 								 //게임속도 빠르게 speed faster
 
 
+
 	coordinator.SetMultithreaded(true);
 
 	if (ControlTest) {
@@ -68,7 +69,7 @@ int main(int argc, char* argv[])
 		std::cout << "Please set map names!" << std::endl;
 		return 1;
 	}
-	
+
 	std::string map_name;
 
 	// Start the game.

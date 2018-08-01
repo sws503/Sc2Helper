@@ -42,50 +42,12 @@ bool MEMIBot::EarlyStrategy() {
     size_t twilight_council_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
     size_t robotics_facility_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
 	size_t robotics_bay_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
+
     size_t templar_archive_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_TEMPLARARCHIVE);
 
 #ifdef DEBUG
 	std::cout << stage_number << std::endl;
 #endif
-
-    if (find_enemy_location) {
-        advance_pylon_location = Point2D((startLocation_.x*1.8 + game_info_.enemy_start_locations.front().x*2.2)/4, (startLocation_.y*1.8 + game_info_.enemy_start_locations.front().y*2.2)/4);
-    }
-
-    if (stage_number>2) {
-		if (find_enemy_location == false && pylons.size()>0) {
-			Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
-			if (!enemy_townhalls.empty() || enemy_structures.size()>2 || game_info_.enemy_start_locations.size() == 1) {
-				if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<10 || game_info_.enemy_start_locations.size() == 1) {
-					find_enemy_location = true;
-					std::cout << "find!" << std::endl;
-					Actions()->UnitCommand(probe_scout, ABILITY_ID::STOP);
-					float minimum_distance = std::numeric_limits<float>::max();
-					for (const auto& expansion : expansions_) {
-						float current_distance = Distance2D(game_info_.enemy_start_locations.front(), expansion);
-						if (current_distance < 3) {
-							continue;
-						}
-
-						if (current_distance < minimum_distance) {
-							enemy_expansion = expansion;
-							minimum_distance = current_distance;
-						}
-
-
-
-
-					}
-				}
-			}
-			else {
-				if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<7) {
-					std::vector<Point2D>::iterator iter_esl = game_info_.enemy_start_locations.begin();
-					game_info_.enemy_start_locations.erase(iter_esl);
-				}
-			}
-		}
-	}
 
 	if (stage_number<28) {
         if (observation->GetFoodWorkers()<23) {
@@ -105,36 +67,28 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
         }
 	}
-	if (branch<2 && stage_number>29) {
+	if (branch<2 && stage_number>36) {
         TryBuildPylonIfNeeded(2);
-        if ((bases.size()-1)*2>assimilator_count) {
+        if (bases.size()*2>assimilator_count) {
             TryBuildAssimilator();
         }
-        if (forge_count<1) {
+        if (forge_count<2) {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_PROBE);
         }
-        if (!BlinkResearched && CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER)>5) {
-			if (TryBuildUnit(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)) {
-				BlinkResearched = true;
-			}
-			else {
-                return false;
-			}
 
-        }
-        if (gateway_count<bases.size()*3 && gateway_count<10) {
+        if (gateway_count<=bases.size()*2 && gateway_count<10) {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_PROBE);
         }
         else if (observation->GetFoodUsed()>120 && GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() ) {
             for (const auto& b : bases) {
                 if (b->build_progress < 1.0) {
-                    return TryWarpStalker();
+                    return TryBuildArmyBranch0();
                 }
             }
             TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
         }
         else{
-            TryWarpStalker();
+            TryBuildArmyBranch0();
         }
 	}
 
@@ -467,7 +421,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 33:
-        if (stalkers.size()>=5) {
+        if (stalkers.size()>=14) {
             stage_number=34;
             return false;
         }
@@ -493,7 +447,12 @@ bool MEMIBot::EarlyStrategy() {
             }
         }
         return false;
-
+    case 36:
+        if (BlinkResearched || !observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSBAY)).front()->orders.empty()) {
+            stage_number=37;
+            return false;
+        }
+        TryBuildUnit(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
 
     //branch 3
     case 50:

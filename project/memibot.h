@@ -2223,6 +2223,8 @@ private:
 
 	void scout_all();
 
+	void scoutenemylocation();
+
 	Point2D probe_scout_dest = Point2D(0,0);
 	Point2D advance_pylon_location = Point2D((float)game_info_.width/2,(float)game_info_.height/2);
 
