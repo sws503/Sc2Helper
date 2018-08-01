@@ -593,7 +593,7 @@ void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units N
 	{
 		Point2D HarassLocation = EnemyExpansionMineral->pos;
 		Point2D KitingLocation = CalcKitingPosition(EnemyExpansionMineral->pos, Enemy_front_expansion);
-		HarassLocation += KitingLocation * 7.0f;
+		HarassLocation += KitingLocation * 1.0f;
 
 		AdeptPhaseToLocation(unit, HarassLocation, Timer, ComeOn);
 	}
@@ -601,7 +601,7 @@ void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units N
 	{
 		Point2D HarassLocation = EnemyBaseMineral->pos;
 		Point2D KitingLocation = CalcKitingPosition(EnemyBaseMineral->pos, EnemyBaseLocation);
-		HarassLocation += KitingLocation * 1.0f;
+		HarassLocation += KitingLocation * 5.0f;
 
 		AdeptPhaseToLocation(unit, HarassLocation , Timer, ComeOn);
 	}
@@ -752,15 +752,9 @@ void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
 		sc2::Point2D KitingLocation = unit->pos;
 		//If its a building we want range -1 distance
 		//The same is true if it outranges us. We dont want to block following units
-		if (IsStructure(Observation())(ENEMYARMY)) // 건물이면 달라붙죠 ㅇㅋ?
-		{
-			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos);
-		}
-		else // 적 공격사거리가 나랑 같거나 길면
-		{
-			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos); // 적을 데려나오기 위해 뒤로 빼게 했습니다.
-		}
-		
+
+		KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos); // 적을 데려나오기 위해 뒤로 빼게 했습니다.
+				
 		if (!Observation()->IsPathable(KitingLocation)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
 		{
 			EmergencyKiting(unit, enemyarmy);
