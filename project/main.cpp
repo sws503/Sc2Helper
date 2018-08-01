@@ -14,8 +14,8 @@ static const std::string current_version = "v0.5";
 static const bool VsHuman = false;
 static const int stepsize = 3;
 static const bool ControlTest = false;
-static const std::vector<std::string> map_names( { 
-	"CatalystLE", "AcidPlantLE", "DarknessSanctuary", 
+static const std::vector<std::string> map_names( {
+	"CatalystLE", "AcidPlantLE", "DarknessSanctuary",
 	"DreamcatcherLE", "LostAndFoundLE", "Redshift" } );
 static const std::string ControlMap = "StalkerMicroMarine.SC2Map";
 
@@ -38,9 +38,9 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	coordinator.SetStepSize(1); //Control
+	coordinator.SetStepSize(5); //Control
 								 //게임속도 빠르게 speed faster
-	
+
 
 	coordinator.SetMultithreaded(true);
 
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
 		std::cout << "Please set map names!" << std::endl;
 		return 1;
 	}
-	
+
 	std::string map_name;
 
 	// Start the game.

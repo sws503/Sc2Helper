@@ -3,7 +3,7 @@
 /*bool MEMIBot::ExpectBattle(Units myunits, Units enemyunits, bool OracleCanAttack)
 {
 	const ObservationInterface* observation = Observation();
-	//Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy); 
+	//Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
 
 	float UnitHP = Oracle->health + Oracle->shield;
 	float TotalUnitHP
@@ -185,8 +185,8 @@ struct IsNearbyEnemies {
 		case UNIT_TYPEID::ZERG_EGG: return false;
 		case UNIT_TYPEID::TERRAN_MULE: return false;
 		case UNIT_TYPEID::TERRAN_NUKE: return false;
-		
-		default:  
+
+		default:
 			return Distance2D(mp, unit.pos) < radius;
 		}
 	}
@@ -217,11 +217,11 @@ bool StalkerMustAttack = false;
 bool MEMIBot::LoadUnitWeaponCooldown(const Unit * unit, const Unit* passenger)
 {
 	uint32_t game_loop = Observation()->GetGameLoop();
-	
+
 	float unitWC = unit->weapon_cooldown; // 계산 한 다음에
 	float StepWC = unitWC * 21.7;
 	Actions()->UnitCommand(unit, ABILITY_ID::LOAD, passenger); // 태우고
-	
+
 	if (unit->last_seen_game_loop + StepWC <= game_loop) //시간이 되면
 	{
 		Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit->pos); // 내려준다
@@ -273,7 +273,7 @@ const Unit * MEMIBot::GetPassenger(const Unit * shuttle, Units & passengers)
 
 //////////////////////////////////
 
-void MEMIBot::ManageRush() { 
+void MEMIBot::ManageRush() {
 
 	const ObservationInterface* observation = Observation();
 	Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
@@ -331,14 +331,14 @@ void MEMIBot::ManageRush() {
 
 		if (passenger != nullptr)
 		{
-			
+
 		}
 		else
 		{
 
 		}*/
 
-		
+
 
 		/*if (LoadUnitCalcWC(unit, ))
 		{
@@ -348,7 +348,7 @@ void MEMIBot::ManageRush() {
 
 		if (!unit->passengers.empty())
 		{
-			
+
 
 
 			const Unit * PASSENGER = observation->GetUnit(unit->passengers.front().tag);
@@ -383,34 +383,34 @@ void MEMIBot::ManageRush() {
 			}
 		}
 
-		
 
-		
+
+
 	}
 	for (const auto& unit : AdeptShades) {
 		ShadeNearArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 15));
 		ShadeNearEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 15));
 		Units ShadeNearWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyWorker(observation, unit->pos, 15));
-		
+
 		for (const auto & ShadeNearWorker : ShadeNearWorkers)
 		{
 			/*if (unit->orders.empty()) {
 				Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, ShadeNearWorker->pos);
 			}*/
-			
+
 		}
 	}
 
 	for (const auto& unit : rangedunits) {
 		Units NearbyWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyWorker(observation, unit->pos, 7));
 		Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 15));
-		Units NearbyEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 20)); //각 유닛의 근처에 있는 
+		Units NearbyEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 20)); //각 유닛의 근처에 있는
 		float TargetAttackRange = 0.0f;
 		float UnitAttackRange = getAttackRangeGROUND(unit);
 
 		// 타겟을 받아옵니다 *^^*
 		const Unit * target = GetTarget(unit, NearbyEnemies);
-		
+
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
 		{
 			if (MustAttack == true && target == nullptr)
@@ -452,7 +452,7 @@ void MEMIBot::ManageRush() {
 				}
 				Kiting(unit, target);
 			}
-			
+
 			if (CurrentStalker < 12 && !StalkerMustAttack && unit->orders.empty())
 			{
 				RetreatWithUnit(unit, advance_pylon_location);
@@ -480,7 +480,7 @@ void MEMIBot::ManageRush() {
 			{
 				const Unit * Workertarget = GetTarget(unit, NearbyWorkers);
 				Chat("FrontKiting Activating");
-				
+
 
 				if(target != nullptr) AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
 				if (ComeOn)
@@ -492,7 +492,7 @@ void MEMIBot::ManageRush() {
 					FrontKiting(unit, Workertarget);
 				}
 			}
-			else if (CurrentAdept < 6 && !MustAttack)
+			else if (CurrentAdept < 9 && !MustAttack)
 			{
 				RetreatWithUnit(unit, advance_pylon_location);
 			}
@@ -518,8 +518,8 @@ void MEMIBot::ManageRush() {
 					{
 						Kiting(unit, target);
 					}
-					
-				}				
+
+				}
 			}
 		}
 
@@ -581,7 +581,7 @@ void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units N
 	const Unit * EnemyBaseMineral = FindNearestMineralPatch(game_info_.enemy_start_locations.front());
 
 	// **********************TEST 용 입니다 **************************
-	bool ControlTest = false; 
+	bool ControlTest = false;
 	if (ControlTest)
 	{
 		Chat("Warning!! TEST MODE");
@@ -759,7 +759,7 @@ void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
 		{
 			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos); // 적을 데려나오기 위해 뒤로 빼게 했습니다.
 		}
-		
+
 		if (!Observation()->IsPathable(KitingLocation)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
 		{
 			EmergencyKiting(unit, enemyarmy);

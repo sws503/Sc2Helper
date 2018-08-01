@@ -66,7 +66,7 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
         }
 	}
-	if (branch<2 && stage_number>35) {
+	if (branch<2 && stage_number>36) {
         TryBuildPylonIfNeeded(2);
         if (bases.size()*2>assimilator_count) {
             TryBuildAssimilator();
@@ -74,15 +74,7 @@ bool MEMIBot::EarlyStrategy() {
         if (forge_count<2) {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_PROBE);
         }
-        if (!BlinkResearched && CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER)>5) {
-			if (TryBuildUnit(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)) {
-				BlinkResearched = true;
-			}
-			else {
-                return false;
-			}
 
-        }
         if (gateway_count<=bases.size()*2 && gateway_count<10) {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_PROBE);
         }
@@ -404,7 +396,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         TryWarpAdept();
     case 30:
-        if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_STALKER)>7) {
+        if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_STALKER)>10) {
             stage_number=31;
             return false;
         }
@@ -428,7 +420,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 33:
-        if (stalkers.size()>=5) {
+        if (stalkers.size()>=14) {
             stage_number=34;
             return false;
         }
@@ -454,6 +446,14 @@ bool MEMIBot::EarlyStrategy() {
             }
         }
         return false;
+    case 36:
+        if (BlinkResearched || !observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSBAY)).front()->orders.empty()) {
+            stage_number=37;
+            return false;
+        }
+        TryBuildUnit(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
+
+
 
     //branch 3
     case 50:
