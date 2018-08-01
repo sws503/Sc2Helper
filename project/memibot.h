@@ -330,7 +330,7 @@ public:
 		ep.radiuses_.push_back(5.9f);
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
-        branch = 3;
+        branch = 0;
 		stage_number = 0;
 		iter_exp = expansions_.begin();
 
@@ -420,9 +420,9 @@ public:
 		ManageUpgrades();
 
 		// Control ½ÃÀÛ
-		//Defend();
+		Defend();
 		//ManageArmy();
-		//ManageRush();
+		ManageRush();
 
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
@@ -2032,8 +2032,11 @@ private:
 		const ObservationInterface* observation = Observation();
 		auto upgrades = observation->GetUpgrades();
 		TryBuildUnit(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
-		TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
-		for (const auto& upgrade : upgrades) {
+		//TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
+		if (branch == 0 || branch == 1) {
+            TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
+            TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE);
+            TryBuildUnit(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
 		}
 	}
 
@@ -2227,6 +2230,60 @@ private:
                         return true;
                     }
                 }
+            }
+        }
+        return false;
+    }
+    bool TryWarpUnitPosition(AbilityID ability_type_for_unit, Point2D pos) {
+        const ObservationInterface* observation = Observation();
+        std::vector<PowerSource> power_sources = observation->GetPowerSources();
+        Units warpgates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE));
+        if (observation->GetFoodUsed() >= observation->GetFoodCap()) {
+			return false;
+		}
+		if (power_sources.empty()) {
+            return false;
+        }
+
+        PowerSource& power_source = GetRandomEntry(power_sources);
+        for (const auto& power__source : power_sources) {
+            if (Distance2D(pos,power_source.position)>Distance2D(pos,power__source.position)) {
+                power_source = power__source;
+            }
+        }
+
+        float radius = power_source.radius;
+        float rx = GetRandomScalar();
+        float ry = GetRandomScalar();
+        Point2D build_location = Point2D(power_source.position.x + rx * radius, power_source.position.y + ry * radius);
+
+        for (const auto& warpgate : warpgates) {
+            if (warpgate->build_progress == 1) {
+                AvailableAbilities abilities = Query()->GetAbilitiesForUnit(warpgate);
+                for (const auto& ability : abilities.abilities) {
+                    if (ability.ability_id == ability_type_for_unit) {
+                        Actions()->UnitCommand(warpgate, ability_type_for_unit, build_location);
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    bool TryBuildArmyBranch0(){
+        const ObservationInterface* observation = Observation();
+        Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
+        for (const auto& r : robotics) {
+            if (r->orders.empty()) {
+                if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_OBSERVER) < 2) {
+                    TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+                }
+                else{
+                    TryBuildUnit(ABILITY_ID::TRAIN_COLOSSUS, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+                }
+            }
+            else {
+                TryWarpStalker();
             }
         }
         return false;
