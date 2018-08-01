@@ -422,9 +422,8 @@ public:
 		if (!early_strategy) {
 			EarlyStrategy();
 		}
-		if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_GATEWAY)>0 && iter_exp < expansions_.end() && find_enemy_location == true) {
-			scoutprobe();
-		}
+
+		scout_all();
 
 #ifdef DEBUG
 		PrintCursor();
@@ -1962,10 +1961,19 @@ private:
 				if (target_worker != nullptr) {
 					MineIdleWorkers(target_worker);
 					Print("reassigning for gas workers");
-					break;
+					return;
 				}
 			}
 		}
+
+		// uncomment this if probe_forward should mine minerals
+		/* 
+		if (has_space_for_mineral || has_space_for_gas) {
+			if (probe_forward != nullptr && probe_forward->orders.empty()) {
+				MineIdleWorkers(probe_forward);
+			}
+		}
+		*/
 	}
 
 	void ManageUpgrades() {
@@ -1974,8 +1982,8 @@ private:
 		TryBuildUnit(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
 		//TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
 		if (branch == 0 || branch == 1) {
-            TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
-            TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE);
+            TryBuildUnitChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
+            TryBuildUnitChrono(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE);
             TryBuildUnit(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
 		}
 	}
@@ -2214,6 +2222,8 @@ private:
 
 	Point2D probe_scout_dest = Point2D(0,0);
 	Point2D advance_pylon_location = Point2D((float)game_info_.width/2,(float)game_info_.height/2);
+
+	std::map<Tag, uint32_t> adept_map;
 
 	std::string version;
 	std::string botname;

@@ -2,10 +2,16 @@
 
 void MEMIBot::scout_all() {
 	const ObservationInterface* observation = Observation();
+	
+	if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_GATEWAY)>0 && iter_exp < expansions_.end() && find_enemy_location == true) {
+		scoutprobe();
+	}
+
 	Point2D position;
 	enemy_expansion;
+	
 	if (probe_scout != nullptr) {
-		Actions()->UnitCommand(probe_scout, ABILITY_ID::SMART, position);
+		//Actions()->UnitCommand(probe_scout, ABILITY_ID::SMART, position);
 	}
 }
 
