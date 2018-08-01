@@ -19,6 +19,7 @@ static const std::vector<std::string> map_names( {
 	"DreamcatcherLE", "LostAndFoundLE", "Redshift" } );
 static const std::string ControlMap = "StalkerMicroMarine.SC2Map";
 
+
 class Human : public sc2::Agent {
 public:
 	void OnGameStart() final {

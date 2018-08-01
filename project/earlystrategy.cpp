@@ -47,7 +47,6 @@ bool MEMIBot::EarlyStrategy() {
 	std::cout << stage_number << std::endl;
 #endif
 
-
 	if (stage_number<28) {
         if (observation->GetFoodWorkers()<23) {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
@@ -82,7 +81,7 @@ bool MEMIBot::EarlyStrategy() {
         if (gateway_count<bases.size()*3 && gateway_count<10) {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_PROBE);
         }
-        else if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() ) {
+        else if (observation->GetFoodUsed()>120 && GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() ) {
             for (const auto& b : bases) {
                 if (b->build_progress < 1.0) {
                     return TryWarpStalker();
