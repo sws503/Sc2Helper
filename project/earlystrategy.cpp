@@ -441,7 +441,6 @@ bool MEMIBot::EarlyStrategy() {
             return false;
         }
         TryWarpAdept();
-<<<<<<< HEAD
     case 30:
         if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_STALKER)>10) {
             stage_number=31;
@@ -658,7 +657,7 @@ bool MEMIBot::EarlyStrategy() {
             return false;
 	    }
 	    else{
-            
+
             //std::cout<<Query()->PathingDistance(warpprisms.front()->pos,game_info_.enemy_start_locations.front())<<std::endl;
 
             //Actions()->UnitCommand(warpprisms.front(), ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
