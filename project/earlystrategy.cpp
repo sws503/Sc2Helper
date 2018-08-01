@@ -1,5 +1,6 @@
 #include "memibot.h"
 
+// Todo: trybuildunit() 호출하기 전에 자원, 인구수가 있는지 체크하기
 bool MEMIBot::EarlyStrategy() {
 	const ObservationInterface* observation = Observation();
 	Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PROBE));
@@ -16,11 +17,11 @@ bool MEMIBot::EarlyStrategy() {
     Units archons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ARCHON));
 
 	/*
-	while (workers.size() > 2 && (probe_forge == nullptr || !probe_forge->is_alive)) {
+	while (workers.size() > 2 && (probe_forward == nullptr || !probe_forward->is_alive)) {
 	//건물 지을 프로브 지정
 		const Unit* probe_candidate;
 		GetRandomUnit(probe_candidate, observation, UNIT_TYPEID::PROTOSS_PROBE);
-		if (probe_scout == nullptr || probe_candidate->tag != probe_scout->tag) probe_forge = probe_candidate;
+		if (probe_scout == nullptr || probe_candidate->tag != probe_scout->tag) probe_forward = probe_candidate;
 	}
 
 	// Todo: 프로브 상납 방지
@@ -28,7 +29,7 @@ bool MEMIBot::EarlyStrategy() {
 		//정찰 프로브 지정
 		const Unit* probe_candidate;
 		GetRandomUnit(probe_candidate, observation, UNIT_TYPEID::PROTOSS_PROBE);
-		if (probe_forge == nullptr || probe_candidate->tag != probe_forge->tag)  probe_scout = probe_candidate;
+		if (probe_forward == nullptr || probe_candidate->tag != probe_forward->tag)  probe_scout = probe_candidate;
 	}
 	*/
 
@@ -86,7 +87,6 @@ bool MEMIBot::EarlyStrategy() {
 		}
 	}
 
-
 	if (stage_number<28) {
         if (observation->GetFoodWorkers()<23) {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
@@ -114,7 +114,13 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_PROBE);
         }
         if (!BlinkResearched && CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER)>5) {
-            TryBuildUnit(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
+			if (TryBuildUnit(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)) {
+				BlinkResearched = true;
+			}
+			else {
+                return false;
+			}
+
         }
         if (gateway_count<=bases.size()*2) {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_PROBE);
@@ -431,13 +437,13 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 29:
-        if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_ADEPT)>9) {
+        if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_ADEPT)>6) {
             stage_number=30;
             return false;
         }
         TryWarpAdept();
     case 30:
-        if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_STALKER)>7) {
+        if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_STALKER)>10) {
             stage_number=31;
             return false;
         }

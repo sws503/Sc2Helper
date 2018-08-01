@@ -13,8 +13,9 @@ static const std::string current_version = "v0.5";
 #ifdef DEBUG
 static const bool VsHuman = false;
 static const int stepsize = 3;
-static const bool ControlTest = true;
-static const std::string map_name = "AcidPlantLE.SC2Map";
+static const bool ControlTest = false;
+static const std::string map_name = "CatalystLE.SC2Map";
+static const std::string ControlMap = "StalkerMicroMarine.SC2Map";
 
 class Human : public sc2::Agent {
 public:
@@ -36,6 +37,9 @@ int main(int argc, char* argv[])
 
 	coordinator.SetStepSize(3); //Control
 								 //게임속도 빠르게 speed faster
+
+
+
 	coordinator.SetMultithreaded(true);
 
 	if (ControlTest) {
@@ -54,7 +58,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Protoss, Difficulty::CheatInsane),
+			CreateComputer(Race::Protoss, Difficulty::CheatVision),
 			});
 	}
 
@@ -63,6 +67,7 @@ int main(int argc, char* argv[])
 
 	bool do_break = false;
 	while (!do_break) {
+		//if (!coordinator.StartGame(ControlMap)) {
 		if (!coordinator.StartGame(map_name)) {
 			break;
 		}
