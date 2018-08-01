@@ -188,8 +188,6 @@ private:
 	int radius;
 };
 
-std::map<uint64_t, uint32_t> adept_map;
-
 bool MustAttack = false;
 bool StalkerMustAttack = false;
 
@@ -210,9 +208,10 @@ void MEMIBot::ManageRush() {
 	Units RangedUnitTargets;
 
 	Units rangedunits = observation->GetUnits(Unit::Alliance::Self, IsRanged(observation));
+
+	// TODO : 정확하게 shadeneararmies 받아오기
 	Units ShadeNearEnemies;
 	Units ShadeNearArmies;
-
 	for (const auto& unit : AdeptShades) {
 		ShadeNearArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 15));
 		ShadeNearEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 15));
