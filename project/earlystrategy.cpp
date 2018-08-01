@@ -70,6 +70,10 @@ bool MEMIBot::EarlyStrategy() {
 							enemy_expansion = expansion;
 							minimum_distance = current_distance;
 						}
+
+
+
+
 					}
 				}
 			}
@@ -115,7 +119,7 @@ bool MEMIBot::EarlyStrategy() {
         if (gateway_count<=bases.size()*2) {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_PROBE);
         }
-        else if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() ) {
+        else if (observation->GetFoodUsed()>120 && GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() ) {
             for (const auto& b : bases) {
                 if (b->build_progress < 1.0) {
                     TryBuildArmyBranch0();
