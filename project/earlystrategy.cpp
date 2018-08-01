@@ -1,5 +1,6 @@
 #include "memibot.h"
 
+// Todo: trybuildunit() 호출하기 전에 자원, 인구수가 있는지 체크하기
 bool MEMIBot::EarlyStrategy() {
 	const ObservationInterface* observation = Observation();
 	Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PROBE));
@@ -16,11 +17,11 @@ bool MEMIBot::EarlyStrategy() {
     Units archons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ARCHON));
 
 	/*
-	while (workers.size() > 2 && (probe_forge == nullptr || !probe_forge->is_alive)) {
+	while (workers.size() > 2 && (probe_forward == nullptr || !probe_forward->is_alive)) {
 	//건물 지을 프로브 지정
 		const Unit* probe_candidate;
 		GetRandomUnit(probe_candidate, observation, UNIT_TYPEID::PROTOSS_PROBE);
-		if (probe_scout == nullptr || probe_candidate->tag != probe_scout->tag) probe_forge = probe_candidate;
+		if (probe_scout == nullptr || probe_candidate->tag != probe_scout->tag) probe_forward = probe_candidate;
 	}
 
 	// Todo: 프로브 상납 방지
@@ -28,7 +29,7 @@ bool MEMIBot::EarlyStrategy() {
 		//정찰 프로브 지정
 		const Unit* probe_candidate;
 		GetRandomUnit(probe_candidate, observation, UNIT_TYPEID::PROTOSS_PROBE);
-		if (probe_forge == nullptr || probe_candidate->tag != probe_forge->tag)  probe_scout = probe_candidate;
+		if (probe_forward == nullptr || probe_candidate->tag != probe_forward->tag)  probe_scout = probe_candidate;
 	}
 	*/
 
@@ -46,41 +47,6 @@ bool MEMIBot::EarlyStrategy() {
 #ifdef DEBUG
 	std::cout << stage_number << std::endl;
 #endif
-
-    if (find_enemy_location) {
-        advance_pylon_location = Point2D((startLocation_.x*1.8 + game_info_.enemy_start_locations.front().x*2.2)/4, (startLocation_.y*1.8 + game_info_.enemy_start_locations.front().y*2.2)/4);
-    }
-
-    if (stage_number>2) {
-		if (find_enemy_location == false && pylons.size()>0) {
-			Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
-			if (!enemy_townhalls.empty() || enemy_structures.size()>2 || game_info_.enemy_start_locations.size() == 1) {
-				if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<10 || game_info_.enemy_start_locations.size() == 1) {
-					find_enemy_location = true;
-					std::cout << "find!" << std::endl;
-					Actions()->UnitCommand(probe_scout, ABILITY_ID::STOP);
-					float minimum_distance = std::numeric_limits<float>::max();
-					for (const auto& expansion : expansions_) {
-						float current_distance = Distance2D(game_info_.enemy_start_locations.front(), expansion);
-						if (current_distance < 3) {
-							continue;
-						}
-
-						if (current_distance < minimum_distance) {
-							enemy_expansion = expansion;
-							minimum_distance = current_distance;
-						}
-					}
-				}
-			}
-			else {
-				if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<7) {
-					std::vector<Point2D>::iterator iter_esl = game_info_.enemy_start_locations.begin();
-					game_info_.enemy_start_locations.erase(iter_esl);
-				}
-			}
-		}
-	}
 
 
 	if (stage_number<28) {
