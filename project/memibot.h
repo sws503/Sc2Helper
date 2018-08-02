@@ -1069,6 +1069,7 @@ private:
 
 	bool TryChronoboost(const Unit * unit) {
 		const ObservationInterface* observation = Observation();
+		if (unit == nullptr) return false;
 		// is structure?
 		if (!IsStructure(observation)(*unit)) return false;
 		// is completely built?
@@ -1078,7 +1079,9 @@ private:
 		// is powered?
 		if (IsUnpowered()(*unit)) return false;
 		// is not buffed?
-		if (HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) return false;
+		//if (HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) return false;
+		if (!unit->buffs.empty()) return false;
+
 		// then chronoboost
 		return Chronoboost(unit);
 	}
@@ -1121,9 +1124,10 @@ private:
 			if (!candidate_unit->orders.empty()) continue;
 			unit = candidate_unit;
 			// pick prioritized structures first
-			if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
+			/*if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
 				break;
-			}
+			}*/
+			if (unit->buffs.empty()) break;
 		}
 		if (unit == nullptr) {
 			return false;
@@ -1146,18 +1150,21 @@ private:
 			// is completely built?
 			if (candidate_unit->build_progress != 1.0f) continue;
 			// is doing something?
-			if (!candidate_unit->orders.empty()) continue;
-			unit = candidate_unit;
-			// pick prioritized structures first
-			if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
-				break;
+			if (!candidate_unit->orders.empty()){
+                if (observation->GetAbilityData().at(ability_type_for_unit).ability_id == candidate_unit->orders.front().ability_id) {
+                    return TryChronoboost(candidate_unit);
+                }
+                continue;
 			}
+			unit = candidate_unit;
 		}
+
+
 		if (unit == nullptr) {
 			return false;
 		}
 		Actions()->UnitCommand(unit, ability_type_for_unit);
-		Chronoboost(unit);
+		TryChronoboost(unit);
 		return true;
 	}
 
@@ -1193,14 +1200,12 @@ private:
 			if (candidate_unit->build_progress != 1.0f) continue;
 			// is doing something?
 			if (!candidate_unit->orders.empty()) continue;
-			// is powered?
-			if (IsUnpowered()(*candidate_unit)) continue;
-
 			unit = candidate_unit;
 			// pick prioritized structures first
-			if (!priority_filter || priority_filter(*candidate_unit)) {
+			/*if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
 				break;
-			}
+			}*/
+			if (unit->buffs.empty()) break;
 		}
 		if (unit == nullptr) {
 			return false;

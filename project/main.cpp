@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	coordinator.SetStepSize(10); //Control
+	coordinator.SetStepSize(1); //Control
 								 //게임속도 빠르게 speed faster
 
 
