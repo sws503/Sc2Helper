@@ -1285,9 +1285,13 @@ private:
 	}
 
 	// if isExpansion is false, then consider expansion sites and avoid these places.
-	bool TryBuildStructure(AbilityID ability_type_for_structure, UnitTypeID unit_type, Point2D location, bool isExpansion = false) {
+	bool TryBuildStructure(AbilityID ability_type_for_structure, UnitTypeID building_type, UnitTypeID unit_type, Point2D location, bool isExpansion = false) {
 		const ObservationInterface* observation = Observation();
 		Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
+
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+            return false;
+		}
 
 		//if we have no workers Don't build
 		if (workers.empty()) {
@@ -1496,10 +1500,14 @@ private:
 
 	}
 
-	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, const Unit* pylon) {
+	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID building_type, const Unit* pylon) {
 		const ObservationInterface* observation = Observation();
 		if (pylon == nullptr) return false;
 		if (!pylon->is_alive) return false;
+
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+            return false;
+		}
 
 		const std::vector<PowerSource>& power_sources = observation->GetPowerSources();
 
@@ -1515,11 +1523,15 @@ private:
 		float rx = GetRandomScalar();
 		float ry = GetRandomScalar();
 		Point2D build_location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
-		return TryBuildStructure(ability_type_for_structure, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+		return TryBuildStructure(ability_type_for_structure, building_type, UNIT_TYPEID::PROTOSS_PROBE, build_location);
 	}
 
-	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID) {
+	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID building_type) {
 		const ObservationInterface* observation = Observation();
+
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+            return false;
+		}
 
 		//Need to check to make sure its a pylon instead of a warp prism
 		std::vector<PowerSource> power_sources = observation->GetPowerSources();
@@ -1543,19 +1555,19 @@ private:
 		float rx = GetRandomScalar();
 		float ry = GetRandomScalar();
 		Point2D build_location = Point2D(random_power_source.position.x + rx * radius, random_power_source.position.y + ry * radius);
-		return TryBuildStructure(ability_type_for_structure, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+		return TryBuildStructure(ability_type_for_structure, building_type, UNIT_TYPEID::PROTOSS_PROBE, build_location);
 	}
 
-	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID, const Unit* pylon) {
+	/*bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID, const Unit* pylon) {
 		return TryBuildStructureNearPylon(ability_type_for_structure, pylon);
 	}
 
 	bool TryBuildStructureNearPylonWithUnit(const Unit* unit, AbilityID ability_type_for_structure, const Unit* pylon) {
 		return TryBuildStructureNearPylon(ability_type_for_structure, pylon);
-	}
+	}*/
 
 	bool TryBuildForge(const Unit* unit, const Unit* pylon) {
-		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, pylon);
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_FORGE,pylon);
 	}
 
 	bool TryBuildGas(Point2D base_location) {
@@ -1630,7 +1642,7 @@ private:
 		float rx = GetRandomScalar();
 		float ry = GetRandomScalar();
 		Point2D build_location = Point2D(location.x + rx * radius, location.y + ry * radius);
-		return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+		return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
 	}
 
 	bool TrybuildFirstPylon() {
@@ -1655,7 +1667,7 @@ private:
             y = -7.0f;
 		}
 		Point2D build_location = Point2D(startLocation_.x + x, startLocation_.y + y);
-        return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+        return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, UNIT_TYPEID::PROTOSS_PROBE,build_location);
 	}
 
 	void MineIdleWorkers(const Unit* worker, bool reassigning = false) {
@@ -2102,7 +2114,7 @@ private:
 			}
 		}
 		//only update staging location up till 3 bases.
-		if (TryBuildStructure(build_ability, worker_type, closest_expansion, true) && observation->GetUnits(Unit::Self, IsTownHall()).size() < 4) {
+		if (TryBuildStructure(build_ability, UNIT_TYPEID::PROTOSS_NEXUS,worker_type, closest_expansion, true) && observation->GetUnits(Unit::Self, IsTownHall()).size() < 4) {
 			staging_location_ = Point3D(((staging_location_.x + closest_expansion.x) / 2), ((staging_location_.y + closest_expansion.y) / 2),
 				((staging_location_.z + closest_expansion.z) / 2));
 			return true;
