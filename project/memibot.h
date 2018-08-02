@@ -1167,6 +1167,9 @@ private:
 		}
 		Actions()->UnitCommand(unit, ability_type_for_unit);
 		Chronoboost(unit);
+
+		if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT) try_adept++;
+		if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER) try_stalker++;
 		return true;
 	}
 
@@ -1244,6 +1247,8 @@ private:
 			return false;
 		}
 		Actions()->UnitCommand(unit, ability_type_for_unit);
+		if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT) try_adept++;
+		if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER) try_stalker++;
 		return true;
 	}
 
@@ -1312,6 +1317,9 @@ private:
                 for (const auto& ability : abilities.abilities) {
                     if (ability.ability_id == ability_type_for_unit) {
                         Actions()->UnitCommand(warpgate, ability_type_for_unit, build_location);
+
+                        if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT) try_adept++;
+                        if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER) try_stalker++;
                         return true;
                     }
                 }
@@ -2239,6 +2247,7 @@ private:
                 for (const auto& ability : abilities.abilities) {
                     if (ability.ability_id == ABILITY_ID::TRAINWARP_ADEPT) {
                         Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
+                        try_adept++;
                         return true;
                     }
                 }
@@ -2272,6 +2281,7 @@ private:
                 for (const auto& ability : abilities.abilities) {
                     if (ability.ability_id == ABILITY_ID::TRAINWARP_STALKER) {
                         Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_STALKER, build_location);
+                        try_stalker++;
                         return true;
                     }
                 }
@@ -2338,6 +2348,9 @@ private:
                 for (const auto& ability : abilities.abilities) {
                     if (ability.ability_id == ability_type_for_unit) {
                         Actions()->UnitCommand(warpgate, ability_type_for_unit, build_location);
+
+                        if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT) try_adept++;
+                        if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER) try_stalker++;
                         return true;
                     }
                 }
@@ -2395,6 +2408,9 @@ private:
 	uint16_t stage_number;
 	const Unit* base;
 	uint16_t branch;
-	const size_t max_worker_count_ = 65;
+	const size_t max_worker_count_ = 68;
+
+	uint16_t try_adept = 0;
+    uint16_t try_stalker = 0;
 
 };
