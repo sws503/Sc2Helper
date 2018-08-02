@@ -67,8 +67,10 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
         }
 	}
-	if (branch<2 && stage_number>36) {
+	if (branch<2 && stage_number>30) {
         TryBuildPylonIfNeeded(2);
+	}
+	if (branch<2 && stage_number>36) {
         if (bases.size()*2>assimilator_count) {
             TryBuildAssimilator();
         }
@@ -446,7 +448,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 36:
-        if (BlinkResearched || !observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSBAY)).front()->orders.empty()) {
+        if (BlinkResearched || !observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
             stage_number=37;
             return false;
         }

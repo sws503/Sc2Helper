@@ -433,9 +433,9 @@ public:
 		ManageUpgrades();
 
 		// Control Ω√¿€
-		Defend();
+		//Defend();
 		//ManageArmy();
-		ManageRush();
+		//ManageRush();
 
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
@@ -497,11 +497,11 @@ public:
 	}
     void OnUpgradeCompleted(UpgradeID upgrade) {
         switch (upgrade.ToType()) {
-            /*case UPGRADE_ID::BLINKTECH: {
+            case UPGRADE_ID::BLINKTECH: {
 				std::cout << "BLINK UPGRADE DONE!!";
 				BlinkResearched = true;
 				return;
-			}*/
+			}
             case UPGRADE_ID::WARPGATERESEARCH: {
                 warpgate_researched = true;
                 return;
@@ -1136,7 +1136,7 @@ private:
 	bool TryBuildUpgradeChrono(AbilityID ability_type_for_unit, UnitTypeID building_type, UpgradeID upgrade_type) {
 		const ObservationInterface* observation = Observation();
 
-		if (observation->GetMinerals() > observation->GetUpgradeData().at(upgrade_type).mineral_cost || observation->GetVespene() > observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUpgradeData().at(upgrade_type).mineral_cost || observation->GetVespene() < observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
             return false;
 		}
 
