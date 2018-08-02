@@ -486,7 +486,7 @@ public:
 			break;
 		}
 		case UNIT_TYPEID::PROTOSS_CARRIER: {
-			ScoutWithUnit(unit, Observation());
+			
 			break;
 		}
 		default: {
@@ -527,7 +527,6 @@ public:
 	Point2D KitingLocation;
 
 
-	const float base_range = 35;
 
 private:
 	void ChatVersion() {
@@ -654,7 +653,10 @@ private:
 			ReadyLocation2 = startLocation_;
 		}
 	}
+	void ManageWarpBlink(const Unit * unit);
 	void ManageRush();
+
+	void Roam_randombase(const Unit * unit);
 
 	void AdeptPhaseShift(const Unit * unit, Units ShadeNearEnemies, Units NearbyEnemies, bool & ComeOn);
 
@@ -667,6 +669,8 @@ private:
 	void StalkerBlinkForward(const Unit * unit, const Unit * enemyarmy);
 
 	void FleeKiting(const Unit * unit, const Unit * enemyarmy);
+
+	void DistanceKiting(const Unit * unit, const Unit * enemyarmy, const Unit * army);
 
 	void FrontKiting(const Unit * unit, const Unit * enemyarmy);
 
@@ -692,11 +696,19 @@ private:
 
 	int getAttackPriority(const Unit * u);
 
+	bool LoadUnit(const Unit * unit, const Unit * passenger);
+
 	bool LoadUnitWeaponCooldown(const Unit * unit, const Unit * passenger);
 
 	const Unit * GetPassenger(const Unit * shuttle, Units & targets);
 
+	const Unit * GetNearShuttle(const Unit * unit);
+
+	void ManageWarpBlink(const Unit * unit, const Unit * shuttle);
+
 	const Unit * GetTarget(const Unit * rangedUnit, Units & targets);
+
+	const float getunitsDpsGROUND(Units targets) const;
 
 	const float getDpsGROUND(const Unit * target) const;
 
@@ -858,6 +870,27 @@ private:
 		Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
 		for (const auto& unit : units) {
 			RetreatWithUnit(unit, retreat_position);
+		}
+	}
+
+	void RetreatSmart(const Unit* unit, Point2D retreat_position) {
+		float dist = Distance2D(unit->pos, retreat_position);
+
+		if (dist < 3) {
+			if (unit->orders.empty()) {
+				return;
+			}
+			Actions()->UnitCommand(unit, ABILITY_ID::STOP);
+			return;
+		}
+
+		if (unit->orders.empty() && dist > 4) {
+			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, retreat_position);
+		}
+		else if (!unit->orders.empty() && dist > 4) {
+			if (unit->orders.front().ability_id != ABILITY_ID::MOVE) {
+				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, retreat_position);
+			}
 		}
 	}
 

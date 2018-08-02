@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	coordinator.SetStepSize(1); //Control
+	coordinator.SetStepSize(stepsize); //Control
 								 //게임속도 빠르게 speed faster
 
 
@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Protoss, Difficulty::Easy),
+			CreateComputer(Race::Terran, Difficulty::CheatVision),
 			});
 	}
 
