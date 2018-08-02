@@ -197,6 +197,7 @@ private:
 
 bool MustAttack = false;
 bool StalkerMustAttack = false;
+bool AdeptMustAttack = false;
 
 ////////////////////////////////
 /*void shuttle::loadPassangers()
@@ -488,15 +489,26 @@ void MEMIBot::ManageRush() {
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_ADEPT)
 		{
-			bool ComeOn = false;
-			if (target == nullptr)
+			if (CurrentAdept >= 9)
 			{
-				if (MustAttack)
+				AdeptMustAttack = true;
+			}
+
+			if (AdeptMustAttack) // 공격타이밍이면
+			{
+				if (target == nullptr)
 				{
 					ScoutWithUnit(unit, observation);
 				}
 			}
-			else // 타겟이 존재할 때
+			else if (!AdeptMustAttack && unit->orders.empty()) // 공격타이밍이 아닐때 한가하면
+			{
+				RetreatWithUnit(unit, advance_pylon_location);
+			}
+
+
+			bool ComeOn = false;
+			if(target != nullptr)
 			{
 				if (getunitsDpsGROUND(NearbyArmies) > 20.0f)
 				{
@@ -526,19 +538,6 @@ void MEMIBot::ManageRush() {
 				{
 					Kiting(unit, target);
 				}
-			}
-
-			if (CurrentAdept < 9 && !MustAttack && unit->orders.empty())
-			{
-				RetreatWithUnit(unit, advance_pylon_location);
-			}
-			else if (CurrentAdept == 1 && MustAttack)
-			{
-				MustAttack = false;
-			}
-			else //(CurrentAdept >= 9)
-			{
-				MustAttack = true;
 			}
 		}
 

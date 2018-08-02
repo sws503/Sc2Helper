@@ -433,9 +433,9 @@ public:
 		ManageUpgrades();
 
 		// Control Ω√¿€
-		//Defend();
+		Defend();
 		//ManageArmy();
-		//ManageRush();
+		ManageRush();
 
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
