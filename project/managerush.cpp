@@ -412,7 +412,6 @@ void MEMIBot::ManageRush() {
 			/*if (unit->orders.empty()) {
 				Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, ShadeNearWorker->pos);
 			}*/
-
 		}
 	}
 

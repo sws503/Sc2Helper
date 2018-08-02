@@ -646,7 +646,6 @@ private:
 									return false;
 								}
 							}
-							
 						}
 						else
 						{
