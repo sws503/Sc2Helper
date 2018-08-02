@@ -2,7 +2,7 @@
 
 void MEMIBot::scout_all() {
 	const ObservationInterface* observation = Observation();
-	
+
 	if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_GATEWAY)>0 && iter_exp < expansions_.end() && find_enemy_location == true) {
 		scoutprobe();
 	}
@@ -11,7 +11,7 @@ void MEMIBot::scout_all() {
 
 	Point2D position;
 	enemy_expansion;
-	
+
 	if (probe_scout != nullptr) {
 		//Actions()->UnitCommand(probe_scout, ABILITY_ID::SMART, position);
 	}
@@ -22,12 +22,14 @@ void MEMIBot::scoutenemylocation() {
 	Units enemy_structures = observation->GetUnits(Unit::Alliance::Enemy, IsStructure(observation));
 	Units enemy_townhalls = observation->GetUnits(Unit::Alliance::Enemy, IsTownHall());
 	Units pylons = observation->GetUnits(IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
+    size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
+	size_t gateway_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_GATEWAY);
 
 	if (find_enemy_location) {
 		advance_pylon_location = Point2D((startLocation_.x*1.8 + game_info_.enemy_start_locations.front().x*2.2) / 4, (startLocation_.y*1.8 + game_info_.enemy_start_locations.front().y*2.2) / 4);
 	}
 
-	if (stage_number>2) {
+	if (forge_count + gateway_count>0) {
 		if (probe_scout != nullptr && find_enemy_location == false && pylons.size()>0) {
 			Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
 			if (!enemy_townhalls.empty() || enemy_structures.size()>2 || game_info_.enemy_start_locations.size() == 1) {

@@ -330,7 +330,7 @@ public:
 		ep.radiuses_.push_back(5.9f);
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
-        branch = 0;
+        branch = 5;
 
 		stage_number = 0;
 		iter_exp = expansions_.begin();
@@ -486,7 +486,7 @@ public:
 			break;
 		}
 		case UNIT_TYPEID::PROTOSS_CARRIER: {
-			
+
 			break;
 		}
 		default: {
@@ -1696,6 +1696,10 @@ private:
 
         Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
 
+        if (observation->GetFoodUsed()<14) {
+            return false;
+        }
+
         if (observation->GetMinerals() < 100) {
 			return false;
 		}
@@ -2107,14 +2111,15 @@ private:
 		size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
 		auto upgrades = observation->GetUpgrades();
 		TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES,UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL,UPGRADE_ID::ADEPTPIERCINGATTACK);
+		TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::EXTENDEDTHERMALLANCE);
+
 		//TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
-		if (branch == 0 || branch == 1) {
+		if (1) {
             if (forge_count ==0) {
                 return;
             }
             TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1);
             TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL1);
-            TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::EXTENDEDTHERMALLANCE);
 
             for (const auto& upgrade : upgrades) {
                 if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1) {
@@ -2369,6 +2374,20 @@ private:
                 else{
                     TryBuildUnit(ABILITY_ID::TRAIN_COLOSSUS, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_COLOSSUS);
                 }
+            }
+            else {
+                TryWarpStalker();
+            }
+        }
+        return false;
+    }
+
+    bool TryBuildArmyBranch5(){
+        const ObservationInterface* observation = Observation();
+        Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
+        for (const auto& r : robotics) {
+            if (r->orders.empty()) {
+                TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
             }
             else {
                 TryWarpStalker();

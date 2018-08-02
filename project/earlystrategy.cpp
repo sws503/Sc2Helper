@@ -48,7 +48,10 @@ bool MEMIBot::EarlyStrategy() {
 #ifdef DEBUG
 	std::cout << stage_number << std::endl;
 #endif
-	if (stage_number<28) {
+
+
+
+	if (bases.size()==1) {
         if (observation->GetFoodWorkers()<23) {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
         }
@@ -66,6 +69,8 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
         }
 	}
+
+
 	if (branch<2 && stage_number>30) {
         TryBuildPylonIfNeeded(2);
 	}
@@ -97,6 +102,20 @@ bool MEMIBot::EarlyStrategy() {
         TryBuildPylonIfNeeded(2);
 	}
 
+	if (branch == 5) {
+        if (!BlinkResearched && stage_number>211) {
+            TryChronoboost(observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front());
+        }
+        if (stage_number>218) {
+            TryBuildPylonIfNeeded(2);
+        }
+        if (stage_number>228) {
+            //TryBuildAssimilator();
+            TryBuildArmyBranch5();
+
+        }
+	}
+
 
 	Point2D probe_scout_dest;
 
@@ -122,7 +141,12 @@ bool MEMIBot::EarlyStrategy() {
 			if (probe_scout == probe_forward) probe_forward = nullptr;
 		}//건물 지을 프로브 지정
         if (probe_scout != nullptr && probe_forward != nullptr) {
-            stage_number=1;
+            if (branch == 5) {
+                stage_number =200;
+            }
+            else {
+                stage_number=1;
+            }
             return false;
         }
 		return false;
@@ -211,10 +235,15 @@ bool MEMIBot::EarlyStrategy() {
         stage_number=10;
         return false;
     case 10:
+        if (!cores.front()->orders.empty()) {
+            stage_number=11;
+            return false;
+        }
         if (TryBuildUpgrade(ABILITY_ID::RESEARCH_WARPGATE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, UPGRADE_ID::WARPGATERESEARCH)) {
             stage_number=11;
             return false;
         }
+        return false;
     case 11:
         if (branch == 2) {
             stage_number = 100;
@@ -285,6 +314,7 @@ bool MEMIBot::EarlyStrategy() {
         if(observation->GetMinerals()>=150&&observation->GetVespene()>=100){
             return TryBuildStructureNearPylon(ABILITY_ID::BUILD_TWILIGHTCOUNCIL, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
         }
+        return false;
     case 18:
         if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT)) {
             stage_number=19;
@@ -605,7 +635,7 @@ bool MEMIBot::EarlyStrategy() {
         return false;
 	case 108:
 	    if (CountUnitType(UNIT_TYPEID::PROTOSS_WARPPRISM)<1) {
-            stage_number=105;
+            stage_number=109;
             return false;
 	    }
 	case 109:
@@ -622,7 +652,225 @@ bool MEMIBot::EarlyStrategy() {
 	    }
 	case 110:
         TryWarpUnitPrism(ABILITY_ID::TRAINWARP_STALKER);
+        return false;
+
+	//branch 5
+	case 200:
+		if (pylons.size()>0) {
+            if (pylons.front()->build_progress == 1.0) {
+                stage_number=201;
+                return false;
+            }
+		}
+		TrybuildFirstPylon();
+		return false;
+	case 201:
+		if (gateway_count>0) {
+			stage_number=202;
+			return false;
+		}
+		if (observation->GetMinerals()>150) {
+		    TryChronoboost(base);
+            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
+		}
+		return false;
+	case 202:
+		if (assimilator_count>=1) {
+			stage_number=203;
+			return false;
+		}
+		if (observation->GetFoodWorkers()>=18) {
+            if (TryBuildGas(base->pos)) {
+                stage_number=203;
+                return false;
+            }
+		}
+		return false;
+    case 203:
+        if (bases.size()>=2) {
+            stage_number=204;
+            return false;
+        }
+        return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+    case 204:
+		if (cybernetics_count>0) {
+			stage_number=205;
+			return false;
+		}
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
+    case 205:
+		if (assimilator_count>=2) {
+			stage_number=206;
+			return false;
+		}
+		return TryBuildGas(base->pos);
+    case 206:
+        if (pylons.size()>1) {
+            stage_number=207;
+            return false;
+        }
+        return TryBuildPylon(startLocation_,20.0);
+	case 207:
+	    if (try_stalker>0) {
+            stage_number=208;
+            return false;
+	    }
+        return TryBuildUnitChrono(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
+    case 208:
+        if (!cores.front()->orders.empty()) {
+            stage_number=209;
+            return false;
+        }
+        if (TryBuildUpgrade(ABILITY_ID::RESEARCH_WARPGATE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, UPGRADE_ID::WARPGATERESEARCH)) {
+            stage_number=209;
+            return false;
+        }
+        return false;
+    case 209:
+        if (twilight_council_count>0) {
+            for (const auto& b : bases) {
+                if (b!=base) {
+                    TryChronoboost(b);
+                }
+            }
+            stage_number=210;
+            return false;
+        }
+        return TryBuildStructureNearPylon(ABILITY_ID::BUILD_TWILIGHTCOUNCIL, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
+    case 210:
+        if (try_stalker>1) {
+            stage_number=211;
+            return false;
+        }
+        return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
+    case 211:
+        if (BlinkResearched || !observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
+            stage_number=212;
+            return false;
+        }
+        TryBuildUpgrade(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::BLINKTECH);
+        return false;
+    case 212:
+        if (pylons.size()>2) {
+            stage_number=213;
+            return false;
+        }
+        return TryBuildPylon(startLocation_,20.0);
+    case 213:
+        if (try_stalker>2) {
+            stage_number=214;
+            return false;
+        }
+        return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
+    case 214:
+        if (robotics_facility_count>=1) {
+            stage_number=215;
+            return false;
+        }
+        return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+    case 215:
+        if (gateway_count>2) {
+			stage_number=216;
+			return false;
+		}
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
+    case 216:
+        if (try_stalker>3) {
+            stage_number=217;
+            return false;
+        }
+        return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
+    case 217:
+        if (assimilator_count>=4) {
+			stage_number=218;
+			return false;
+		}
+		return TryBuildAssimilator();
+    case 218:
+        if (pylons.size()>3) {
+            stage_number=219;
+            return false;
+        }
+        return TryBuildPylon(startLocation_,20.0);
+    case 219:
+        if (TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER)) {
+            stage_number=220;
+            return false;
+        }
+        return false;
+    case 220:
+        if (bases.size()>=3) {
+            stage_number=221;
+            return false;
+        }
+        return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+    case 221:
+        if (TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER)) {
+            stage_number=222;
+            return false;
+        }
+        return false;
+    case 222:
+        if (try_stalker>6) {
+            stage_number=223;
+            return false;
+        }
+        return TryWarpStalker();
+    case 223:
+        if (gateway_count>4) {
+			stage_number=224;
+			return false;
+		}
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
+    case 224:
+        if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
+            stage_number=225;
+            return false;
+        }
+        if (TryBuildUpgrade(ABILITY_ID::RESEARCH_CHARGE, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::CHARGE)) {
+            stage_number=225;
+            return false;
+        }
+        return false;
+    case 225:
+        if (forge_count<2) {
+            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_FORGE);
+        }
+        else {
+            stage_number=226;
+            return false;
+        }
+    case 226:
+        if (try_stalker>7) {
+            stage_number=227;
+            return false;
+        }
+        return TryWarpStalker();
+    case 227:
+        if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY)).front()->orders.empty()) {
+            if (observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY)).front()->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
+                return false;
+            }
+            stage_number=228;
+            return false;
+        }
+        if (TryBuildUnit(ABILITY_ID::TRAIN_WARPPRISM, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_WARPPRISM)) {
+            stage_number=228;
+            return false;
+        }
+        return false;
+    case 228:
+        if (gateway_count>6) {
+			stage_number=229;
+			return false;
+		}
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
+
+
+
 	}
+
+
 
 	return false;
 }
