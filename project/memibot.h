@@ -681,6 +681,8 @@ private:
 
 	void Defend();
 
+	void ManageWarpBlink(const Unit * unit);
+
 	void ManageRush();
 
 	void Roam_randombase(const Unit * unit);
