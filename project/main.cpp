@@ -11,13 +11,13 @@ static const std::string bot_name = "AdeptBot";
 static const std::string current_version = "v0.5";
 
 #ifdef DEBUG
-static const bool VsHuman = false;
+static const bool VsHuman = true;
 static const int stepsize = 3;
-static const bool ControlTest = false;
+static const bool ControlTest = true;
 static const std::vector<std::string> map_names( {
 	"CatalystLE", "AcidPlantLE", "DarknessSanctuary",
 	"DreamcatcherLE", "LostAndFoundLE", "Redshift" } );
-static const std::string ControlMap = "StalkerMicroMarine.SC2Map";
+static const std::string ControlMap = "MicroMarauder.SC2Map";
 
 class Human : public sc2::Agent {
 public:
@@ -39,8 +39,6 @@ int main(int argc, char* argv[])
 
 	coordinator.SetStepSize(stepsize); //Control
 								 //게임속도 빠르게 speed faster
-
-
 
 	coordinator.SetMultithreaded(true);
 
@@ -81,7 +79,9 @@ int main(int argc, char* argv[])
 		map_name = map_names.at(i) + ".SC2Map";
 		std::cout << map_names.at(i) << std::endl;
 
-		//if (!coordinator.StartGame(ControlMap)) {
+		if (ControlTest) 
+			map_name = ControlMap;
+
 		if (!coordinator.StartGame(map_name)) {
 			break;
 		}

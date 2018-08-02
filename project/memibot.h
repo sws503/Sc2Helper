@@ -604,6 +604,8 @@ private:
 
 	bool EvadeEffect(const Unit* unit)
 	{
+
+
 		bool moving = false;
 		for (const auto & effect : Observation()->GetEffects())
 		{
@@ -611,6 +613,10 @@ private:
 			{
 				const EffectData& ed = Observation()->GetEffectData().at(effect.effect_id);
 				const float radius = ed.radius;
+				if (EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHED)
+				{
+					const float radius = ed.radius + 1.0f;
+				}
 				for (const auto & pos : effect.positions)
 				{
 					const float dist = Distance2D(unit->pos, pos);
@@ -628,7 +634,24 @@ private:
 						{
 							fleeingPos = Point2D(staging_location_);
 						}
-						Actions()->UnitCommand(unit, ABILITY_ID::MOVE, fleeingPos);
+
+						if (EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHED)
+						{
+							Units bases = Observation()->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+
+							for (const auto & base : bases)
+							{
+								if (Distance2D(unit->pos, pos) < 10)
+								{
+									return false;
+								}
+							}
+							
+						}
+						else
+						{
+							Actions()->UnitCommand(unit, ABILITY_ID::MOVE, fleeingPos);
+						}
 						Chat("Enemy Skill Run~");
 						std::cout << "skill : " << ed.friendly_name << std::endl;
 						moving = true;
