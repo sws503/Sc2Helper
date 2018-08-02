@@ -577,7 +577,7 @@ void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units N
 	bool Timer = false;
 
 	// nullpointer
-	const Unit * EnemyExpansionMineral = FindNearestMineralPatch(Enemy_front_expansion);
+	const Unit * EnemyExpansionMineral = FindNearestMineralPatch(enemy_expansion);
 	const Unit * EnemyBaseMineral = FindNearestMineralPatch(game_info_.enemy_start_locations.front());
 
 	// **********************TEST 용 입니다 **************************
@@ -591,7 +591,7 @@ void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units N
 	else if (Distance2D(EnemyBaseMineral->pos, unit->pos) <= 15) //적 기지근처에 있으면 적 앞마당으로 분신을 날린다
 	{
 		Point2D HarassLocation = EnemyExpansionMineral->pos;
-		Point2D KitingLocation = CalcKitingPosition(EnemyExpansionMineral->pos, Enemy_front_expansion);
+		Point2D KitingLocation = CalcKitingPosition(EnemyExpansionMineral->pos, enemy_expansion);
 		HarassLocation += KitingLocation * 7.0f;
 
 		AdeptPhaseToLocation(unit, HarassLocation, Timer, ComeOn);
