@@ -48,7 +48,6 @@ bool MEMIBot::EarlyStrategy() {
 #ifdef DEBUG
 	std::cout << stage_number << std::endl;
 #endif
-
 	if (stage_number<28) {
         if (observation->GetFoodWorkers()<23) {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
@@ -391,11 +390,12 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 29:
-        if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_ADEPT)>8) {
+        if (try_adept>8) {
             stage_number=30;
             return false;
         }
         TryWarpAdept();
+        return false;
     case 30:
         if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_STALKER)>10) {
             stage_number=31;
