@@ -1,10 +1,51 @@
 #include "memibot.h"
 
+Units two_stalkers;
+bool selected = false;
+
+struct IsNearbyArmies {
+	IsNearbyArmies(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
+		observation_(obs), mp(MyPosition), radius(Radius) {}
+
+	bool operator()(const Unit& unit) {
+		auto attributes = observation_->GetUnitTypeData().at(unit.unit_type).attributes;
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::ZERG_OVERLORD: return false;
+		case UNIT_TYPEID::ZERG_LARVA: return false;
+		case UNIT_TYPEID::ZERG_EGG: return false;
+		case UNIT_TYPEID::TERRAN_MULE: return false;
+		case UNIT_TYPEID::TERRAN_NUKE: return false;
+		case UNIT_TYPEID::ZERG_DRONE:
+		case UNIT_TYPEID::TERRAN_SCV:
+		case UNIT_TYPEID::PROTOSS_PROBE:return false;
+
+		case UNIT_TYPEID::PROTOSS_PHOTONCANNON:
+		case UNIT_TYPEID::TERRAN_BUNKER:
+		case UNIT_TYPEID::ZERG_SPINECRAWLER:
+		case UNIT_TYPEID::TERRAN_PLANETARYFORTRESS: return Distance2D(mp, unit.pos) < radius;
+
+
+		default:
+			for (const auto& attribute : attributes) {
+				if (attribute == Attribute::Structure) {
+					return false;
+				}
+			}
+			return Distance2D(mp, unit.pos) < radius;
+		}
+	}
+private:
+	const ObservationInterface* observation_;
+	Point2D mp;
+	int radius;
+};
+
+
 void MEMIBot::Defend() {
 	const ObservationInterface* observation = Observation();
-	Units Oracles = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ORACLE));
-	Units nexus = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
-	size_t CurrentOracle = Oracles.size();
+	Units Stalkers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_STALKER));
+	Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+	size_t CurrentStalker = Stalkers.size();
 
 	Units Workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
 	Units EnemyWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsWorker());
@@ -14,24 +55,61 @@ void MEMIBot::Defend() {
 
 
 	Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
+	Units enemy_armies = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
+	Units my_armies = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
 	Units enemyUnitsInRegion;
 
-	enemyUnitsInRegion.clear();
-	for (const auto & unit : enemy_units)
-	{
-		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_OVERLORD || unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_OBSERVER || unit->unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_REAPER)
-		{
-			continue;
-		}
+	if (Stalkers.empty())
+		return;
+	else if (!Stalkers.empty() && CurrentStalker == 2 && !selected) {
+		two_stalkers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_STALKER));
+		selected = true;
+	}
 
-		if (Distance2D(startLocation_, unit->pos) < base_range + getAttackRangeGround(unit))
+	for (const auto & unit : two_stalkers)
+	{
+
+	}
+
+	enemyUnitsInRegion.clear();
+	const float base_range = 15;
+
+	for (const auto & base : bases) //기지별로
+	{
+		for (const auto & unit : enemy_armies)
 		{
-			Chat("Enemy Captured 1");
-			enemyUnitsInRegion.push_back(unit);
+			/*if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_OVERLORD || unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_OBSERVER || unit->unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_REAPER)
+			{
+			continue;
+			}*/
+			if (Distance2D(base->pos, startLocation_) < 10)
+			{
+				if (Distance2D(base->pos, unit->pos) < 30)
+				{
+					enemyUnitsInRegion.push_back(unit);
+				}
+			}
+			else if (Distance2D(base->pos, unit->pos) < base_range)
+			{
+				enemyUnitsInRegion.push_back(unit);
+			}
 		}
 	}
 
-	if (false)
+	for (const auto & base : bases) //기지별로
+	{
+		if (enemyUnitsInRegion.size() > 0)
+		{
+			Units defenders = observation->GetUnits(Unit::Alliance::Self, IsNearbyArmies(observation, base->pos, 35));
+			for (const auto & defender : defenders)
+			{
+				const Unit * target = GetTarget(defender, enemyUnitsInRegion);
+				Kiting(defender, target);
+			}
+		}
+	}
+
+	/*if (false)
 	{
 		if (Killers.size() < enemyUnitsInRegion.size()) {
 			Killers.resize(enemyUnitsInRegion.size(), nullptr);
@@ -85,5 +163,5 @@ void MEMIBot::Defend() {
 	if (enemyUnitsInRegion.size() == 0)
 	{
 		EnemyRush = false;
-	}
+	}*/
 }

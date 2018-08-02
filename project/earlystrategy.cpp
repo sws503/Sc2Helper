@@ -370,7 +370,7 @@ bool MEMIBot::EarlyStrategy() {
         return false;
     case 27:
         if (bases.size()>=2) {
-            stage_number++;
+            stage_number=28;
             return false;
         }
         if (observation->GetMinerals()>400) {
@@ -453,6 +453,7 @@ bool MEMIBot::EarlyStrategy() {
             return false;
         }
         TryBuildUnit(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
+		return false;
 
     //branch 3
     case 50:
