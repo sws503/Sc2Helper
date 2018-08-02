@@ -41,7 +41,7 @@ enum class EFFECT_ID
 	LIBERATORMORPHED = 9,
 	BLINDINGCLOUD = 10,
 	CORROSIVEBILE = 11,
-	LURKERATTACK = 12   
+	LURKERATTACK = 12
 };
 typedef SC2Type<EFFECT_ID>  EffectID;
 // Control 끝
@@ -386,7 +386,7 @@ public:
 			}
 		}
 
-		// 본진 좌표가 (0,0)으로 나오는 것 수정. 
+		// 본진 좌표가 (0,0)으로 나오는 것 수정.
 		for (auto& e : expansions_) {
 			if (Point2D(e) == Point2D(0, 0)) {
 				e.x = startLocation_.x;
@@ -433,9 +433,9 @@ public:
 		ManageUpgrades();
 
 		// Control 시작
-		Defend();
+		//Defend();
 		//ManageArmy();
-		ManageRush();
+		//ManageRush();
 
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
@@ -510,7 +510,7 @@ public:
                 break;
         }
     }
-	
+
 	GameInfo game_info_;
 	std::vector<Point3D> expansions_;
 	Point3D startLocation_;
@@ -1102,6 +1102,7 @@ private:
 
 	bool TryChronoboost(const Unit * unit) {
 		const ObservationInterface* observation = Observation();
+		if (unit == nullptr) return false;
 		// is structure?
 		if (!IsStructure(observation)(*unit)) return false;
 		// is completely built?
@@ -1111,7 +1112,9 @@ private:
 		// is powered?
 		if (IsUnpowered()(*unit)) return false;
 		// is not buffed?
-		if (HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) return false;
+		//if (HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) return false;
+		if (!unit->buffs.empty()) return false;
+
 		// then chronoboost
 		return Chronoboost(unit);
 	}
@@ -1133,15 +1136,20 @@ private:
 		return false;
 	}
 
-	bool TryBuildUnitChrono(AbilityID ability_type_for_unit, UnitTypeID unit_type) {
+	bool TryBuildUnitChrono(AbilityID ability_type_for_unit, UnitTypeID building_type, UnitTypeID unit_type) {
 		const ObservationInterface* observation = Observation();
 
 		//If we are at supply cap, don't build anymore units, unless its an overlord.
-		if (observation->GetFoodUsed() >= observation->GetFoodCap() && ability_type_for_unit != ABILITY_ID::TRAIN_OVERLORD) {
+		if (observation->GetFoodUsed()+observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
 			return false;
 		}
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
+            return false;
+		}
+
+
 		const Unit* unit = nullptr;
-		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
+		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(building_type));
 		for (const auto& candidate_unit : target_units) {
 			// is completely built?
 			if (candidate_unit->build_progress != 1.0f) continue;
@@ -1149,15 +1157,47 @@ private:
 			if (!candidate_unit->orders.empty()) continue;
 			unit = candidate_unit;
 			// pick prioritized structures first
-			if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
+			/*if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
 				break;
-			}
+			}*/
+			if (unit->buffs.empty()) break;
 		}
 		if (unit == nullptr) {
 			return false;
 		}
 		Actions()->UnitCommand(unit, ability_type_for_unit);
 		Chronoboost(unit);
+		return true;
+	}
+
+	bool TryBuildUpgradeChrono(AbilityID ability_type_for_unit, UnitTypeID building_type, UpgradeID upgrade_type) {
+		const ObservationInterface* observation = Observation();
+
+		if (observation->GetMinerals() < observation->GetUpgradeData().at(upgrade_type).mineral_cost || observation->GetVespene() < observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
+            return false;
+		}
+
+		const Unit* unit = nullptr;
+		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(building_type));
+		for (const auto& candidate_unit : target_units) {
+			// is completely built?
+			if (candidate_unit->build_progress != 1.0f) continue;
+			// is doing something?
+			if (!candidate_unit->orders.empty()){
+                if (observation->GetAbilityData().at(ability_type_for_unit).ability_id == candidate_unit->orders.front().ability_id) {
+                    return TryChronoboost(candidate_unit);
+                }
+                continue;
+			}
+			unit = candidate_unit;
+		}
+
+
+		if (unit == nullptr) {
+			return false;
+		}
+		Actions()->UnitCommand(unit, ability_type_for_unit);
+		TryChronoboost(unit);
 		return true;
 	}
 
@@ -1174,15 +1214,49 @@ private:
         }
     }
 
-	bool TryBuildUnit(AbilityID ability_type_for_unit, UnitTypeID unit_type, Filter priority_filter = {}) {
+	bool TryBuildUnit(AbilityID ability_type_for_unit, UnitTypeID building_type, UnitTypeID unit_type, Filter priority_filter = {}) {
 		const ObservationInterface* observation = Observation();
 
 		//If we are at supply cap, don't build anymore units, unless its an overlord.
-		if (observation->GetFoodUsed() >= observation->GetFoodCap() && ability_type_for_unit != ABILITY_ID::TRAIN_OVERLORD) {
+		if (observation->GetFoodUsed()+observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
 			return false;
 		}
+
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
+            return false;
+		}
+
 		const Unit* unit = nullptr;
-		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
+		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(building_type));
+		for (const auto& candidate_unit : target_units) {
+			// is completely built?
+			if (candidate_unit->build_progress != 1.0f) continue;
+			// is doing something?
+			if (!candidate_unit->orders.empty()) continue;
+			unit = candidate_unit;
+			// pick prioritized structures first
+			/*if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
+				break;
+			}*/
+			if (unit->buffs.empty()) break;
+		}
+		if (unit == nullptr) {
+			return false;
+		}
+		Actions()->UnitCommand(unit, ability_type_for_unit);
+		return true;
+	}
+
+	bool TryBuildUpgrade(AbilityID ability_type_for_unit, UnitTypeID building_type, UpgradeID upgrade_type) {
+        const ObservationInterface* observation = Observation();
+
+        if (observation->GetMinerals()<observation->GetUpgradeData().at(upgrade_type).mineral_cost || observation->GetVespene()<observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
+            return false;
+		}
+
+		const Unit* unit = nullptr;
+		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(building_type));
+
 		for (const auto& candidate_unit : target_units) {
 			// is completely built?
 			if (candidate_unit->build_progress != 1.0f) continue;
@@ -1192,10 +1266,6 @@ private:
 			if (IsUnpowered()(*candidate_unit)) continue;
 
 			unit = candidate_unit;
-			// pick prioritized structures first
-			if (!priority_filter || priority_filter(*candidate_unit)) {
-				break;
-			}
 		}
 		if (unit == nullptr) {
 			return false;
@@ -1253,9 +1323,13 @@ private:
 	}
 
 	// if isExpansion is false, then consider expansion sites and avoid these places.
-	bool TryBuildStructure(AbilityID ability_type_for_structure, UnitTypeID unit_type, Point2D location, bool isExpansion = false) {
+	bool TryBuildStructure(AbilityID ability_type_for_structure, UnitTypeID building_type, UnitTypeID unit_type, Point2D location, bool isExpansion = false) {
 		const ObservationInterface* observation = Observation();
 		Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
+
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+            return false;
+		}
 
 		//if we have no workers Don't build
 		if (workers.empty()) {
@@ -1464,10 +1538,14 @@ private:
 
 	}
 
-	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, const Unit* pylon) {
+	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID building_type, const Unit* pylon) {
 		const ObservationInterface* observation = Observation();
 		if (pylon == nullptr) return false;
 		if (!pylon->is_alive) return false;
+
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+            return false;
+		}
 
 		const std::vector<PowerSource>& power_sources = observation->GetPowerSources();
 
@@ -1483,11 +1561,15 @@ private:
 		float rx = GetRandomScalar();
 		float ry = GetRandomScalar();
 		Point2D build_location = Point2D(pylon->pos.x + rx * radius, pylon->pos.y + ry * radius);
-		return TryBuildStructure(ability_type_for_structure, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+		return TryBuildStructure(ability_type_for_structure, building_type, UNIT_TYPEID::PROTOSS_PROBE, build_location);
 	}
 
-	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID) {
+	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID building_type) {
 		const ObservationInterface* observation = Observation();
+
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+            return false;
+		}
 
 		//Need to check to make sure its a pylon instead of a warp prism
 		std::vector<PowerSource> power_sources = observation->GetPowerSources();
@@ -1511,19 +1593,19 @@ private:
 		float rx = GetRandomScalar();
 		float ry = GetRandomScalar();
 		Point2D build_location = Point2D(random_power_source.position.x + rx * radius, random_power_source.position.y + ry * radius);
-		return TryBuildStructure(ability_type_for_structure, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+		return TryBuildStructure(ability_type_for_structure, building_type, UNIT_TYPEID::PROTOSS_PROBE, build_location);
 	}
 
-	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID, const Unit* pylon) {
+	/*bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID, const Unit* pylon) {
 		return TryBuildStructureNearPylon(ability_type_for_structure, pylon);
 	}
 
 	bool TryBuildStructureNearPylonWithUnit(const Unit* unit, AbilityID ability_type_for_structure, const Unit* pylon) {
 		return TryBuildStructureNearPylon(ability_type_for_structure, pylon);
-	}
+	}*/
 
 	bool TryBuildForge(const Unit* unit, const Unit* pylon) {
-		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, pylon);
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_FORGE,pylon);
 	}
 
 	bool TryBuildGas(Point2D base_location) {
@@ -1598,7 +1680,7 @@ private:
 		float rx = GetRandomScalar();
 		float ry = GetRandomScalar();
 		Point2D build_location = Point2D(location.x + rx * radius, location.y + ry * radius);
-		return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+		return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
 	}
 
 	bool TrybuildFirstPylon() {
@@ -1623,7 +1705,7 @@ private:
             y = -7.0f;
 		}
 		Point2D build_location = Point2D(startLocation_.x + x, startLocation_.y + y);
-        return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+        return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, UNIT_TYPEID::PROTOSS_PROBE,build_location);
 	}
 
 	void MineIdleWorkers(const Unit* worker, bool reassigning = false) {
@@ -2003,7 +2085,7 @@ private:
 		}
 
 		// uncomment this if probe_forward should mine minerals
-		/* 
+		/*
 		if (has_space_for_mineral || has_space_for_gas) {
 			if (probe_forward != nullptr && probe_forward->orders.empty()) {
 				MineIdleWorkers(probe_forward);
@@ -2014,13 +2096,41 @@ private:
 
 	void ManageUpgrades() {
 		const ObservationInterface* observation = Observation();
+		size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
 		auto upgrades = observation->GetUpgrades();
-		TryBuildUnit(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
+		TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES,UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL,UPGRADE_ID::ADEPTPIERCINGATTACK);
 		//TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
 		if (branch == 0 || branch == 1) {
-            TryBuildUnitChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
-            TryBuildUnitChrono(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE);
-            TryBuildUnit(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
+            if (forge_count ==0) {
+                return;
+            }
+            TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1);
+            TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL1);
+            TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::EXTENDEDTHERMALLANCE);
+
+            for (const auto& upgrade : upgrades) {
+                if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1) {
+                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2);
+                }
+                else if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2) {
+                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL3);
+                }
+                else if (upgrade == UPGRADE_ID::PROTOSSSHIELDSLEVEL1) {
+                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL2);
+                }
+                else if (upgrade == UPGRADE_ID::PROTOSSSHIELDSLEVEL2) {
+                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL3);
+                }
+                else if (upgrade == UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL1) {
+                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDARMOR, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL2);
+                }
+                else if (upgrade == UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL2) {
+                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDARMOR, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL3);
+                }
+                else if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL3) {
+                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDARMOR, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL1);
+                }
+            }
 		}
 	}
 
@@ -2042,7 +2152,7 @@ private:
 			}
 		}
 		//only update staging location up till 3 bases.
-		if (TryBuildStructure(build_ability, worker_type, closest_expansion, true) && observation->GetUnits(Unit::Self, IsTownHall()).size() < 4) {
+		if (TryBuildStructure(build_ability, UNIT_TYPEID::PROTOSS_NEXUS,worker_type, closest_expansion, true) && observation->GetUnits(Unit::Self, IsTownHall()).size() < 4) {
 			staging_location_ = Point3D(((staging_location_.x + closest_expansion.x) / 2), ((staging_location_.y + closest_expansion.y) / 2),
 				((staging_location_.z + closest_expansion.z) / 2));
 			return true;
@@ -2091,7 +2201,7 @@ private:
 			//if there is a base with less than ideal workers
 			if (base->assigned_harvesters < base->ideal_harvesters && base->build_progress == 1) {
 				if (observation->GetMinerals() >= 50 && observation->GetFoodCap() - observation->GetFoodUsed() >= 1) {
-					return TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS);
+					return TryBuildUnitChrono(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
 
 				}
 
@@ -2241,10 +2351,10 @@ private:
         for (const auto& r : robotics) {
             if (r->orders.empty()) {
                 if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_OBSERVER) < 2) {
-                    TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+                    TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
                 }
                 else{
-                    TryBuildUnit(ABILITY_ID::TRAIN_COLOSSUS, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+                    TryBuildUnit(ABILITY_ID::TRAIN_COLOSSUS, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_COLOSSUS);
                 }
             }
             else {

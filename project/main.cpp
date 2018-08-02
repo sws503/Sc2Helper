@@ -14,8 +14,8 @@ static const std::string current_version = "v0.5";
 static const bool VsHuman = false;
 static const int stepsize = 3;
 static const bool ControlTest = false;
-static const std::vector<std::string> map_names( { 
-	"CatalystLE", "AcidPlantLE", "DarknessSanctuary", 
+static const std::vector<std::string> map_names( {
+	"CatalystLE", "AcidPlantLE", "DarknessSanctuary",
 	"DreamcatcherLE", "LostAndFoundLE", "Redshift" } );
 static const std::string ControlMap = "StalkerMicroMarine.SC2Map";
 
