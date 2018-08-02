@@ -615,7 +615,7 @@ void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units N
 	bool Timer = false;
 
 	// nullpointer
-	const Unit * EnemyExpansionMineral = FindNearestMineralPatch(Enemy_front_expansion);
+	const Unit * EnemyExpansionMineral = FindNearestMineralPatch(enemy_expansion);
 	const Unit * EnemyBaseMineral = FindNearestMineralPatch(game_info_.enemy_start_locations.front());
 
 	// **********************TEST 용 입니다 **************************

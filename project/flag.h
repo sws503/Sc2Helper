@@ -8,18 +8,17 @@ public:
 		flag_map.clear();
 	}
 
-	bool status(std::string name) {
-		return flag_map.count(name);
+	int status(std::string name) {
+		return flag_map.count(name)? flag_map.at(name) : 0;
 	}
 
 	void raise(std::string name) {
-		flag_map.emplace(name, 1);
-		//flag_map.insert(name, 1);
+		set(name, 1);
 	}
 
-	void set(std::string name, bool status=true) {
-		if (status) raise(name);
-		else clear(name);
+	void set(std::string name, int status=1) {
+		clear(name);
+		if (status) flag_map.emplace(name, status);
 	}
 
 	void clear(std::string name) {
