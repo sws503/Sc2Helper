@@ -16,22 +16,12 @@ bool MEMIBot::EarlyStrategy() {
     Units templars = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_HIGHTEMPLAR));
     Units archons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ARCHON));
 
-	/*
 	while (workers.size() > 2 && (probe_forward == nullptr || !probe_forward->is_alive)) {
-	//건물 지을 프로브 지정
+	//건물 지을 프로브 재지정
 		const Unit* probe_candidate;
 		GetRandomUnit(probe_candidate, observation, UNIT_TYPEID::PROTOSS_PROBE);
 		if (probe_scout == nullptr || probe_candidate->tag != probe_scout->tag) probe_forward = probe_candidate;
 	}
-
-	// Todo: 프로브 상납 방지
-	while (workers.size() > 2 && (probe_scout == nullptr)) {
-		//정찰 프로브 지정
-		const Unit* probe_candidate;
-		GetRandomUnit(probe_candidate, observation, UNIT_TYPEID::PROTOSS_PROBE);
-		if (probe_forward == nullptr || probe_candidate->tag != probe_forward->tag)  probe_scout = probe_candidate;
-	}
-	*/
 
 	size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
 	size_t cannon_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_PHOTONCANNON);
@@ -116,10 +106,6 @@ bool MEMIBot::EarlyStrategy() {
         }
 	}
 
-
-	Point2D probe_scout_dest;
-
-
 	switch (stage_number) {
 	case 0:
 		if (bases.size() > 1) {
@@ -133,7 +119,6 @@ bool MEMIBot::EarlyStrategy() {
 			base = bases.front();
 		}//본진 넥서스 지정
 		if (probe_scout == nullptr || !probe_scout->is_alive) {
-			probe_scout_dest = front_expansion;
 			GetRandomUnit(probe_scout, observation, UNIT_TYPEID::PROTOSS_PROBE);
 		}//정찰 프로브 지정
 		if (probe_forward == nullptr || !probe_forward->is_alive) {
@@ -197,6 +182,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 6:
+		// 정찰 : 분기 1, 2 정찰 시작
 		if (cybernetics_count>0) {
 			stage_number=7;
 			return false;
@@ -245,6 +231,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 11:
+		// 정찰 : 분기 2 결정
         if (branch == 2) {
             stage_number = 100;
             return false;
@@ -262,6 +249,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 13:
+		// 정찰: 분기 1 결정.
         if (branch == 0 || branch == 3) {
             stage_number = 16;
             return false;
@@ -346,6 +334,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 22:
+		work_probe_forward = false;
         Actions()->UnitCommand(probe_forward, ABILITY_ID::MOVE, advance_pylon_location);
         if (TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::ADEPTPIERCINGATTACK)) {
             stage_number=23;
@@ -391,6 +380,7 @@ bool MEMIBot::EarlyStrategy() {
         for (const auto& p : pylons) {
             if (Distance2D(p->pos,advance_pylon_location)<20) {
                 advance_pylon = p;
+				work_probe_forward = true;
             }
         }
         if (observation->GetMinerals()>100) {

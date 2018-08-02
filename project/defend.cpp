@@ -104,6 +104,7 @@ void MEMIBot::Defend() {
 			for (const auto & defender : defenders)
 			{
 				const Unit * target = GetTarget(defender, enemyUnitsInRegion);
+
 				Kiting(defender, target);
 			}
 		}

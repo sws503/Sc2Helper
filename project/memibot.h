@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <iterator>
 #include <typeinfo>
+#include <list>
+#include "flag.h"
 
 static inline float round_to_halfint(float f) {
 	return float(std::floor(double(f))+0.5);
@@ -334,6 +336,10 @@ public:
 
 		stage_number = 0;
 		iter_exp = expansions_.begin();
+		advance_pylon_location = Point2D((float)game_info_.width / 2, (float)game_info_.height / 2);
+		Enemy_front_expansion = Point3D(0, 0, 0);
+		recent_probe_scout_location = Point2D(0, 0);
+		recent_probe_scout_loop = 0;
 
 		early_strategy = false;
 		warpgate_researched = false;
@@ -344,32 +350,22 @@ public:
 		probe_forward = nullptr;
 		base = nullptr;
 		find_enemy_location = false;
+		work_probe_forward = true;
+
+		flags.reset();
+
+		// 본진 좌표가 (0,0)으로 나오는 것 수정. 
+		for (auto& e : expansions_) {
+			if (Point2D(e) == Point2D(0, 0)) {
+				e.x = startLocation_.x;
+				e.y = startLocation_.y;
+				break;
+			}
+		}
 
 		//Temporary, we can replace this with observation->GetStartLocation() once implemented
 		startLocation_ = Observation()->GetStartLocation();
 		staging_location_ = startLocation_;
-
-		if (game_info_.enemy_start_locations.size() == 1)
-		{
-			find_enemy_location = true;
-
-			float minimum_distance = std::numeric_limits<float>::max();
-			for (const auto& expansion : expansions_) {
-				float Enemy_distance = Distance2D(game_info_.enemy_start_locations.front(), expansion);
-				if (Enemy_distance < 5.0f) {
-					continue;
-				}
-
-				if (Enemy_distance < minimum_distance) {
-					if (Query()->Placement(ABILITY_ID::BUILD_NEXUS, expansion)) {
-						Enemy_front_expansion = expansion;
-						minimum_distance = Enemy_distance;
-					}
-				}
-			}
-			std::cout << "Enemy front expansion :" << Enemy_front_expansion.x << "  " << Enemy_front_expansion.y << "  " << Enemy_front_expansion.z << std::endl;
-		}
-
 
 		float minimum_distance = std::numeric_limits<float>::max();
 		for (const auto& expansion : expansions_) {
@@ -397,10 +393,6 @@ public:
 
 		for (const auto& e : expansions_) {
 			std::cout << e.x << ", " << e.y << ", " << e.z << std::endl;
-		}
-
-		for (const auto& e : Observation()->GetEffectData()) {
-			std::cout << e.friendly_name << e.effect_id << e.name << std::endl;
 		}
 
 		staging_location_ = Point3D(((staging_location_.x + front_expansion.x) / 2), ((staging_location_.y + front_expansion.y) / 2),
@@ -433,23 +425,22 @@ public:
 		ManageUpgrades();
 
 		// Control 시작
-		//Defend();
+		Defend();
 		//ManageArmy();
-		//ManageRush();
-
+		ManageRush();
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 	}
 
-	virtual void OnUnitIdle(const Unit* unit) override {
+	virtual void OnUnitIdle(const Unit* unit) final {
 		switch (unit->unit_type.ToType()) {
 		case UNIT_TYPEID::PROTOSS_PROBE: {
 			if (probe_scout != nullptr && probe_scout->tag == unit->tag) {
 				return;
 			}
-			if (probe_forward != nullptr && probe_forward->tag == unit->tag) {
+			if (probe_forward != nullptr && probe_forward->tag == unit->tag && !work_probe_forward) {
 				if (EnemyRush) {
 					Actions()->UnitCommand(unit, ABILITY_ID::MOVE, startLocation_);
 				}
@@ -495,7 +486,8 @@ public:
 		}
 		return;
 	}
-    void OnUpgradeCompleted(UpgradeID upgrade) {
+
+    virtual void OnUpgradeCompleted(UpgradeID upgrade) final {
         switch (upgrade.ToType()) {
             case UPGRADE_ID::BLINKTECH: {
 				std::cout << "BLINK UPGRADE DONE!!";
@@ -511,6 +503,31 @@ public:
         }
     }
 
+	virtual void OnUnitDestroyed(Unit* u) final {
+		if (u->alliance == Unit::Alliance::Enemy) {
+			for (auto& it = enemy_units_scouter_seen.begin(); it != enemy_units_scouter_seen.end(); ++it) {
+				if ((*it)->tag == u->tag) {
+					enemy_units_scouter_seen.erase(it);
+					break;
+				}
+			}
+		}
+	}
+
+	virtual void OnUnitEnterVision(Unit* u) final {
+		if (IsStructure(Observation())(*u) && u->alliance == Unit::Alliance::Enemy) {
+			if (Distance2D(u->pos, startLocation_) < 50) {
+				branch = 1;
+			}
+			for (auto& l : enemy_units_scouter_seen) {
+				if (l->tag == u->tag) {
+					enemy_units_scouter_seen.push_back(u);
+					break;
+				}
+			}
+		}
+	}
+	
 	GameInfo game_info_;
 	std::vector<Point3D> expansions_;
 	Point3D startLocation_;
@@ -604,6 +621,8 @@ private:
 
 	bool EvadeEffect(const Unit* unit)
 	{
+
+
 		bool moving = false;
 		for (const auto & effect : Observation()->GetEffects())
 		{
@@ -611,6 +630,10 @@ private:
 			{
 				const EffectData& ed = Observation()->GetEffectData().at(effect.effect_id);
 				const float radius = ed.radius;
+				if (EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHED)
+				{
+					const float radius = ed.radius + 1.0f;
+				}
 				for (const auto & pos : effect.positions)
 				{
 					const float dist = Distance2D(unit->pos, pos);
@@ -628,7 +651,23 @@ private:
 						{
 							fleeingPos = Point2D(staging_location_);
 						}
-						Actions()->UnitCommand(unit, ABILITY_ID::MOVE, fleeingPos);
+
+						if (EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHED)
+						{
+							Units bases = Observation()->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+
+							for (const auto & base : bases)
+							{
+								if (Distance2D(unit->pos, pos) < 10)
+								{
+									return false;
+								}
+							}
+						}
+						else
+						{
+							Actions()->UnitCommand(unit, ABILITY_ID::MOVE, fleeingPos);
+						}
 						Chat("Enemy Skill Run~");
 						std::cout << "skill : " << ed.friendly_name << std::endl;
 						moving = true;
@@ -642,18 +681,8 @@ private:
 
 	void Defend();
 
-	void SetupRushLocation(const ObservationInterface *observation)
-	{
-		if (find_enemy_location) {
-			ReadyLocation1 = game_info_.enemy_start_locations.front() + Point2D(30.0f, 0.0f);
-			ReadyLocation2 = game_info_.enemy_start_locations.front() + Point2D(0.0f, 30.0f);
-		}
-		else {
-			ReadyLocation1 = startLocation_;
-			ReadyLocation2 = startLocation_;
-		}
-	}
 	void ManageWarpBlink(const Unit * unit);
+
 	void ManageRush();
 
 	void Roam_randombase(const Unit * unit);
@@ -677,8 +706,6 @@ private:
 	void ComeOnKiting(const Unit * unit, const Unit * enemyarmy);
 
 	void Kiting(const Unit * unit, const Unit * enemyarmy);
-
-	void CalcValidPath(const Unit * unit, Point2D KitingLocation);
 
 	void EmergencyKiting(const Unit * unit, const Unit * enemyarmy);
 
@@ -2097,13 +2124,13 @@ private:
 		}
 
 		// uncomment this if probe_forward should mine minerals
-		/*
-		if (has_space_for_mineral || has_space_for_gas) {
+
+		
+		if (work_probe_forward && (has_space_for_mineral || has_space_for_gas)) {
 			if (probe_forward != nullptr && probe_forward->orders.empty()) {
 				MineIdleWorkers(probe_forward);
 			}
 		}
-		*/
 	}
 
 	void ManageUpgrades() {
@@ -2244,6 +2271,7 @@ private:
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
         Point2D build_location = Point2D(advance_pylon->pos.x + rx * radius, advance_pylon->pos.y + ry * radius);
+		if (!observation->IsPathable(build_location)) return false;
 
         for (const auto& warpgate : warpgates) {
             //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
@@ -2278,6 +2306,7 @@ private:
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
         Point2D build_location = Point2D(random_power_source.position.x + rx * radius, random_power_source.position.y + ry * radius);
+		if (!observation->IsPathable(build_location)) return false;
 
         for (const auto& warpgate : warpgates) {
             //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
@@ -2309,6 +2338,7 @@ private:
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
         Point2D build_location = Point2D(advance_pylon->pos.x + rx * radius, advance_pylon->pos.y + ry * radius);
+		if (!observation->IsPathable(build_location)) return false;
 
         for (const auto& warpgate : warpgates) {
             //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
@@ -2346,6 +2376,7 @@ private:
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
         Point2D build_location = Point2D(power_source.position.x + rx * radius, power_source.position.y + ry * radius);
+		if (!observation->IsPathable(build_location)) return false;
 
         for (const auto& warpgate : warpgates) {
             if (warpgate->build_progress == 1) {
@@ -2400,10 +2431,14 @@ private:
 
 	void scoutenemylocation();
 
-	Point2D probe_scout_dest = Point2D(0,0);
-	Point2D advance_pylon_location = Point2D((float)game_info_.width/2,(float)game_info_.height/2);
+	std::list<const Unit *> enemy_units_scouter_seen;
+	Point2D recent_probe_scout_location;
+	uint32_t recent_probe_scout_loop;
+
+	Point2D advance_pylon_location;
 
 	std::map<Tag, uint32_t> adept_map;
+	Flags flags;
 
 	std::string version;
 	std::string botname;
@@ -2420,6 +2455,7 @@ private:
 	const Unit* pylon_first;
 	const Unit* probe_forward;
 
+	bool work_probe_forward;
 	bool find_enemy_location;
 	std::vector<Point3D>::iterator iter_exp;
 	Point3D enemy_expansion;

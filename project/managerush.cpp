@@ -197,6 +197,7 @@ private:
 
 bool MustAttack = false;
 bool StalkerMustAttack = false;
+bool AdeptMustAttack = false;
 
 ////////////////////////////////
 /*void shuttle::loadPassangers()
@@ -411,7 +412,6 @@ void MEMIBot::ManageRush() {
 			/*if (unit->orders.empty()) {
 				Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, ShadeNearWorker->pos);
 			}*/
-
 		}
 	}
 
@@ -424,6 +424,8 @@ void MEMIBot::ManageRush() {
 
 		// 타겟을 받아옵니다 *^^*
 		const Unit * target = GetTarget(unit, NearbyEnemies);
+		// 스킬은 알아서 피하시구요 *^^*
+		
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
 		{
@@ -453,9 +455,11 @@ void MEMIBot::ManageRush() {
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_STALKER)
 		{
+
 			ManageWarpBlink(unit);
 
-			if (target != nullptr) // 카이팅은 항상하자
+			if (EvadeEffect(unit)) {}
+			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				if (BlinkResearched)
 				{
@@ -477,26 +481,38 @@ void MEMIBot::ManageRush() {
 			}
 
 
-			if (CurrentStalker >= 12)
+			if (try_stalker >= 11)
 			{
 				StalkerMustAttack = true;
-				
 			}
-
 		}
 
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_ADEPT)
 		{
-			bool ComeOn = false;
-			if (target == nullptr)
+			
+			if (try_adept >= 9)
 			{
-				if (MustAttack)
+				AdeptMustAttack = true;
+			}
+
+			if (AdeptMustAttack) // 공격타이밍이면
+			{
+				if (target == nullptr)
 				{
 					ScoutWithUnit(unit, observation);
 				}
 			}
-			else // 타겟이 존재할 때
+			else if (!AdeptMustAttack && unit->orders.empty()) // 공격타이밍이 아닐때 한가하면
+			{
+				RetreatWithUnit(unit, advance_pylon_location);
+			}
+
+
+			bool ComeOn = false;
+
+			if (EvadeEffect(unit)) {}
+			else if(target != nullptr)
 			{
 				if (getunitsDpsGROUND(NearbyArmies) > 20.0f)
 				{
@@ -526,19 +542,6 @@ void MEMIBot::ManageRush() {
 				{
 					Kiting(unit, target);
 				}
-			}
-
-			if (CurrentAdept < 9 && !MustAttack && unit->orders.empty())
-			{
-				RetreatWithUnit(unit, advance_pylon_location);
-			}
-			else if (CurrentAdept == 1 && MustAttack)
-			{
-				MustAttack = false;
-			}
-			else //(CurrentAdept >= 9)
-			{
-				MustAttack = true;
 			}
 		}
 
@@ -595,13 +598,16 @@ void  MEMIBot::Roam_randombase(const Unit* unit)
 	Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 
 	bool good_position = false;
-	Point2D mp = bases.front()->pos;
+	if (!bases.empty())
+	{
+		Point2D mp = bases.front()->pos;
 
-	float rx = GetRandomScalar();
-	float ry = GetRandomScalar();
-	Point2D RoamPosition = Point2D(mp.x + rx * 20, mp.y + ry * 20);
-
-	Actions()->UnitCommand(unit, ABILITY_ID::MOVE, RoamPosition);
+		float rx = GetRandomScalar();
+		float ry = GetRandomScalar();
+		Point2D RoamPosition = Point2D(mp.x + rx * 20, mp.y + ry * 20);
+		
+		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, RoamPosition);
+	}
 }
 
 void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units NearbyEnemies, bool & ComeOn)
@@ -609,7 +615,7 @@ void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units N
 	bool Timer = false;
 
 	// nullpointer
-	const Unit * EnemyExpansionMineral = FindNearestMineralPatch(Enemy_front_expansion);
+	const Unit * EnemyExpansionMineral = FindNearestMineralPatch(enemy_expansion);
 	const Unit * EnemyBaseMineral = FindNearestMineralPatch(game_info_.enemy_start_locations.front());
 
 	// **********************TEST 용 입니다 **************************
@@ -758,7 +764,7 @@ void MEMIBot::DistanceKiting(const Unit* unit, const Unit* enemyarmy, const Unit
 	else // 거리가 가까워서 도망가야 하는 상황
 	{
 		sc2::Point2D KitingLocation = unit->pos;
-		KitingLocation += CalcKitingPosition(unit->pos, army->pos) * 4;
+		KitingLocation += CalcKitingPosition(unit->pos, army->pos) * 6.0f;
 
 		if (!Observation()->IsPathable(KitingLocation)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
 		{
@@ -915,12 +921,11 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 		}
 		else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
 		{
-			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 7;
-			//KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos); //TODO : 적을 데려나오기 위해 임시로 뒤로 빼게 했습니다.
+			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
 		}
-		else
+		else // 적 사정거리가 나보다 짧으면
 		{
-			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 7;
+			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 7.0f;
 		}
 
 		/*if (!Observation()->IsPathable(KitingLocation)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
