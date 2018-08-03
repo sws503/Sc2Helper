@@ -36,13 +36,49 @@ void MEMIBot::scout_all() {
 
 	Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PROBE));
 
-	// Todo: 프로브 상납 방지
-	while (workers.size() > 2 && (probe_scout != nullptr && !probe_scout->is_alive)) {
-		//정찰 프로브 지정
-		const Unit* probe_candidate;
-		GetRandomUnit(probe_candidate, observation, UNIT_TYPEID::PROTOSS_PROBE);
-		if (probe_forward == nullptr || probe_candidate->tag != probe_forward->tag)  probe_scout = probe_candidate;
-		flags.set("search_branch", 1);
+	//정찰 프로브 재지정
+	if (workers.size() > 2 && (probe_scout != nullptr && !probe_scout->is_alive)) {
+		for (const auto& p : workers) {
+			if (probe_forward != nullptr && p->tag == probe_forward->tag) continue;
+			if (IsCarryingMinerals(*p) || IsCarryingVespene(*p)) continue;
+
+			// 본진 정찰 때 사망 -> 다른 정찰 기지로.
+			if (!find_enemy_location) {
+				flags.set("search_branch", 1);
+				flags.set("search_result", 1);
+
+				if (DistanceSquared2D(probe_scout->pos, EnemyBaseLocation) < 400) {
+					find_enemy_location = true;
+					EnemyBaseLocation = game_info_.enemy_start_locations.front();
+					determine_enemy_expansion();
+				}
+				else {
+					std::random_shuffle(game_info_.enemy_start_locations.begin(),
+						game_info_.enemy_start_locations.end());
+				}
+			}
+			// 멀티 정찰 때 사망
+			else {
+				// 다음 확장으로 스킵
+				if (iter_exp == expansions_.end()) {
+					std::random_shuffle(expansions_.begin(), expansions_.end());
+					iter_exp = expansions_.begin();
+				}
+				iter_exp++;
+			}
+
+			probe_scout = p;
+
+			// 본진 정찰 중단.
+			flags.set("search_branch", 1);
+			break;
+		}
+	}
+
+	if (probe_scout != nullptr && probe_scout->is_alive && DistanceSquared2D(recent_probe_scout_location, probe_scout->pos) > 4) {
+		//Print("renew position");
+		recent_probe_scout_location = probe_scout->pos;
+		recent_probe_scout_loop = observation->GetGameLoop();
 	}
 
 	if (!find_enemy_location) {
@@ -73,13 +109,6 @@ void MEMIBot::scout_all() {
 		std::cout << "Enemy front expansion :" << Enemy_front_expansion.x << "  " << Enemy_front_expansion.y << "  " << Enemy_front_expansion.z << std::endl;
 	}
 	*/
-
-	std::cout << flags.status("search_branch") << std::endl;
-	if (probe_scout != nullptr && probe_scout->is_alive && DistanceSquared2D(recent_probe_scout_location, probe_scout->pos) > 4) {
-		recent_probe_scout_location = probe_scout->pos;
-		recent_probe_scout_loop = observation->GetGameLoop();
-		Print("renew position");
-	}
 
 	// 정찰 : 분기 1, 2 정찰 시작
 	if (flags.status("search_branch") == 0 && find_enemy_location) {
@@ -125,6 +154,7 @@ void MEMIBot::scout_all() {
 		bool HasBarracksOrGateway = false;
 		bool IsExtractor = false;
 		for (const auto& e : enemy_units_scouter_seen) {
+			Print(UnitTypeToName(e->unit_type.ToType()));
 			numExpansion += IsTownHall()(*e);
 			HasBarracksOrGateway |= IsUnits({ 
 				UNIT_TYPEID::TERRAN_BARRACKS, UNIT_TYPEID::TERRAN_BARRACKSFLYING, 
@@ -132,27 +162,42 @@ void MEMIBot::scout_all() {
 				})(*e);
 			IsExtractor |= IsUnit( UNIT_TYPEID::ZERG_EXTRACTOR )(*e);
 		}
+		// zerg has gas : branch 1
 		if (IsExtractor) {
-			flags.set("search_branch", 1);	// search end
-			branch = 1;
+			flags.set("search_branch", 1);
+			flags.set("search_result", 3);
 		}
 
-		if ( Distance2D(probe_scout->pos, EnemyLocation) < 7 && ((numExpansion < 2) || !HasBarracksOrGateway) ) {
+		// not blocked and has expansion : branch 0
+		if (numExpansion >= 2) {
+			flags.set("search_branch", 1);
+			flags.set("search_result", 2);
+		}
+
+		// not blocked and has no expansion or barracks : branch 1
+		if ( Distance2D(probe_scout->pos, EnemyBaseLocation) < 5 ){
+			// not blocked and has no expansion or barracks : 
+			if (HasBarracksOrGateway) {
+				flags.set("search_branch", 1);
+				flags.set("search_result", 2);
+			}
 			flags.set("search_branch", 1);  // search end
-			branch = 1;
+			flags.set("search_result", 3);
 		}
 
 		// if probe_scout is stuck or cannot go for 10 seconds
-		if (observation->GetGameLoop() - recent_probe_scout_loop > 217) {
-			if (Query()->PathingDistance(probe_scout, enemy_expansion + Point2D(4, 4)) < 0.1) {
-				flags.set("search_status", 1);	// search end
-				branch = 2;
-				Print("Base is blocked!");
-			}
+		if (observation->GetGameLoop() - recent_probe_scout_loop > 105 &&
+			DistanceSquared2D(probe_scout->pos, startLocation_) > 200) {
+			flags.set("search_branch", 1);	// search end
+			flags.set("search_result", 1);
+			Print("Base is blocked!");
 		}
 	}
-	else if (observation->GetUnits(Unit::Alliance::Self, IsUnits({ UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_WARPGATE })).size() > 0 
-		&& (observation->GetFoodUsed() >= 15) && find_enemy_location == true) {
+
+	// 몰래멀티 주기적으로 검사
+	if (flags.status("search_branch") != 0 && find_enemy_location == true &&
+		observation->GetUnits(Unit::Alliance::Self, IsUnits({ UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_WARPGATE })).size() > 0
+		&& (observation->GetFoodUsed() >= 15)) {
 		scoutprobe();
 	}
 
@@ -177,25 +222,27 @@ void MEMIBot::scoutenemylocation() {
 				Print("find!");
 				Actions()->UnitCommand(probe_scout, ABILITY_ID::STOP);
 				EnemyBaseLocation = game_info_.enemy_start_locations.front();
-				float minimum_distance = std::numeric_limits<float>::max();
-				for (const auto& expansion : expansions_) {
-					float current_distance = Distance2D(EnemyBaseLocation, expansion);
-					if (current_distance < 3) {
-						continue;
-					}
-
-					if (current_distance < minimum_distance) {
-						enemy_expansion = expansion;
-						minimum_distance = current_distance;
-					}
-				}
+				determine_enemy_expansion();
+				return;
 			}
 		}
-		else {
-			if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<7) {
-				std::vector<Point2D>::iterator iter_esl = game_info_.enemy_start_locations.begin();
-				game_info_.enemy_start_locations.erase(iter_esl);
-			}
+		else if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<7) {
+			std::vector<Point2D>::iterator iter_esl = game_info_.enemy_start_locations.begin();
+			game_info_.enemy_start_locations.erase(iter_esl);
+			return;
+		}
+
+		if (observation->GetGameLoop() - recent_probe_scout_loop > 105 && 
+			DistanceSquared2D(probe_scout->pos, startLocation_) > 200) {
+			flags.set("search_branch", 1);	// search end
+			flags.set("search_result", 1);
+			Print("Base is blocked!");
+			find_enemy_location = true;
+			Print("find!");
+			Actions()->UnitCommand(probe_scout, ABILITY_ID::STOP);
+			EnemyBaseLocation = game_info_.enemy_start_locations.front();
+			determine_enemy_expansion();
+			return;
 		}
 	}
 }
@@ -203,7 +250,10 @@ void MEMIBot::scoutenemylocation() {
 void MEMIBot::scoutprobe() {
 	const ObservationInterface* observation = Observation();
 
-	if (iter_exp == expansions_.end()) iter_exp = expansions_.begin();
+	if (iter_exp == expansions_.end()) {
+		std::random_shuffle(expansions_.begin(), expansions_.end());
+		iter_exp = expansions_.begin();
+	}
 
 	const Unit* mineralp = FindNearestMineralPatch(*iter_exp);
 	if (mineralp == nullptr) {
@@ -211,6 +261,7 @@ void MEMIBot::scoutprobe() {
 	}
 	Point2D tag_pos = mineralp->pos;
 
+	// 우리본진이랑 적본진은 거름
 	if (DistanceSquared2D(EnemyBaseLocation, tag_pos)<200 ||
 		DistanceSquared2D(enemy_expansion, tag_pos)<200 ||
 		DistanceSquared2D(front_expansion, tag_pos)<200 ||
@@ -220,9 +271,25 @@ void MEMIBot::scoutprobe() {
 	}
 	if (probe_scout->orders.empty() || tag_pos != probe_scout->orders.front().target_pos)
 		Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, tag_pos);
+	// 도착하면 다음 확장으로
 	if (DistanceSquared2D(probe_scout->pos, tag_pos)<4) {
 		iter_exp++;
+		return;
 	}
-
 }
 
+void MEMIBot::determine_enemy_expansion() {
+	if (!find_enemy_location) return;
+	float minimum_distance = std::numeric_limits<float>::max();
+	for (const auto& expansion : expansions_) {
+		float current_distance = Distance2D(EnemyBaseLocation, expansion);
+		if (current_distance < 3) {
+			continue;
+		}
+
+		if (current_distance < minimum_distance) {
+			enemy_expansion = expansion;
+			minimum_distance = current_distance;
+		}
+	}
+}

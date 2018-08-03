@@ -11,12 +11,19 @@ static const std::string bot_name = "AdeptBot";
 static const std::string current_version = "v0.5";
 
 #ifdef DEBUG
-static const bool VsHuman = false;
+static const bool VsHuman = true;
 static const int stepsize = 2;
+static const bool Realtime = true;
 static const bool ControlTest = false;
 static const std::vector<std::string> map_names( {
-	"CatalystLE", "AcidPlantLE", "DarknessSanctuary",
-	"DreamcatcherLE", "LostAndFoundLE", "Redshift" } );
+	"CatalystLE", 
+	"AcidPlantLE", 
+	"DarknessSanctuary",
+	"DreamcatcherLE", 
+	"LostAndFoundLE", 
+	"Redshift", 
+	"16BitLE"
+	} );
 static const std::string ControlMap = "1pTest.SC2Map"; // 1pTest 2pTest
 
 class Human : public sc2::Agent {
@@ -42,7 +49,7 @@ int main(int argc, char* argv[])
 
 	coordinator.SetMultithreaded(true);
 
-	if (ControlTest) {
+	if (Realtime || ControlTest) {
 		coordinator.SetRealtime(true);
 	}
 	// Add the custom bot, it will control the players.

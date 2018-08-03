@@ -321,7 +321,7 @@ public:
 	MEMIBot(std::string botname, std::string version)
 		: botname(botname), version(version) {}
 
-	virtual void OnGameStart() final {
+	virtual void OnGameStart() final override {
 		game_info_ = Observation()->GetGameInfo();
 		std::cout << "Game started!" << std::endl;
 		ChatVersion();
@@ -356,14 +356,8 @@ public:
 
 		flags.reset();
 
-		// 본진 좌표가 (0,0)으로 나오는 것 수정.
-		for (auto& e : expansions_) {
-			if (Point2D(e) == Point2D(0, 0)) {
-				e.x = startLocation_.x;
-				e.y = startLocation_.y;
-				break;
-			}
-		}
+		enemy_units_scouter_seen.clear();
+		adept_map.clear();
 
 		//Temporary, we can replace this with observation->GetStartLocation() once implemented
 		startLocation_ = Observation()->GetStartLocation();
@@ -401,7 +395,7 @@ public:
 			((staging_location_.z + front_expansion.z) / 2));
 	}
 
-	virtual void OnStep() final {
+	virtual void OnStep() final override {
 
 
 		const ObservationInterface* observation = Observation();
@@ -436,7 +430,7 @@ public:
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 	}
 
-	virtual void OnUnitIdle(const Unit* unit) final {
+	virtual void OnUnitIdle(const Unit* unit) final override {
 		switch (unit->unit_type.ToType()) {
 		case UNIT_TYPEID::PROTOSS_PROBE: {
 			if (probe_scout != nullptr && probe_scout->tag == unit->tag) {
@@ -489,7 +483,7 @@ public:
 		return;
 	}
 
-    virtual void OnUpgradeCompleted(UpgradeID upgrade) final {
+    virtual void OnUpgradeCompleted(UpgradeID upgrade) final override {
         switch (upgrade.ToType()) {
             case UPGRADE_ID::BLINKTECH: {
 				std::cout << "BLINK UPGRADE DONE!!";
@@ -520,7 +514,7 @@ public:
         }
     }
 
-	virtual void OnUnitDestroyed(Unit* u) final {
+	virtual void OnUnitDestroyed(const Unit* u) final override {
 		if (u->alliance == Unit::Alliance::Enemy) {
 			for (auto& it = enemy_units_scouter_seen.begin(); it != enemy_units_scouter_seen.end(); ++it) {
 				if ((*it)->tag == u->tag) {
@@ -531,16 +525,23 @@ public:
 		}
 	}
 
-	virtual void OnUnitEnterVision(Unit* u) final {
+	// add buildings we saw
+	virtual void OnUnitEnterVision(const Unit* u) final override {
 		if (IsStructure(Observation())(*u) && u->alliance == Unit::Alliance::Enemy) {
+			// 전진 게이트 등등
 			if (Distance2D(u->pos, startLocation_) < 50) {
-				branch = 1;
+				flags.set("search_branch", 1);
+				flags.set("search_result", 3);
+				return;
 			}
+			bool duplicated = false;
 			for (auto& l : enemy_units_scouter_seen) {
-				if (l->tag == u->tag) {
-					enemy_units_scouter_seen.push_back(u);
+				if (duplicated |= (l->tag == u->tag)) {
 					break;
 				}
+			}
+			if (!duplicated) {
+				enemy_units_scouter_seen.push_back(u);
 			}
 		}
 	}
@@ -1194,10 +1195,12 @@ private:
 		const Unit* unit = nullptr;
 		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(building_type));
 		for (const auto& candidate_unit : target_units) {
-			// is completely built?
+			// is not completely built?
 			if (candidate_unit->build_progress != 1.0f) continue;
 			// is doing something?
 			if (!candidate_unit->orders.empty()) continue;
+			// is unpowered?
+			if (IsUnpowered()(*candidate_unit)) continue;
 			unit = candidate_unit;
 			// pick prioritized structures first
 			/*if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
@@ -1226,7 +1229,7 @@ private:
 		const Unit* unit = nullptr;
 		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(building_type));
 		for (const auto& candidate_unit : target_units) {
-			// is completely built?
+			// is not completely built?
 			if (candidate_unit->build_progress != 1.0f) continue;
 			// is doing something?
 			if (!candidate_unit->orders.empty()){
@@ -1275,10 +1278,12 @@ private:
 		const Unit* unit = nullptr;
 		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(building_type));
 		for (const auto& candidate_unit : target_units) {
-			// is completely built?
+			// is not completely built?
 			if (candidate_unit->build_progress != 1.0f) continue;
 			// is doing something?
 			if (!candidate_unit->orders.empty()) continue;
+			// is unpowered?
+			if (IsUnpowered()(*candidate_unit)) continue;
 			unit = candidate_unit;
 			// pick prioritized structures first
 			/*if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
@@ -1306,11 +1311,11 @@ private:
 		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(building_type));
 
 		for (const auto& candidate_unit : target_units) {
-			// is completely built?
+			// is not completely built?
 			if (candidate_unit->build_progress != 1.0f) continue;
 			// is doing something?
 			if (!candidate_unit->orders.empty()) continue;
-			// is powered?
+			// is unpowered?
 			if (IsUnpowered()(*candidate_unit)) continue;
 
 			unit = candidate_unit;
@@ -2140,8 +2145,6 @@ private:
 		}
 
 		// uncomment this if probe_forward should mine minerals
-
-
 		if (work_probe_forward && (has_space_for_mineral || has_space_for_gas)) {
 			if (probe_forward != nullptr && probe_forward->orders.empty()) {
 				MineIdleWorkers(probe_forward);
@@ -2272,6 +2275,8 @@ private:
 	bool EarlyStrategy();
 
 	void scoutprobe();
+
+	void determine_enemy_expansion();
 
 	bool TryWarpAdept(){
         const ObservationInterface* observation = Observation();
