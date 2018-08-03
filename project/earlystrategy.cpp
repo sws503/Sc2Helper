@@ -16,11 +16,31 @@ bool MEMIBot::EarlyStrategy() {
     Units templars = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_HIGHTEMPLAR));
     Units archons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ARCHON));
 
-	while (workers.size() > 2 && (probe_forward == nullptr || !probe_forward->is_alive)) {
 	//건물 지을 프로브 재지정
-		const Unit* probe_candidate;
-		GetRandomUnit(probe_candidate, observation, UNIT_TYPEID::PROTOSS_PROBE);
-		if (probe_scout == nullptr || probe_candidate->tag != probe_scout->tag) probe_forward = probe_candidate;
+	if (workers.size() > 2 && (probe_forward != nullptr && !probe_forward->is_alive)) {
+		for (const auto& p : workers) {
+			if (probe_scout != nullptr && p->tag == probe_scout->tag) continue;
+			probe_forward = p;
+			break;
+		}
+	}
+
+	//브랜치 지정
+	//디폴트 branch = 2
+	if (flags.status("search_branch") == 1) {
+		// 정찰 실패: 입구를 막았거나 프로브가 죽었음
+		if (flags.status("search_result") == 1) {
+			branch = 2;
+		}
+		// 적이 정석 빌드를 감: 멀티가 있거나 barracks, gateway가 있거나 extracter가 없음
+		else if (flags.status("search_result") == 2) {
+			branch = 0;
+		}
+		// 적이 심상치 않음: extracter가 있거나, 멀티도 없고 barracks, gateway도 없다.
+		//					또는 정찰 가다가 본진 밖에 있는 건물을 봤다.
+		else if (flags.status("search_result") == 3) {
+			branch = 1;
+		}
 	}
 
 	size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
@@ -115,16 +135,26 @@ bool MEMIBot::EarlyStrategy() {
 				}
 			}
 		}
+		//본진 넥서스 지정
 		else if (bases.size() == 1){
 			base = bases.front();
-		}//본진 넥서스 지정
+		}
+		//정찰 프로브 지정
 		if (probe_scout == nullptr || !probe_scout->is_alive) {
-			GetRandomUnit(probe_scout, observation, UNIT_TYPEID::PROTOSS_PROBE);
-		}//정찰 프로브 지정
+			for (const auto& p : workers) {
+				if (probe_forward == p) continue;
+				probe_scout = p;
+				break;
+			}
+		}
+		//건물 지을 프로브 지정
 		if (probe_forward == nullptr || !probe_forward->is_alive) {
-			GetRandomUnit(probe_forward, observation, UNIT_TYPEID::PROTOSS_PROBE);
-			if (probe_scout == probe_forward) probe_forward = nullptr;
-		}//건물 지을 프로브 지정
+			for (const auto& p : workers) {
+				if (probe_scout == p) continue;
+				probe_forward = p;
+				break;
+			}
+		}
         if (probe_scout != nullptr && probe_forward != nullptr) {
             if (branch == 5) {
                 stage_number =200;
