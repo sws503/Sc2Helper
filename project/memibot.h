@@ -1212,10 +1212,10 @@ private:
 			return false;
 		}
 		Actions()->UnitCommand(unit, ability_type_for_unit);
-		Chronoboost(unit);
+		TryChronoboost(unit);
 
-		if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT) try_adept++;
-		if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER) try_stalker++;
+		if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT || ability_type_for_unit == ABILITY_ID::TRAINWARP_ADEPT) try_adept++;
+		if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER || ability_type_for_unit == ABILITY_ID::TRAINWARP_STALKER) try_stalker++;
 		return true;
 	}
 
@@ -1295,8 +1295,8 @@ private:
 			return false;
 		}
 		Actions()->UnitCommand(unit, ability_type_for_unit);
-		if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT) try_adept++;
-		if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER) try_stalker++;
+		if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT || ability_type_for_unit == ABILITY_ID::TRAINWARP_ADEPT) try_adept++;
+		if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER || ability_type_for_unit == ABILITY_ID::TRAINWARP_STALKER) try_stalker++;
 		return true;
 	}
 
@@ -1366,8 +1366,8 @@ private:
                     if (ability.ability_id == ability_type_for_unit) {
                         Actions()->UnitCommand(warpgate, ability_type_for_unit, build_location);
 
-                        if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT) try_adept++;
-                        if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER) try_stalker++;
+                        if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT || ability_type_for_unit == ABILITY_ID::TRAINWARP_ADEPT) try_adept++;
+                        if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER || ability_type_for_unit == ABILITY_ID::TRAINWARP_STALKER) try_stalker++;
                         return true;
                     }
                 }
@@ -2414,8 +2414,8 @@ private:
                     if (ability.ability_id == ability_type_for_unit) {
                         Actions()->UnitCommand(warpgate, ability_type_for_unit, build_location);
 
-                        if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT) try_adept++;
-                        if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER) try_stalker++;
+                        if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT || ability_type_for_unit == ABILITY_ID::TRAINWARP_ADEPT) try_adept++;
+                        if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER || ability_type_for_unit == ABILITY_ID::TRAINWARP_STALKER) try_stalker++;
                         return true;
                     }
                 }
