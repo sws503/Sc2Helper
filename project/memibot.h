@@ -334,7 +334,13 @@ public:
 		ep.radiuses_.push_back(5.9f);
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
-        branch = 5;
+		//상대 종족
+		branch = 0;
+		for (const auto& p : game_info_.player_info) {
+            if(p.race_requested == 2) {
+                branch = 5;
+            }
+		}
 
 		stage_number = 0;
 		iter_exp = expansions_.begin();
@@ -929,7 +935,7 @@ private:
 
 		if (dist >= 2) // 멀리있으면
 		{
-			if (unit->orders.front().ability_id != ABILITY_ID::UNLOADALLAT_WARPPRISM) 
+			if (unit->orders.front().ability_id != ABILITY_ID::UNLOADALLAT_WARPPRISM)
 			{
 				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, retreat_position); // 움직이고
 				moving = true;

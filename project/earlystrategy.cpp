@@ -27,7 +27,7 @@ bool MEMIBot::EarlyStrategy() {
 
 	//브랜치 지정
 	//디폴트 branch = 2
-	if (flags.status("search_branch") == 1) {
+	if (branch !=5 && flags.status("search_branch") == 1) {
 		// 정찰 실패: 입구를 막았거나 프로브가 죽었음
 		if (flags.status("search_result") == 1) {
 			branch = 2;
@@ -56,7 +56,7 @@ bool MEMIBot::EarlyStrategy() {
     size_t templar_archive_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_TEMPLARARCHIVE);
 
 #ifdef DEBUG
-	std::cout << stage_number << std::endl;
+	std::cout << "branch : " << branch << ", stage : "<< stage_number << std::endl;
 #endif
 
 	if (bases.size()==1) {
