@@ -282,40 +282,41 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 13:
-		// 정찰: 분기 1 결정.
-        if (branch == 0 || branch == 3) {
-            stage_number = 16;
-            return false;
-        }
-        if (branch == 1) {
-            stage_number=14;
-            return false;
-        }
-        return false;
-    case 14:
-        if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_SHIELDBATTERY)>=2) {
-            stage_number=15;
-            return false;
-        }
-        if (observation->GetMinerals()>100){
-            TryBuildStructureNearPylon(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY);
-        }
-        return false;
-    case 15:
-        if (try_stalker>=4) {
-            stage_number++;
-            return false;
-        }
-        return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
-    case 16:
         if (pylons.size()>2) {
-            stage_number=17;
+            stage_number=14;
             return false;
         }
         if (observation->GetMinerals()>100) {
             return TryBuildPylon(startLocation_,20.0);
         }
         return false;
+    case 14:
+		// 정찰: 분기 1 결정.
+        if (branch == 0 || branch == 3) {
+            stage_number = 17;
+            return false;
+        }
+        if (branch == 1) {
+            stage_number=15;
+            return false;
+        }
+        return false;
+    case 15:
+        if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_SHIELDBATTERY)>=2) {
+            stage_number=16;
+            return false;
+        }
+        if (observation->GetMinerals()>100){
+            TryBuildStructureNearPylon(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY);
+        }
+        return false;
+    case 16:
+        if (try_stalker>=4) {
+            stage_number=17;
+            return false;
+        }
+        return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
+
 	case 17:
         if (twilight_council_count>0) {
             stage_number=18;
