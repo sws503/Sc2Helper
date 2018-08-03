@@ -1516,8 +1516,7 @@ private:
 
 			// prioritize probe_forward
 			if (current_tag == probe_forward_tag) {
-				d *= 0.5f;
-				d -= 6.0f;
+				d = (work_probe_forward) ? (d - 4.0f) : (d * 0.5f - 6.0f);
 			}
 
 			if (d < min_distance) {
@@ -2066,7 +2065,8 @@ private:
 			
 			bool reassigned = false;
 			for (const auto& worker : workers) {
-				if (worker == probe_scout || worker == probe_forward) continue;
+				if (worker == probe_scout) continue;
+				if (worker == probe_forward && !work_probe_forward) continue;
 				if (worker->orders.empty()) continue;
 				const UnitOrder& o = worker->orders.front();
 				if (o.ability_id != ABILITY_ID::HARVEST_GATHER) continue;
@@ -2120,12 +2120,13 @@ private:
 		}
 
 		// if few workers are mining minerals, then mine mineral rather than gas
-		if (has_space_for_half_mineral) {
+		if (has_space_for_half_mineral && !EnemyRush) {
 			for (const auto& geyser : geysers) {
 				if (geyser->assigned_harvesters == 0) continue;
 
 				for (const auto& worker : workers) {
-					if (worker == probe_scout || worker == probe_forward) continue;
+					if (worker == probe_scout) continue;
+					if (worker == probe_forward && !work_probe_forward) continue;
 					// pick gas mining workers
 					if (worker->orders.empty()) continue;
 					const UnitOrder& o = worker->orders.front();
@@ -2157,7 +2158,8 @@ private:
 				float min_distance = std::numeric_limits<float>::max();
 
 				for (const auto& worker : workers) {
-					if (worker == probe_scout || worker == probe_forward) continue;
+					if (worker == probe_scout) continue;
+					if (worker == probe_forward && !work_probe_forward) continue;
 					// pick mineral mining workers first.
 					if (worker->orders.empty()) continue;
 					const UnitOrder& o = worker->orders.front();
