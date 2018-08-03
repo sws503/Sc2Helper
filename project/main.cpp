@@ -17,7 +17,7 @@ static const bool ControlTest = false;
 static const std::vector<std::string> map_names( {
 	"CatalystLE", "AcidPlantLE", "DarknessSanctuary",
 	"DreamcatcherLE", "LostAndFoundLE", "Redshift" } );
-static const std::string ControlMap = "MicroMarauder.SC2Map";
+static const std::string ControlMap = "1pTest.SC2Map"; // 1pTest 2pTest
 
 class Human : public sc2::Agent {
 public:

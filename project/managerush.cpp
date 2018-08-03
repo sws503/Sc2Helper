@@ -78,6 +78,14 @@
 		TotalDPS += dps;
 	}*/
 
+struct IsObserver {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_OBSERVER: return true;
+		default: return false;
+		}
+	}
+};
 struct IsAdept {
 	bool operator()(const Unit& unit) {
 		switch (unit.unit_type.ToType()) {
@@ -316,6 +324,18 @@ void MEMIBot::ManageWarpBlink(const Unit * unit)
 	}
 }
 
+bool MEMIBot::IsUnitInUnits(const Unit* unit, Units& units) {
+	if (unit == nullptr) return false;
+	for (const auto& u : units) {
+		if (u->tag == unit->tag) return true;
+	}
+	return false;
+}
+
+void MEMIBot::OrganizeSquad()
+{
+}
+
 void MEMIBot::ManageRush() {
 
 
@@ -325,6 +345,7 @@ void MEMIBot::ManageRush() {
 	Units my_army = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
 
 	Units Adepts = observation->GetUnits(Unit::Alliance::Self, IsAdept());
+	Units Observers = observation->GetUnits(Unit::Alliance::Self, IsObserver());
 	Units AdeptShades = observation->GetUnits(Unit::Alliance::Self, IsAdeptShade());
 	Units WarpPrisms = observation->GetUnits(Unit::Alliance::Self, IsWarpPrism());
 	Units Colossuses = observation->GetUnits(Unit::Alliance::Self, IsColossus());
@@ -340,36 +361,74 @@ void MEMIBot::ManageRush() {
 	Units ShadeNearEnemies;
 	Units ShadeNearArmies;
 
+	///////////////////////////////////////
+	Units Attackers;
+	if (timing_attack)
+	{
+		for (const auto& unit : rangedunits)
+		{
+			Attackers.push_back(unit);
+		}
+		timing_attack = false;
+	}
+
+	Units Guardians;
+	for (const auto & unit : rangedunits)
+	{
+		if (!IsUnitInUnits(unit, Attackers))
+		{
+			Guardians.push_back(unit);
+		}
+	}
+
+	for (const auto & guardian : Guardians)
+	{
+		if (guardian->orders.empty())
+		{
+			Roam_randombase(guardian);
+		}
+	}
+	////////////////////////////////////////////
+
+	for (const auto& unit : Observers)
+	{
+		for (const auto & enemy : enemy_units)
+		{
+
+		}
+	}
+
 	for (const auto& unit : WarpPrisms)
 	{
-		Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 15));
+		Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
 
-		const Unit * passenger = GetPassenger(unit, Colossuses);
-		const Unit * target = GetTarget(unit, NearbyArmies);
-		
+		Point2D enemy_position;
 		Point2D retreat_position;
-		GetPosition(my_army, Unit::Alliance::Self, retreat_position);
 
-		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, retreat_position);
+		GetPosition(NearbyArmies, Unit::Alliance::Enemy, enemy_position);
+		GetPosition(my_army, Unit::Alliance::Self, retreat_position); // TODO : 러쉬하는 유닛들로만 지정
+		
 
-		if (target == nullptr)
+		/*if (NearbyArmies.empty())
 		{
-			Point2D retreat_position;
-			GetPosition(my_army, Unit::Alliance::Self, retreat_position);
-
-			RetreatSmart(unit, retreat_position);
+			if (RetreatSmart(unit, retreat_position)) {}
+			else if(unit->cargo_space_taken > 0)
+			{
+				Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit->pos);
+			}
 		}
 		else
 		{
-			sc2::Point2D KitingLocation = unit->pos;
-			KitingLocation += CalcKitingPosition(retreat_position, target->pos) * 4.0f;
-			RetreatSmart(unit, KitingLocation);
-		}
+			sc2::Point2D KitingLocation = retreat_position;
+			KitingLocation += CalcKitingPosition(enemy_position, retreat_position * 5.0f);
 
-		if (unit->cargo_space_taken > 0)
-		{
-			Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit->pos);
-		}
+			if (RetreatSmart(unit, KitingLocation)) {}
+			else if(unit->cargo_space_taken > 0)
+			{
+				Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit->pos);
+			}
+		}*/
+
 		/*if (unit->cargo_space_taken == unit->cargo_space_max)
 		{
 			if (target == nullptr)
@@ -415,6 +474,9 @@ void MEMIBot::ManageRush() {
 		}
 	}
 
+
+
+	//유닛이라면 기본적으로 해야할 행동 강령
 	for (const auto& unit : rangedunits) {
 		Units NearbyWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyWorker(observation, unit->pos, 7));
 		Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 10));
@@ -426,15 +488,19 @@ void MEMIBot::ManageRush() {
 		const Unit * target = GetTarget(unit, NearbyEnemies);
 		// 스킬은 알아서 피하시구요 *^^*
 		
-
-		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
+		for (const auto& unit : Attackers)
 		{
-			if (MustAttack == true && target == nullptr)
+			if (target == nullptr)
 			{
 				ScoutWithUnit(unit, observation);
 			}
+		}
 
-			if (target != nullptr) // 카이팅은 항상하자
+
+		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
+		{
+			if (EvadeEffect(unit)) {}
+			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				Kiting(unit, target);
 			}
@@ -442,12 +508,8 @@ void MEMIBot::ManageRush() {
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
 		{
-			if (MustAttack == true && target == nullptr)
-			{
-				ScoutWithUnit(unit, observation);
-			}
-
-			if (target != nullptr) // 카이팅은 항상하자
+			if (EvadeEffect(unit)) {}
+			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				Kiting(unit, target);
 			}
@@ -456,7 +518,7 @@ void MEMIBot::ManageRush() {
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_STALKER)
 		{
 
-			ManageWarpBlink(unit);
+			//ManageWarpBlink(unit);
 
 			if (EvadeEffect(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
@@ -467,30 +529,11 @@ void MEMIBot::ManageRush() {
 				}
 				Kiting(unit, target);
 			}
-
-			if (StalkerMustAttack) // 공격타이밍이면
-			{
-				if (target == nullptr)
-				{
-					ScoutWithUnit(unit, observation);
-				}
-			}
-			else if (!StalkerMustAttack && unit->orders.empty()) // 공격타이밍이 아닐때 한가하면
-			{
-				Roam_randombase(unit);
-			}
-
-
-			if (try_stalker >= 11)
-			{
-				StalkerMustAttack = true;
-			}
 		}
 
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_ADEPT)
 		{
-			
 			if (try_adept >= 9)
 			{
 				AdeptMustAttack = true;
@@ -547,11 +590,8 @@ void MEMIBot::ManageRush() {
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
 		{
-			if (target == nullptr)
-			{
-				ScoutWithUnit(unit,  observation);
-			}
-			else // 타겟이 존재할 때
+			if (EvadeEffect(unit)) {}
+			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				Kiting(unit, target);
 			}
@@ -678,13 +718,16 @@ void MEMIBot::AdeptPhaseToLocation(const Unit* unit, Point2D Location , bool & T
 
 void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 {
+	Units NearbyArmies = Observation()->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(Observation(), unit->pos, 30));
+	Units NearMyArmies = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), unit->pos, 15));
+
 	float UnitHealth = unit->health + unit->shield;
 
-	if (UnitHealth < 30)
+	if (UnitHealth < 60)
 	{
 		StalkerBlinkEscape(unit, target);
 	}
-	if (getDpsGROUND(target) == 0.0f)
+	if (getunitsDpsGROUND(NearbyArmies) < 7.0f + NearMyArmies.size() * 1.0f)
 	{
 		StalkerBlinkForward(unit, target);
 	}
