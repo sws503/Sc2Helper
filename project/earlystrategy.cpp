@@ -218,19 +218,11 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 9:
-        for (const auto& gate : gateways) {
-            if (gate->build_progress < 1.0) {
-                continue;
-            }
-            if (observation->GetMinerals() < 125 || observation->GetVespene() < 50) {
-                return false;
-            }
-            if (gate->orders.empty()){
-                return TryBuildUnitChrono(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
-            }
+        if (try_stalker>=2) {
+            stage_number=10;
+            return false;
         }
-        stage_number=10;
-        return false;
+        return TryBuildUnitChrono(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
     case 10:
         if (!cores.front()->orders.empty()) {
             stage_number=11;
@@ -280,23 +272,11 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 15:
-        for (const auto& gate : gateways) {
-            if (gate->build_progress < 1.0) {
-                continue;
-            }
-            if (observation->GetMinerals() < 125 || observation->GetVespene() < 50) {
-                return false;
-            }
-            if (gate->orders.empty()){
-                //return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_STALKER);
-                return TryBuildUnitChrono(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
-            }
+        if (try_stalker>=4) {
+            stage_number++;
+            return false;
         }
-        if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER)<2) {
-               return false;
-        }
-        stage_number=16;
-        return false;
+        return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
     case 16:
         if (pylons.size()>2) {
             stage_number=17;
@@ -807,7 +787,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=223;
             return false;
         }
-        return TryWarpStalker();
+        return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
     case 223:
         if (gateway_count>4) {
 			stage_number=224;
@@ -837,7 +817,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=227;
             return false;
         }
-        return TryWarpStalker();
+        return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
     case 227:
         if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY)).front()->orders.empty()) {
             if (observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY)).front()->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
