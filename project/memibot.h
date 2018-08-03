@@ -10,6 +10,7 @@
 #include <typeinfo>
 #include <list>
 #include "flag.h"
+#include "balance_unit.h"
 
 static inline float round_to_halfint(float f) {
 	return float(std::floor(double(f))+0.5);
@@ -334,8 +335,11 @@ public:
 		ep.radiuses_.push_back(5.9f);
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
+
+		
+
 		//상대 종족
-		branch = 0;
+		branch = 2;
 		for (const auto& p : game_info_.player_info) {
             if(p.race_requested == 2) {
                 branch = 5;
@@ -1751,8 +1755,7 @@ private:
         const ObservationInterface* observation = Observation();
 
         Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
-
-        if (observation->GetFoodUsed()<14) {
+		if (observation->GetFoodUsed()<14) {
             return false;
         }
 
@@ -2458,10 +2461,65 @@ private:
                 TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
             }
             else {
-                TryWarpStalker();
+                TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
             }
         }
         return false;
+    }
+
+    bool TryBuildArmyBalance(){
+        const ObservationInterface* observation = Observation();
+        Units enemy_army = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
+        Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
+        size_t zealot = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ZEALOT);
+        size_t stalker = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER);
+        size_t immortal = CountUnitType(observation, UNIT_TYPEID::PROTOSS_IMMORTAL);
+
+        double enemy_unit_number[1000]={0,};
+        double enemy_unit_all=0;
+
+        if(!enemy_army.empty()&&enemy_army.size()>10){
+			
+			if (!try_initialbalance) {
+				try_initialbalance = true;
+				initial_balance_unit();
+			}
+			initial_balance_unit();
+			initial_build_unit();
+            //if(enemy_army.size()>10){
+            for (const auto& enemy_unit : enemy_army){
+                enemy_unit_number[static_cast<int>(enemy_unit->unit_type)]+=observation->GetUnitTypeData().at(enemy_unit->unit_type).food_required;
+                enemy_unit_all+=observation->GetUnitTypeData().at(enemy_unit->unit_type).food_required;
+            }
+            for (int i=0;i<1000;i++){
+                if(enemy_unit_number[i]!=0){
+                    for(int j=0;j<1000;j++){
+                        if(balance_unit[j][i]==1) build_unit[j]=build_unit[j]+enemy_unit_number[i]/enemy_unit_all;
+                        else if(balance_unit[j][i]==-1) build_unit[j]=build_unit[j]-enemy_unit_number[i]/enemy_unit_all;
+                    }
+                }
+            }
+        }
+            //광전사73 추적자74 불멸자83
+
+        if (build_unit[83]>0.1) {
+            for (const auto& r : robotics) {
+                if (r->orders.empty()) {
+                    TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
+                }
+            }
+        }
+
+        if (build_unit[73]>build_unit[74]) {
+            TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ZEALOT, front_expansion);
+        }
+        else {
+            TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+        }
+        return false;
+
+
+
     }
 
     uint16_t TryBuildCannonNexus(){
@@ -2535,5 +2593,7 @@ private:
 
 	uint16_t try_adept = 0;
     uint16_t try_stalker = 0;
+
+	bool try_initialbalance = false;
 
 };
