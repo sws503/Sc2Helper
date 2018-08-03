@@ -336,6 +336,9 @@ void MEMIBot::OrganizeSquad()
 {
 }
 
+Units Attackers;
+
+
 void MEMIBot::ManageRush() {
 
 
@@ -362,39 +365,32 @@ void MEMIBot::ManageRush() {
 	Units ShadeNearArmies;
 
 	///////////////////////////////////////
-	Units Attackers;
-	if (timing_attack)
-	{
-		for (const auto& unit : rangedunits)
-		{
-			Attackers.push_back(unit);
-		}
-		timing_attack = false;
-	}
 
-	Units Guardians;
-	for (const auto & unit : rangedunits)
-	{
-		if (!IsUnitInUnits(unit, Attackers))
-		{
-			Guardians.push_back(unit);
-		}
-	}
-
-	for (const auto & guardian : Guardians)
-	{
-		if (guardian->orders.empty())
-		{
-			Roam_randombase(guardian);
-		}
-	}
+	
 	////////////////////////////////////////////
 
 	for (const auto& unit : Observers)
 	{
-		for (const auto & enemy : enemy_units)
-		{
 
+		Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
+
+		Point2D enemy_position;
+		Point2D retreat_position;
+
+		GetPosition(NearbyArmies, Unit::Alliance::Enemy, enemy_position);
+		GetPosition(my_army, Unit::Alliance::Self, retreat_position); // TODO : 러쉬하는 유닛들로만 지정
+
+
+		if (NearbyArmies.empty())
+		{
+			RetreatSmart(unit, retreat_position);
+		}
+		else
+		{
+			sc2::Point2D KitingLocation = retreat_position;
+			KitingLocation += CalcKitingPosition(enemy_position, retreat_position * 5.0f);
+
+			RetreatSmart(unit, KitingLocation);
 		}
 	}
 
@@ -488,14 +484,34 @@ void MEMIBot::ManageRush() {
 		const Unit * target = GetTarget(unit, NearbyEnemies);
 		// 스킬은 알아서 피하시구요 *^^*
 		
-		for (const auto& unit : Attackers)
+		if (timing_attack)
+		{
+			Attackers.push_back(unit);
+			std::cout << "FINISH 1 !!" << std::endl;
+			timing_attack = false;
+		}
+
+		Units Guardians;
+		Guardians.clear();
+		if (!IsUnitInUnits(unit, Attackers))
+		{
+			Guardians.push_back(unit);
+		}
+
+		if (IsUnitInUnits(unit, Attackers))
 		{
 			if (target == nullptr)
 			{
 				ScoutWithUnit(unit, observation);
 			}
 		}
-
+		else if (IsUnitInUnits(unit, Guardians))
+		{
+			if (unit->orders.empty())
+			{
+				Roam_randombase(unit);
+			}
+		}
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
 		{
@@ -646,6 +662,10 @@ void  MEMIBot::Roam_randombase(const Unit* unit)
 		float ry = GetRandomScalar();
 		Point2D RoamPosition = Point2D(mp.x + rx * 20, mp.y + ry * 20);
 		
+		if (!Observation()->IsPathable(RoamPosition)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
+		{
+			return;
+		}
 		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, RoamPosition);
 	}
 }

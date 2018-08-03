@@ -427,9 +427,9 @@ public:
 		ManageUpgrades();
 
 		// Control 시작
-		//Defend();
+		Defend();
 		//ManageArmy();
-		//ManageRush();
+		ManageRush();
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
@@ -496,11 +496,11 @@ public:
 				BlinkResearched = true;
 				return;
 			}
-			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
+			/*case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
 				std::cout << "attack1";
 				timing_attack = true;
 				return;
-			}
+			}*/
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2: {
 				std::cout << "attack2";
 				timing_attack = true;
@@ -928,11 +928,15 @@ private:
 
 		if (dist >= 2) // 멀리있으면
 		{
-			if (unit->orders.front().ability_id != ABILITY_ID::UNLOADALLAT_WARPPRISM) 
+			if (!unit->orders.empty())
 			{
-				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, retreat_position); // 움직이고
-				moving = true;
+				if (unit->orders.front().ability_id != ABILITY_ID::UNLOADALLAT_WARPPRISM)
+				{
+					Actions()->UnitCommand(unit, ABILITY_ID::MOVE, retreat_position); // 움직이고
+					moving = true;
+				}
 			}
+			
 		}
 		return moving;
 	}
@@ -2504,7 +2508,7 @@ private:
 	bool early_strategy;
 	bool warpgate_researched;
 	bool BlinkResearched;
-	bool timing_attack;
+	bool timing_attack = false;
 	const Unit* advance_pylon;
 	const Unit* probe_scout;
 	const Unit* pylon_first;
