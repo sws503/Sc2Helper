@@ -245,6 +245,7 @@ bool MEMIBot::LoadUnitWeaponCooldown(const Unit * unit, const Unit* passenger)
 		Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit->pos); // 내려준다
 		return true;
 	}
+	return false;
 }
 
 const Unit * MEMIBot::GetPassenger(const Unit * shuttle, Units & passengers)
