@@ -464,7 +464,8 @@ void MEMIBot::ManageRush() {
 
 	for (const auto& unit : WarpPrisms)
 	{
-		Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
+		Units NearbyArmies = FindUnitsNear(unit, 25, Unit::Alliance::Enemy, IsArmy(observation));
+		//Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
 
 		Point2D enemy_position;
 		Point2D retreat_position;
@@ -542,9 +543,12 @@ void MEMIBot::ManageRush() {
 
 	//유닛이라면 기본적으로 해야할 행동 강령
 	for (const auto& unit : rangedunits) {
-		Units NearbyWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyWorker(observation, unit->pos, 7));
-		Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 10));
-		Units NearbyEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 20)); //각 유닛의 근처에 있는
+		Units NearbyArmies = FindUnitsNear(unit, 10, Unit::Alliance::Enemy, IsArmy(observation));
+		Units NearbyWorkers = FindUnitsNear(unit, 7, Unit::Alliance::Enemy, IsWorker());
+		Units NearbyEnemies = FindUnitsNear(unit, 20, Unit::Alliance::Enemy);
+		//Units NearbyWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyWorker(observation, unit->pos, 7));
+		//Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 10));
+		//Units NearbyEnemies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyEnemies(observation, unit->pos, 20)); //각 유닛의 근처에 있는
 		float TargetAttackRange = 0.0f;
 		float UnitAttackRange = getAttackRangeGROUND(unit);
 
@@ -552,24 +556,27 @@ void MEMIBot::ManageRush() {
 		const Unit * target = GetTarget(unit, NearbyEnemies);
 		// 스킬은 알아서 피하시구요 *^^*
 		
-		if (timing_attack)
+		/*if (timing_attack)
 		{
 			Timeto_warpzealot = true;
-
 			Attackers.push_back(unit);
+
+			// TODO 
 			std::cout << "FINISH 1 !!" << std::endl;
 
 			if (Attackers.size() == rangedunits.size())
 			{
 				timing_attack = false;
 			}
-		}
+		}*/
 
-		if (IsUnitInUnits(unit, Attackers))
+		//if (IsUnitInUnits(unit, Attackers))
+		if(AdeptMustAttack)
 		{
 			if (target == nullptr)
 			{
-				ScoutWithUnit(unit, observation);
+				SmartAttackMove(unit, EnemyBaseLocation);
+				//ScoutWithUnit(unit, observation);
 			}
 		}
 		else
@@ -600,6 +607,10 @@ void MEMIBot::ManageRush() {
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_STALKER)
 		{
+			if (try_stalker >= 45)
+			{
+				AdeptMustAttack = true;
+			}
 
 			//ManageWarpBlink(unit);
 
@@ -812,8 +823,12 @@ void MEMIBot::AdeptPhaseToLocation(const Unit* unit, Point2D Location , bool & T
 
 void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 {
-	Units NearbyArmies = Observation()->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(Observation(), unit->pos, 30));
-	Units NearMyArmies = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), unit->pos, 15));
+	Units NearbyArmies = FindUnitsNear(unit, 30, Unit::Alliance::Enemy, IsArmy(Observation()));
+	Units NearMyArmies = FindUnitsNear(unit, 15, Unit::Alliance::Self, IsArmy(Observation()));
+
+
+	//Units NearbyArmies = Observation()->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(Observation(), unit->pos, 30));
+	//Units NearMyArmies = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), unit->pos, 15));
 
 	float UnitHealth = unit->health + unit->shield;
 
@@ -833,7 +848,12 @@ void MEMIBot::StalkerBlinkEscape(const Unit* unit , const Unit* enemyarmy)
 	Point2D KitingLocation = CalcKitingPosition(unit->pos, enemyarmy->pos);
 	BlinkLocation += KitingLocation * 7.0f;
 
-	Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_BLINK, BlinkLocation);
+	AvailableAbilities abilities = Query()->GetAbilitiesForUnit(unit);
+	for (const auto& ability : abilities.abilities) {
+		if (ability.ability_id == ABILITY_ID::EFFECT_BLINK) {
+			Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_BLINK, BlinkLocation);
+		}
+	}
 }
 
 void MEMIBot::StalkerBlinkForward(const Unit* unit, const Unit* enemyarmy)
@@ -842,7 +862,12 @@ void MEMIBot::StalkerBlinkForward(const Unit* unit, const Unit* enemyarmy)
 	Point2D KitingLocation = CalcKitingPosition(unit->pos, enemyarmy->pos);
 	BlinkLocation -= KitingLocation * 7.0f;
 
-	Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_BLINK, BlinkLocation);
+	AvailableAbilities abilities = Query()->GetAbilitiesForUnit(unit);
+	for (const auto& ability : abilities.abilities) {
+		if (ability.ability_id == ABILITY_ID::EFFECT_BLINK) {
+			Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_BLINK, BlinkLocation);
+		}
+	}
 }
 
 void MEMIBot::FleeKiting(const Unit* unit, const Unit* enemyarmy)
@@ -1057,11 +1082,11 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 
 	const Unit& ENEMYARMY = *enemyarmy;
 
-	Units my_army = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), unit->pos, 10));
-	Units enemy_army = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), enemyarmy->pos, 10));
+	//Units my_army = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), unit->pos, 10));
+	//Units enemy_army = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), enemyarmy->pos, 10));
 
-	float myDps = getunitsDpsGROUND(my_army);
-	float enemyDps = getunitsDpsGROUND(enemy_army);
+	//float myDps = getunitsDpsGROUND(my_army);
+	//float enemyDps = getunitsDpsGROUND(enemy_army);
 
 	//현재 공격중인데 WC가 0이면 냅둔다 or 현재 공격가능하면 공격하고 or 적이 멀리 떨어지면
 
@@ -1086,10 +1111,10 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 		{
 			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
 		}
-		else if (getAttackRangeGROUND(enemyarmy) == unitattackrange && (myDps > (enemyDps + 50)) ) // 압도적이면 앞으로 가서 싸워라 TODO : enemy_army.size() * 5 로 가중치를 둘까요??
-		{
-			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
-		}
+		//else if (getAttackRangeGROUND(enemyarmy) == unitattackrange && (myDps > (enemyDps + 50)) ) // 압도적이면 앞으로 가서 싸워라 TODO : enemy_army.size() * 5 로 가중치를 둘까요??
+		//{
+		//	KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
+		//}
 		else // 적 사정거리가 나보다 짧으면
 		{
 			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 7.0f;

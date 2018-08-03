@@ -343,7 +343,7 @@ public:
 		branch = 2;
 		for (const auto& p : game_info_.player_info) {
             if(p.race_requested == Race::Terran) {
-                //branch = 5;
+                branch = 5;
             }
 		}
 
@@ -421,7 +421,7 @@ public:
             ConvertGateWayToWarpGate();
 		}
 
-		//ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE);
+		ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE);
 
 		if (!early_strategy) {
 			EarlyStrategy();

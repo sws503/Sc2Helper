@@ -69,32 +69,44 @@ void MEMIBot::Defend() {
 	enemyUnitsInRegion.clear();
 	const float base_range = 15;
 
-	for (const auto & base : bases) //기지별로
+	
+	for (const auto & unit : enemy_armies)
 	{
-		for (const auto & unit : enemy_armies)
+		for (const auto & base : bases) //기지별로
 		{
-			/*if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_OVERLORD || unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_OBSERVER || unit->unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_REAPER)
-			{
-			continue;
-			}*/
 			if (Distance2D(base->pos, startLocation_) < 15)
 			{
 				if (Distance2D(base->pos, unit->pos) < 30)
 				{
 					enemyUnitsInRegion.push_back(unit);
+					break;
 				}
 			}
 			else if (Distance2D(base->pos, unit->pos) < base_range)
 			{
 				enemyUnitsInRegion.push_back(unit);
+				break;
 			}
 		}
 	}
+	
+	Units defenders = FindUnitsNear(startLocation_, 50, Unit::Alliance::Self, IsArmy(Observation()));
+	for (const auto & defender : defenders)
+	{
+		const Unit* target = GetTarget(defender, enemyUnitsInRegion);
+		if (target != nullptr)
+		{
+			SmartAttackUnit(defender, target);
+		}
+		
+	}
 
-	for (const auto & base : bases) //기지별로
+	/*for (const auto & base : bases) //기지별로
 	{
 		if (enemyUnitsInRegion.size() > 0)
 		{
+			Units defenders = FindUnitsNear(base, 30, Unit::Alliance::Enemy, IsArmy(Observation()));
+
 			Units defenders = observation->GetUnits(Unit::Alliance::Self, IsNearbyArmies(observation, base->pos, 35));
 
 			
@@ -104,7 +116,7 @@ void MEMIBot::Defend() {
 				SmartAttackUnit(defender, target);
 			}
 		}
-	}
+	}*/
 	/*if (false)
 	{
 		if (Killers.size() < enemyUnitsInRegion.size()) {
