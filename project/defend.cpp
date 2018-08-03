@@ -77,7 +77,7 @@ void MEMIBot::Defend() {
 			{
 			continue;
 			}*/
-			if (Distance2D(base->pos, startLocation_) < 10)
+			if (Distance2D(base->pos, startLocation_) < 15)
 			{
 				if (Distance2D(base->pos, unit->pos) < 30)
 				{

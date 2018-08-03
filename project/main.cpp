@@ -16,12 +16,12 @@ static const int stepsize = 2;
 static const bool Realtime = false;
 static const bool ControlTest = false;
 static const std::vector<std::string> map_names( {
-	"CatalystLE", 
-	"AcidPlantLE", 
+	"CatalystLE",
+	"AcidPlantLE",
 	"DarknessSanctuary",
-	"DreamcatcherLE", 
-	"LostAndFoundLE", 
-	"Redshift", 
+	"DreamcatcherLE",
+	"LostAndFoundLE",
+	"Redshift",
 	"16BitLE"
 	} );
 static const std::string ControlMap = "1pTest.SC2Map"; // 1pTest 2pTest
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Terran, Difficulty::CheatInsane),
+			CreateComputer(Race::Terran, Difficulty::CheatVision),
 			});
 	}
 

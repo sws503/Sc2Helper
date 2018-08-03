@@ -334,7 +334,13 @@ public:
 		ep.radiuses_.push_back(5.9f);
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
-        branch = 2;
+		//상대 종족
+		branch = 2;
+		for (const auto& p : game_info_.player_info) {
+            if(p.race_requested == Race::Terran) {
+                branch = 5;
+            }
+		}
 
 		stage_number = 0;
 		iter_exp = expansions_.begin();
@@ -357,6 +363,7 @@ public:
 		flags.reset();
 
 		enemy_units_scouter_seen.clear();
+		enemy_townhalls_scouter_seen.clear();
 		adept_map.clear();
 
 		//Temporary, we can replace this with observation->GetStartLocation() once implemented
@@ -402,7 +409,9 @@ public:
 		ActionInterface* action = Actions();
 
 		Units units = observation->GetUnits(Unit::Self, IsArmy(observation));
-		ConvertGateWayToWarpGate();
+		if (warpgate_researched) {
+            ConvertGateWayToWarpGate();
+		}
 
 		ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE);
 
@@ -522,6 +531,12 @@ public:
 					break;
 				}
 			}
+			for (auto& it = enemy_townhalls_scouter_seen.begin(); it != enemy_townhalls_scouter_seen.end(); ++it) {
+				if ((*it)->tag == u->tag) {
+					enemy_townhalls_scouter_seen.erase(it);
+					break;
+				}
+			}
 		}
 	}
 
@@ -529,19 +544,31 @@ public:
 	virtual void OnUnitEnterVision(const Unit* u) final override {
 		if (IsStructure(Observation())(*u) && u->alliance == Unit::Alliance::Enemy) {
 			// 전진 게이트 등등
-			if (Distance2D(u->pos, startLocation_) < 50) {
+			if (Distance2D(u->pos, startLocation_) < 50 && flags.status("search_branch") != 1 ){
 				flags.set("search_branch", 1);
 				flags.set("search_result", 3);
-				return;
 			}
 			bool duplicated = false;
 			for (auto& l : enemy_units_scouter_seen) {
 				if (duplicated |= (l->tag == u->tag)) {
 					break;
 				}
+
 			}
 			if (!duplicated) {
 				enemy_units_scouter_seen.push_back(u);
+			}
+		}
+		if (IsTownHall()(*u) && u->alliance == Unit::Alliance::Enemy) {
+			bool duplicated = false;
+			for (auto& l : enemy_townhalls_scouter_seen) {
+				if (duplicated |= (l->tag == u->tag)) {
+					break;
+				}
+
+			}
+			if (!duplicated) {
+				enemy_townhalls_scouter_seen.push_back(u);
 			}
 		}
 	}
@@ -792,6 +819,8 @@ private:
 	bool IsUnitInUnits(const Unit * unit, Units & units);
 
 	void OrganizeSquad();
+
+	void DoGuerrillaWarp(const Unit * unit);
 
 	void ManageRush();
 
@@ -2564,7 +2593,7 @@ private:
                 cannon++;
                 continue;
             }
-            if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, mineral->pos, 10)==0) {
+            if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, mineral->pos, 6)==0) {
                 TryBuildPylon(mineral->pos,6,3);
                 continue;
             }
@@ -2587,6 +2616,7 @@ private:
 	void scoutenemylocation();
 
 	std::list<const Unit *> enemy_units_scouter_seen;
+	std::list<const Unit *> enemy_townhalls_scouter_seen;
 	Point2D recent_probe_scout_location;
 	uint32_t recent_probe_scout_loop;
 
@@ -2610,6 +2640,7 @@ private:
 	const Unit* probe_scout;
 	const Unit* pylon_first;
 	const Unit* probe_forward;
+	int Timeto_warpzealot = false;
 
 	bool work_probe_forward;
 	bool find_enemy_location;

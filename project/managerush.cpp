@@ -94,7 +94,14 @@ struct IsAdept {
 		}
 	}
 };
-
+struct IsStalker {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_STALKER: return true;
+		default: return false;
+		}
+	}
+};
 struct IsAdeptShade {
 	bool operator()(const Unit& unit) {
 		switch (unit.unit_type.ToType()) {
@@ -333,12 +340,71 @@ bool MEMIBot::IsUnitInUnits(const Unit* unit, Units& units) {
 	return false;
 }
 
-void MEMIBot::OrganizeSquad()
+/*void MEMIBot::DoGuerrillaWarp(const Unit * unit)
 {
-}
 
+
+	float x_min = static_cast<float>(Observation()->GetGameInfo().playable_min.x);
+	float x_max = static_cast<float>(Observation()->GetGameInfo().playable_max.x);
+	float y_min = static_cast<float>(Observation()->GetGameInfo().playable_min.y);
+	float y_max = static_cast<float>(Observation()->GetGameInfo().playable_max.y);
+
+	//1 2
+	//3 4
+	Point2D Edge1 = Point2D(x_min, y_max);
+	Point2D Edge2 = Point2D(x_max, y_max);
+	Point2D Edge3 = Point2D(x_min, y_min);
+	Point2D Edge4 = Point2D(x_max, y_min);
+
+	float Distance1 = Distance2D(startLocation_, Edge1);
+	float Distance2 = Distance2D(startLocation_, Edge2);
+	float Distance3 = Distance2D(startLocation_, Edge3);
+	float Distance4 = Distance2D(startLocation_, Edge4);
+
+	MinimumDistance2D
+
+	if(Distance2D(startLocation_, ))
+
+	Units Stalkers = Observation()->GetUnits(Unit::Alliance::Self, IsStalker());
+	const Unit* passenger = GetPassenger(unit, Stalkers);
+
+	if (unit->cargo_space_taken == unit->cargo_space_max) {
+		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
+	}
+	Actions()->UnitCommand(unit, ABILITY_ID::LOAD, passenger);
+
+
+	if (Query()->PathingDistance(unit->pos, Point2D(game_info_.enemy_start_locations.front().x + 3, game_info_.enemy_start_locations.front().y)) < 20) {
+		Actions()->UnitCommand(unit, ABILITY_ID::UNLOADALLAT_WARPPRISM, unit->pos);
+
+		if (unit->cargo_space_taken == 0) {
+			Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
+		}
+	}
+
+	//TODO : enemy_townhalls_scouter_seen 를 사용해서 하기
+
+	const Unit * EnemyExpansionMineral = FindNearestMineralPatch(enemy_expansion);
+	const Unit * EnemyBaseMineral = FindNearestMineralPatch(game_info_.enemy_start_locations.front());
+
+	if (Distance2D(EnemyBaseMineral->pos, unit->pos) <= 15) //적 기지근처에 있으면 적 앞마당으로 분신을 날린다
+	{
+		Point2D HarassLocation = EnemyExpansionMineral->pos;
+		Point2D KitingLocation = CalcKitingPosition(EnemyExpansionMineral->pos, Enemy_front_expansion);
+		HarassLocation += KitingLocation * 1.0f;
+
+		AdeptPhaseToLocation(unit, HarassLocation, Timer, ComeOn);
+	}
+	else // 그 경우가 아니면 일반적으로 적 기지로 분신을 날린다
+	{
+		Point2D HarassLocation = EnemyBaseMineral->pos;
+		Point2D KitingLocation = CalcKitingPosition(EnemyBaseMineral->pos, EnemyBaseLocation);
+		HarassLocation += KitingLocation * 5.0f;
+
+		AdeptPhaseToLocation(unit, HarassLocation, Timer, ComeOn);
+	}
+}*/
 Units Attackers;
-
 
 void MEMIBot::ManageRush() {
 
@@ -349,6 +415,7 @@ void MEMIBot::ManageRush() {
 	Units my_army = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
 
 	Units Adepts = observation->GetUnits(Unit::Alliance::Self, IsAdept());
+	
 	Units Observers = observation->GetUnits(Unit::Alliance::Self, IsObserver());
 	Units AdeptShades = observation->GetUnits(Unit::Alliance::Self, IsAdeptShade());
 	Units WarpPrisms = observation->GetUnits(Unit::Alliance::Self, IsWarpPrism());
@@ -487,6 +554,8 @@ void MEMIBot::ManageRush() {
 		
 		if (timing_attack)
 		{
+			Timeto_warpzealot = true;
+
 			Attackers.push_back(unit);
 			std::cout << "FINISH 1 !!" << std::endl;
 
@@ -662,7 +731,7 @@ void  MEMIBot::Roam_randombase(const Unit* unit)
 		int roam_radius = 10;
 		if (Distance2D(mp, startLocation_) < 5)
 		{
-			roam_radius = 25;
+			roam_radius = 15;
 		}
 
 		Point2D RoamPosition = Point2D(mp.x + rx * roam_radius, mp.y + ry * roam_radius);
@@ -977,6 +1046,8 @@ void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
 
 void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 {
+
+
 	//Distance to target
 	float dist = Distance2D(unit->pos, enemyarmy->pos);
 	float DIST = dist - unit->radius - enemyarmy->radius;
@@ -986,9 +1057,15 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 
 	const Unit& ENEMYARMY = *enemyarmy;
 
+	Units my_army = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), unit->pos, 10));
+	Units enemy_army = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), enemyarmy->pos, 10));
+
+	float myDps = getunitsDpsGROUND(my_army);
+	float enemyDps = getunitsDpsGROUND(enemy_army);
+
 	//현재 공격중인데 WC가 0이면 냅둔다 or 현재 공격가능하면 공격하고 or 적이 멀리 떨어지면
 
-	if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
+	if (Distance2D(unit->pos, enemyarmy->pos) < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
 	{
 		//가만히 있도록 합시다
 	}
@@ -1006,6 +1083,10 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos);
 		}
 		else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
+		{
+			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
+		}
+		else if (getAttackRangeGROUND(enemyarmy) == unitattackrange && (myDps > (enemyDps + 50)) ) // 압도적이면 앞으로 가서 싸워라 TODO : enemy_army.size() * 5 로 가중치를 둘까요??
 		{
 			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
 		}
