@@ -9,6 +9,7 @@
 #include <iterator>
 #include <typeinfo>
 #include <list>
+#include <unordered_map>
 #include "flag.h"
 
 static inline float round_to_halfint(float f) {
@@ -359,6 +360,9 @@ public:
 		base = nullptr;
 		find_enemy_location = false;
 		work_probe_forward = true;
+
+		last_map_renewal = 0;
+		resources_to_nearest_base.clear();
 
 		flags.reset();
 
@@ -1129,12 +1133,12 @@ private:
 	}
 
 	const Unit* FindNearestUnit(const Point2D& start, const Units& units, float max_d = std::numeric_limits<float>::max()) const {
-		float distance = max_d;
+		float distance_squared = (max_d == std::numeric_limits<float>::max()) ? max_d : max_d * max_d;
 		const Unit* target = nullptr;
 		for (const auto& u : units) {
 			float d = DistanceSquared2D(u->pos, start);
-			if (d < distance) {
-				distance = d;
+			if (d < distance_squared) {
+				distance_squared = d;
 				target = u;
 			}
 		}
@@ -1774,8 +1778,12 @@ private:
         return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, UNIT_TYPEID::PROTOSS_PROBE,build_location);
 	}
 
-	void MineIdleWorkers(const Unit* worker, bool reassigning = false) {
+	void MakeBaseResourceMap() {
 		const ObservationInterface* observation = Observation();
+
+		if (last_map_renewal == observation->GetGameLoop() + 1) {
+			return;
+		}
 
 		Filter filter_geyser = [](const Unit& u) {
 			return u.build_progress == 1.0f &&
@@ -1798,6 +1806,52 @@ private:
 			return;
 		}
 
+		last_map_renewal = observation->GetGameLoop() + 1;
+
+		resources_to_nearest_base.clear();
+		resources_to_nearest_base.emplace(NullTag, NullTag);
+		for (const auto& m : minerals) {
+			const Unit* b = FindNearestUnit(m->pos, bases, 11.5);
+			Tag b_tag = (b != nullptr) ? b->tag : NullTag;
+			resources_to_nearest_base.emplace(m->tag, b_tag);
+		}
+
+		for (const auto& g : geysers) {
+			const Unit* b = FindNearestUnit(g->pos, bases, 11.5);
+			Tag b_tag = (b != nullptr) ? b->tag : NullTag;
+			resources_to_nearest_base.emplace(g->tag, b_tag);
+		}
+	}
+
+	void MineIdleWorkers(const Unit* worker, bool reassigning = false) {
+		const ObservationInterface* observation = Observation();
+
+		Filter filter_geyser = [](const Unit& u) {
+			return u.build_progress == 1.0f &&
+				IsUnits({ UNIT_TYPEID::PROTOSS_ASSIMILATOR,
+					UNIT_TYPEID::TERRAN_REFINERY,
+					UNIT_TYPEID::ZERG_EXTRACTOR })(u);
+		};
+
+		Filter filter_bases = [](const Unit& u) {
+			return u.build_progress == 1.0f &&
+				IsTownHall()(u) &&
+				u.ideal_harvesters != 0;
+		};
+
+		Units geysers = observation->GetUnits(Unit::Alliance::Self, filter_geyser);
+		Units bases = observation->GetUnits(Unit::Alliance::Self, filter_bases);
+		Units minerals = observation->GetUnits(Unit::Alliance::Neutral, IsMineral());
+		size_t geysers_size = geysers.size();
+		size_t bases_size = bases.size();
+		size_t minerals_size = minerals.size();
+
+		if (bases.empty()) {
+			return;
+		}
+
+		MakeBaseResourceMap();
+
 		bool has_space_for_half_mineral = true;
 		bool has_space_for_gas = false;
 		bool has_space_for_mineral = false;
@@ -1807,7 +1861,7 @@ private:
 
 		// If there are very few workers gathering minerals.
 		for (const auto& base : bases) {
-			if (base->assigned_harvesters > base->ideal_harvesters / 2 && base->assigned_harvesters >= 4) {
+			if (base->assigned_harvesters >= base->ideal_harvesters / 2 && base->assigned_harvesters >= 4) {
 				has_space_for_half_mineral = false;
 				break;
 			}
@@ -1821,74 +1875,73 @@ private:
 			}
 		}
 		// Search for a base that is missing workers.
-		for (const auto& base : bases) {
-			Units target_geysers = FindUnitsNear(base->pos, 11.5f, geysers);
-			for (const auto& geyser : target_geysers) {
-				if (geyser->assigned_harvesters < geyser->ideal_harvesters) {
-					has_space_for_gas = true;
-					gas_base = base;
-					break;
-				}
+		for (const auto& geyser : geysers) {
+			Tag base_tag = resources_to_nearest_base.at(geyser->tag);
+			if (base_tag == NullTag) continue;
+			if (geyser->assigned_harvesters < geyser->ideal_harvesters) {
+				has_space_for_gas = true;
+				gas_base = observation->GetUnit(base_tag);
+				break;
 			}
-			if (has_space_for_gas) break;
 		}
 
 		float min_distance = std::numeric_limits<float>::max();
 		const Unit* target_resource = nullptr;
 
 		// Search for a base that is missing mineral workers.
-		if (has_space_for_half_mineral) {
-			for (const auto& base : bases) {
+		if (has_space_for_half_mineral && !EnemyRush) {
+			for (const auto& mineral : minerals) {
+				Tag b = resources_to_nearest_base.at(mineral->tag);
+				if (b == NullTag) continue;
+				const Unit* base = observation->GetUnit(b);
+				if (base == nullptr) continue;
 				if (base->assigned_harvesters >= base->ideal_harvesters / 2) continue;
-				Units target_minerals = FindUnitsNear(base->pos, 11.5f, minerals);
-				for (const auto& mineral : target_minerals) {
-					const Unit* current_resource = mineral;
-					float current_distance = DistanceSquared2D(current_resource->pos, worker->pos);
-					if (current_distance < min_distance) {
-						min_distance = current_distance;
-						target_resource = current_resource;
-					}
+				float current_distance = DistanceSquared2D(mineral->pos, worker->pos);
+				if (current_distance < min_distance) {
+					min_distance = current_distance;
+					target_resource = mineral;
 				}
 			}
 		}
+
 		if (target_resource != nullptr) {
 			Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
 			return;
 		}
 
 		// Search for a base that does not have full of gas workers.
-		for (const auto& base : bases) {
-			Units target_geysers = FindUnitsNear(base->pos, 11.5f, geysers);
-			for (const auto& geyser : target_geysers) {
-				if (geyser->assigned_harvesters >= geyser->ideal_harvesters) continue;
-
-				const Unit* current_resource = geyser;
-				float current_distance = DistanceSquared2D(current_resource->pos, worker->pos);
-				if (current_distance < min_distance) {
-					min_distance = current_distance;
-					target_resource = current_resource;
-				}
+		for (const auto& geyser : geysers) {
+			if (geyser->assigned_harvesters >= geyser->ideal_harvesters) continue;
+			Tag b = resources_to_nearest_base.at(geyser->tag);
+			if (b == NullTag) continue;
+			const Unit* base = observation->GetUnit(b);
+			if (base == nullptr) continue;
+			float current_distance = DistanceSquared2D(geyser->pos, worker->pos);
+			if (current_distance < min_distance) {
+				min_distance = current_distance;
+				target_resource = geyser;
 			}
 		}
+
 		if (target_resource != nullptr) {
 			Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
 			return;
 		}
 
 		// Search for a base that does not have full of mineral workers.
-		for (const auto& base : bases) {
+		for (const auto& mineral : minerals) {
+			Tag b = resources_to_nearest_base.at(mineral->tag);
+			if (b == NullTag) continue;
+			const Unit* base = observation->GetUnit(b);
+			if (base == nullptr) continue;
 			if (base->assigned_harvesters >= base->ideal_harvesters) continue;
-
-			Units target_minerals = FindUnitsNear(base->pos, 11.5f, minerals);
-			for (const auto& mineral : target_minerals) {
-				const Unit* current_resource = mineral;
-				float current_distance = DistanceSquared2D(current_resource->pos, worker->pos);
-				if (current_distance < min_distance) {
-					min_distance = current_distance;
-					target_resource = current_resource;
-				}
+			float current_distance = DistanceSquared2D(mineral->pos, worker->pos);
+			if (current_distance < min_distance) {
+				min_distance = current_distance;
+				target_resource = mineral;
 			}
 		}
+
 		if (target_resource != nullptr) {
 			Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
 			return;
@@ -1946,13 +1999,33 @@ private:
 				u.ideal_harvesters != 0;
 		};
 
+
 		Units geysers = observation->GetUnits(Unit::Alliance::Self, filter_geyser);
 		Units bases = observation->GetUnits(Unit::Alliance::Self, filter_bases);
 		Units minerals = observation->GetUnits(Unit::Alliance::Neutral, IsMineral());
 		Units workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
+		size_t geysers_size = geysers.size();
+		size_t bases_size = bases.size();
+		size_t minerals_size = minerals.size();
 
 		if (bases.empty()) {
 			return;
+		}
+
+		MakeBaseResourceMap();
+
+		std::vector<int32_t> base_to_surplus(bases_size, 0);
+		for (int i = 0; i < bases_size; i++) {
+			const Unit * base = bases[i];
+			int32_t surplus = base->assigned_harvesters - base->ideal_harvesters;
+			base_to_surplus[i] = (surplus <= 0) ? 0 : surplus;
+		}
+
+		std::vector<int32_t> geyser_to_surplus(geysers_size, 0);
+		for (int i = 0; i < geysers_size; i++) {
+			const Unit * geyser = geysers[i];
+			int32_t surplus = geyser->assigned_harvesters - geyser->ideal_harvesters;
+			geyser_to_surplus[i] = (surplus <= 0) ? 0 : surplus;
 		}
 
 		bool has_space_for_half_mineral = true;
@@ -1964,7 +2037,7 @@ private:
 
 		// If there are very few workers gathering minerals.
 		for (const auto& base : bases) {
-			if (base->assigned_harvesters > base->ideal_harvesters / 2 && base->assigned_harvesters >= 4) {
+			if (base->assigned_harvesters >= base->ideal_harvesters / 2 && base->assigned_harvesters >= 4) {
 				has_space_for_half_mineral = false;
 				break;
 			}
@@ -1978,106 +2051,70 @@ private:
 			}
 		}
 		// Search for a base that is missing workers.
-		for (const auto& base : bases) {
-			Units target_geysers = FindUnitsNear(base->pos, 11.5f, geysers);
-			for (const auto& geyser : target_geysers) {
-				if (geyser->assigned_harvesters < geyser->ideal_harvesters) {
-					has_space_for_gas = true;
-					gas_base = base;
-					break;
-				}
+		for (const auto& geyser : geysers) {
+			Tag base_tag = resources_to_nearest_base.at(geyser->tag);
+			if (base_tag == NullTag) continue;
+			if (geyser->assigned_harvesters < geyser->ideal_harvesters) {
+				has_space_for_gas = true;
+				gas_base = observation->GetUnit(base_tag);
+				break;
 			}
-			if (has_space_for_gas) break;
 		}
 
 		// if there is a space
 		if (has_space_for_mineral || has_space_for_gas) {
-			// reassign workers that mines resources far from nexuses. (get all)
+			
 			bool reassigned = false;
 			for (const auto& worker : workers) {
 				if (worker == probe_scout || worker == probe_forward) continue;
-				if (worker->orders.empty()) {
-					MineIdleWorkers(worker);
-					reassigned = true;
-					Print("reassigning idle workers");
-					continue;
-				}
+				if (worker->orders.empty()) continue;
 				const UnitOrder& o = worker->orders.front();
-				if (o.ability_id == ABILITY_ID::HARVEST_GATHER) {
-					Tag target_tag = o.target_unit_tag;
-					if (target_tag == NullTag) continue;
-					std::function<bool(const Unit*)> f = [target_tag](const Unit* u) {return u->tag == target_tag;};
+				if (o.ability_id != ABILITY_ID::HARVEST_GATHER) continue;
 
-					// find nexus nearby
-					bool assigned_well = false;
-					for (const auto& base : bases) {
-						Units target_minerals = FindUnitsNear(base->pos, 11.5f, minerals);
-						Units target_geysers = FindUnitsNear(base->pos, 11.5f, geysers);
+				Tag target_tag = o.target_unit_tag;
+				Tag nearest_base_tag = resources_to_nearest_base.count(target_tag) ? resources_to_nearest_base.at(target_tag) : NullTag;
 
-						if (std::find_if(target_minerals.begin(), target_minerals.end(), f) != target_minerals.end() ||
-							std::find_if(target_geysers.begin(), target_geysers.end(), f) != target_geysers.end()) {
-							assigned_well = true;
-							break;
-						}
-					}
-					if (assigned_well) continue;
+				// reassign workers that mines resources far from nexuses. (get all)
+				if (nearest_base_tag == NullTag) {
 					MineIdleWorkers(worker);
 					reassigned = true;
 					Print("reassigning no nexus workers");
+					continue;
 				}
-			}
-			// if reassigned, do checking on next step
-			if (reassigned) return;
 
-			// reassign overflowing workers (minerals)
-			for (const auto& base : bases) {
-				int surplus = base->assigned_harvesters - base->ideal_harvesters;
-				if (surplus <= 0) continue;
+				const Unit* target_resource = observation->GetUnit(target_tag);
+				if (target_resource == nullptr) continue;
 
-				Units target_minerals = FindUnitsNear(base->pos, 11.5f, minerals);
+				// reassign overflowing workers (minerals)
+				if (IsMineral()(*target_resource)) {
+					for (int i = 0; i < bases_size; i++) {
+						const Unit * base = bases[i];
+						int32_t& surplus = base_to_surplus[i];
+						if (base->tag != nearest_base_tag) continue;
+						if (surplus <= 0) break;
 
-				for (const auto& worker : workers) {
-					if (worker == probe_scout || worker == probe_forward) continue;
-					// pick mineral mining workers first.
-					if (worker->orders.empty()) continue;
-					const UnitOrder& o = worker->orders.front();
-					if (o.ability_id != ABILITY_ID::HARVEST_GATHER) continue;
-					const Unit* target_resource = observation->GetUnit(o.target_unit_tag);
-					Tag target_tag = o.target_unit_tag;
-					if (target_resource == nullptr) continue;
-					if (target_tag == NullTag) continue;
-					if (!IsMineral()(*target_resource)) continue;
-
-					std::function<bool(const Unit*)> f = [target_tag](const Unit* u) {return u->tag == target_tag;};
-
-					if (std::find_if(target_minerals.begin(), target_minerals.end(), f) != target_minerals.end()) {
 						MineIdleWorkers(worker);
 						reassigned = true;
 						surplus--;
+						break;
+					}
+				}
+				// reassign overflowing workers (geysers)
+				else {
+					for (int i = 0; i < geysers_size; i++) {
+						const Unit * geyser = geysers[i];
+						int32_t& surplus = geyser_to_surplus[i];
+						if (geyser->tag != target_tag) continue;
 						if (surplus <= 0) break;
+
+						MineIdleWorkers(worker);
+						reassigned = true;
+						surplus--;
+						break;
 					}
 				}
 			}
 
-			// reassign overflowing workers (geysers)
-			for (const auto& geyser : geysers) {
-				int surplus = geyser->assigned_harvesters - geyser->ideal_harvesters;
-				if (surplus <= 0) continue;
-
-				for (const auto& worker : workers) {
-					if (worker == probe_scout || worker == probe_forward) continue;
-					// pick gas mining workers
-					if (worker->orders.empty()) continue;
-					const UnitOrder& o = worker->orders.front();
-					if (o.ability_id != ABILITY_ID::HARVEST_GATHER) continue;
-					if (o.target_unit_tag != geyser->tag) continue;
-
-					MineIdleWorkers(worker);
-					reassigned = true;
-					surplus--;
-					if (surplus <= 0) break;
-				}
-			}
 			// if reassigned, do checking on next step
 			if (reassigned) return;
 		}
@@ -2116,7 +2153,6 @@ private:
 			for (const auto& base : bases) {
 				if (base->assigned_harvesters - 1 < (base->ideal_harvesters / 2)) continue;
 
-				Units target_minerals = FindUnitsNear(base->pos, 11.5f, minerals);
 				const Unit* target_worker = nullptr;
 				float min_distance = std::numeric_limits<float>::max();
 
@@ -2132,8 +2168,8 @@ private:
 					if (target_tag == NullTag) continue;
 					if (!IsMineral()(*target_resource)) continue;
 
-					std::function<bool(const Unit*)> f = [target_tag](const Unit* u) {return u->tag == target_tag;};
-					if (std::find_if(target_minerals.begin(), target_minerals.end(), f) == target_minerals.end()) continue;
+					Tag nearest_base = resources_to_nearest_base.count(target_tag) ? resources_to_nearest_base.at(target_tag) : NullTag;
+					if (base->tag != nearest_base) continue;
 
 					float current_distance = DistanceSquared2D(gas_base->pos, worker->pos);
 					if (current_distance < min_distance) {
@@ -2147,13 +2183,6 @@ private:
 					Print("reassigning for gas workers");
 					return;
 				}
-			}
-		}
-
-		// uncomment this if probe_forward should mine minerals
-		if (work_probe_forward && (has_space_for_mineral || has_space_for_gas)) {
-			if (probe_forward != nullptr && probe_forward->orders.empty()) {
-				MineIdleWorkers(probe_forward);
 			}
 		}
 	}
@@ -2496,6 +2525,8 @@ private:
 
 	void scoutenemylocation();
 
+	uint32_t last_map_renewal;
+	std::unordered_map<Tag, Tag> resources_to_nearest_base;
 	std::list<const Unit *> enemy_units_scouter_seen;
 	Point2D recent_probe_scout_location;
 	uint32_t recent_probe_scout_loop;
