@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Terran, Difficulty::HardVeryHard),
+			CreateComputer(Race::Terran, Difficulty::Easy),
 			});
 	}
 
@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
 		map_name = map_names.at(i) + ".SC2Map";
 		std::cout << map_names.at(i) << std::endl;
 
-		if (ControlTest) 
+		if (ControlTest)
 			map_name = ControlMap;
 
 		if (!coordinator.StartGame(map_name)) {
