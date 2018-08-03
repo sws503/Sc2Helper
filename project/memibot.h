@@ -336,7 +336,7 @@ public:
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
 
-		
+
 
 		//상대 종족
 		branch = 2;
@@ -2467,7 +2467,7 @@ private:
         return false;
     }
 
-    bool TryBuildArmyBalance(){
+    /*bool TryBuildArmyBalance(){
         const ObservationInterface* observation = Observation();
         Units enemy_army = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
         Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
@@ -2479,7 +2479,7 @@ private:
         double enemy_unit_all=0;
 
         if(!enemy_army.empty()&&enemy_army.size()>10){
-			
+
 			if (!try_initialbalance) {
 				try_initialbalance = true;
 				initial_balance_unit();
@@ -2520,7 +2520,7 @@ private:
 
 
 
-    }
+    }*/
 
     uint16_t TryBuildCannonNexus(){
         const ObservationInterface* observation = Observation();
