@@ -491,13 +491,6 @@ void MEMIBot::ManageRush() {
 			timing_attack = false;
 		}
 
-		Units Guardians;
-		Guardians.clear();
-		if (!IsUnitInUnits(unit, Attackers))
-		{
-			Guardians.push_back(unit);
-		}
-
 		if (IsUnitInUnits(unit, Attackers))
 		{
 			if (target == nullptr)
@@ -505,7 +498,7 @@ void MEMIBot::ManageRush() {
 				ScoutWithUnit(unit, observation);
 			}
 		}
-		else if (IsUnitInUnits(unit, Guardians))
+		else
 		{
 			if (unit->orders.empty())
 			{
