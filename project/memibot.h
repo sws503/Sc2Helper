@@ -11,7 +11,7 @@
 #include <list>
 #include <unordered_map>
 #include "flag.h"
-#include "balance_unit.h"
+//#include "balance_unit.h"
 
 static inline float round_to_halfint(float f) {
 	return float(std::floor(double(f))+0.5);
@@ -343,7 +343,7 @@ public:
 		branch = 2;
 		for (const auto& p : game_info_.player_info) {
             if(p.race_requested == Race::Terran) {
-                branch = 5;
+                //branch = 5;
             }
 		}
 
@@ -421,7 +421,7 @@ public:
             ConvertGateWayToWarpGate();
 		}
 
-		ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE);
+		//ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE);
 
 		if (!early_strategy) {
 			EarlyStrategy();
@@ -581,7 +581,13 @@ public:
 		}
 	}
 
-	
+	void SmartAttackMove(const Unit * attacker, const sc2::Point2D & targetPosition)
+	{
+		if (attacker->orders.empty() || attacker->orders.back().ability_id != sc2::ABILITY_ID::ATTACK || Distance2D(attacker->orders.front().target_pos, targetPosition) > 1.0f)
+		{
+			Actions()->UnitCommand(attacker, sc2::ABILITY_ID::ATTACK_ATTACK, targetPosition);
+		}
+	}
 
 	void SmartAttackUnit(const Unit * attacker, const Unit * target)
 	{
@@ -589,7 +595,7 @@ public:
 		{
 			return;
 		}
-		Actions()->UnitCommand(attacker, ABILITY_ID::ATTACK_ATTACK, target);
+		Actions()->UnitCommand(attacker, ABILITY_ID::ATTACK, target);
 	}
 
 	void SmartMove(const Unit * attacker, Unit * target)
@@ -1018,7 +1024,7 @@ private:
 		if (FindEnemyPosition(target_pos)) { //적 기지를 알고있는 상황이면
 			if (Distance2D(unit->pos, target_pos) < 20 && enemy_units.empty()) { //적 유닛이 없는 상황에서 적 기지가 근처에 있으면
 				if (TryFindRandomPathableLocation(unit, target_pos)) { //유닛별로 맵 전체적으로 퍼지는 위치를 배정받고
-					Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos); //그 위치로 간다
+					SmartAttackMove(unit, target_pos); //그 위치로 간다
 					return;
 				}
 			}
@@ -1029,11 +1035,11 @@ private:
 			}
 			// TODO : 가장 마지막으로 본 적의 위치를 target_pos 로 리턴하는 함수를 만들자
 
-			Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos); //위 작업이 끝나면 적 기지를 다시한번 간다
+			SmartAttackMove(unit, target_pos); //위 작업이 끝나면 적 기지를 다시한번 간다
 		}
 		else { //적 기지도 모르면 막 돌아다녀라
 			if (TryFindRandomPathableLocation(unit, target_pos)) {
-				Actions()->UnitCommand(unit, ABILITY_ID::SMART, target_pos);
+				SmartAttackMove(unit, target_pos);
 			}
 		}
 	}

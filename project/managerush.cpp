@@ -439,8 +439,8 @@ void MEMIBot::ManageRush() {
 
 	for (const auto& unit : Observers)
 	{
-
-		Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
+		
+		/*Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
 
 		Point2D enemy_position;
 		Point2D retreat_position;
@@ -459,7 +459,7 @@ void MEMIBot::ManageRush() {
 			KitingLocation += CalcKitingPosition(enemy_position, retreat_position * 5.0f);
 
 			RetreatSmart(unit, KitingLocation);
-		}
+		}*/
 	}
 
 	for (const auto& unit : WarpPrisms)

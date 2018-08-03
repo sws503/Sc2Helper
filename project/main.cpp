@@ -14,7 +14,7 @@ static const std::string current_version = "v0.5";
 static const bool VsHuman = false;
 static const int stepsize = 2;
 static const bool Realtime = false;
-static const bool ControlTest = false;
+static const bool ControlTest = true;
 static const std::vector<std::string> map_names( {
 	"CatalystLE",
 	"AcidPlantLE",
