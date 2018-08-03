@@ -161,7 +161,7 @@ struct IsRanged {
 	bool operator()(const Unit& unit) {
 		auto Weapon = observation_->GetUnitTypeData().at(unit.unit_type).weapons;
 		for (const auto& weapon : Weapon) {
-			if (weapon.range < 1.0f) {
+			if (weapon.range < 2.0f) {
 				return false;
 			}
 		}
@@ -334,7 +334,7 @@ public:
 		ep.radiuses_.push_back(5.9f);
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
-        branch = 5;
+        branch = 2;
 
 		stage_number = 0;
 		iter_exp = expansions_.begin();
@@ -438,7 +438,7 @@ public:
 			}
 			if (probe_forward != nullptr && probe_forward->tag == unit->tag && !work_probe_forward) {
 				if (EnemyRush) {
-					Actions()->UnitCommand(unit, ABILITY_ID::MOVE, startLocation_);
+					SmartMove(unit, startLocation_);
 				}
 				// goto near base or center of mass
 				else {
@@ -459,7 +459,7 @@ public:
 						avg /= static_cast<float>(mystructures_size);
 					}
 					if (DistanceSquared2D(probe_forward->pos, avg) > 200 && advance_pylon != nullptr) {
-						Actions()->UnitCommand(unit, ABILITY_ID::MOVE, avg);
+						SmartMove(unit, avg);
 					}
 				}
 				return;
@@ -546,6 +546,97 @@ public:
 		}
 	}
 
+	
+
+	void SmartAttackUnit(const Unit * attacker, const Unit * target)
+	{
+		if (!attacker->orders.empty() && attacker->orders.front().target_unit_tag == target->tag)
+		{
+			return;
+		}
+		Actions()->UnitCommand(attacker, ABILITY_ID::ATTACK_ATTACK, target);
+	}
+
+	void SmartMove(const Unit * attacker, Unit * target)
+	{
+		if (!attacker->orders.empty() && attacker->orders.front().ability_id == sc2::ABILITY_ID::MOVE && attacker->orders.front().target_unit_tag == target->tag)
+		{
+			return;
+		}
+		Actions()->UnitCommand(attacker, sc2::ABILITY_ID::MOVE, target);
+	}
+
+	void SmartMove(const Unit * attacker, sc2::Point3D & targetPosition)
+	{
+		SmartMove(attacker, Point2D(targetPosition));
+	}
+	void SmartMove(const Unit * attacker, sc2::Point2D & targetPosition)
+	{
+		if (!attacker->orders.empty() && attacker->orders.front().ability_id == sc2::ABILITY_ID::MOVE && Distance2D(attacker->orders.front().target_pos, targetPosition) < 0.01f || Distance2D(attacker->pos, targetPosition) < 0.01f)
+		{
+			return;
+		}
+		if (attacker->is_flying)
+		{
+			sc2::Point2D targetPositionNew = targetPosition;
+			float x_min = static_cast<float>(Observation()->GetGameInfo().playable_min.x);
+			float x_max = static_cast<float>(Observation()->GetGameInfo().playable_max.x);
+			float y_min = static_cast<float>(Observation()->GetGameInfo().playable_min.y);
+			float y_max = static_cast<float>(Observation()->GetGameInfo().playable_max.y);
+
+			if (targetPosition.x < x_min)
+			{
+				if (targetPosition.y > attacker->pos.y)
+				{
+					targetPositionNew = sc2::Point2D(x_min, y_max);
+				}
+				else
+				{
+					targetPositionNew = sc2::Point2D(x_min, y_min);
+				}
+			}
+			else if (targetPosition.x > x_max)
+			{
+				if (targetPosition.y > attacker->pos.y)
+				{
+					targetPositionNew = sc2::Point2D(x_max, y_max);
+				}
+				else
+				{
+					targetPositionNew = sc2::Point2D(x_max, y_min);
+				}
+			}
+			else if (targetPosition.y < y_min)
+			{
+				if (targetPosition.x > attacker->pos.x)
+				{
+					targetPositionNew = sc2::Point2D(x_max, y_min);
+				}
+				else
+				{
+					targetPositionNew = sc2::Point2D(x_min, y_min);
+				}
+			}
+			else if (targetPosition.y > y_max)
+			{
+				if (targetPosition.x > attacker->pos.x)
+				{
+					targetPositionNew = sc2::Point2D(x_max, y_max);
+				}
+				else
+				{
+					targetPositionNew = sc2::Point2D(x_min, y_max);
+				}
+			}
+			Actions()->UnitCommand(attacker, sc2::ABILITY_ID::MOVE, targetPositionNew);
+		}
+		else
+		{
+			Actions()->UnitCommand(attacker, sc2::ABILITY_ID::MOVE, targetPosition);
+		}
+	}
+	
+
 	GameInfo game_info_;
 	std::vector<Point3D> expansions_;
 	Point3D startLocation_;
@@ -560,9 +651,6 @@ public:
 	Point2D ReadyLocation1;
 	Point2D ReadyLocation2;
 	Point2D KitingLocation;
-
-
-
 private:
 	void ChatVersion() {
 		Actions()->SendChat(botname + " " + version);
@@ -684,7 +772,7 @@ private:
 						}
 						else
 						{
-							Actions()->UnitCommand(unit, ABILITY_ID::MOVE, fleeingPos);
+							SmartMove(unit, fleeingPos);
 						}
 						Chat("Enemy Skill Run~");
 						std::cout << "skill : " << ed.friendly_name << std::endl;
@@ -866,13 +954,13 @@ private:
 
 		// 유닛이 하는게 없을 때 공격
 		if (unit->orders.empty()) {
-			Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemy_units.front()->pos);
+			SmartAttackUnit(unit, enemy_units.front());
 			return;
 		}
 
 		//If the unit is doing something besides attacking, make it attack. // 공격을 안하면 공격명령
 		if (unit->orders.front().ability_id != ABILITY_ID::ATTACK) {
-			Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemy_units.front()->pos);
+			SmartAttackUnit(unit, enemy_units.front());
 		}
 	}
 
@@ -899,7 +987,7 @@ private:
 			}
 			else if (!enemy_units.empty()) // 적 유닛이 있는 상황이면 또는 이 유닛이 적 기지 근처에 없는상황이면
 			{
-				Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemy_units.front()); //적 유닛을 공격하러 간다
+				SmartAttackUnit(unit, enemy_units.front());
 				return;
 			}
 			// TODO : 가장 마지막으로 본 적의 위치를 target_pos 로 리턴하는 함수를 만들자
@@ -929,13 +1017,17 @@ private:
 
 		if (dist >= 2) // 멀리있으면
 		{
-			if (!unit->orders.empty())
+			if (!unit->orders.empty()) //뭔가를 하는게
 			{
-				if (unit->orders.front().ability_id != ABILITY_ID::UNLOADALLAT_WARPPRISM)
+				if (unit->orders.front().ability_id != ABILITY_ID::UNLOADALLAT_WARPPRISM) //내리는게 아니라면
 				{
-					Actions()->UnitCommand(unit, ABILITY_ID::MOVE, retreat_position); // 움직이고
+					SmartMove(unit, retreat_position); // 움직여라
 					moving = true;
 				}
+			}
+			else //너가 아무것도 안하고 있었다면
+			{
+				SmartMove(unit, retreat_position); // 움직여라
 			}
 			
 		}
@@ -954,11 +1046,11 @@ private:
 		}
 
 		if (unit->orders.empty() && dist > 14) {
-			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, retreat_position);
+			SmartMove(unit, retreat_position);
 		}
 		else if (!unit->orders.empty() && dist > 14) {
 			if (unit->orders.front().ability_id != ABILITY_ID::MOVE) {
-				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, retreat_position);
+				SmartMove(unit, retreat_position);
 			}
 		}
 	}

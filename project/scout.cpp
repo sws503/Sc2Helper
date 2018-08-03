@@ -113,7 +113,7 @@ void MEMIBot::scout_all() {
 	// 정찰 : 분기 1, 2 정찰 시작
 	if (flags.status("search_branch") == 0 && find_enemy_location) {
 		if (probe_scout != nullptr && (probe_scout->orders.empty() || EnemyBaseLocation == probe_scout->orders.front().target_pos))
-			Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, EnemyBaseLocation);
+			SmartMove(probe_scout, EnemyBaseLocation);
 		
 		// trace probe_scout
 		if (DistanceSquared2D(recent_probe_scout_location, probe_scout->pos) > 4 || recent_probe_scout_location == Point2D(0, 0)) {
@@ -215,7 +215,7 @@ void MEMIBot::scoutenemylocation() {
 
 	if (forge_count + gateway_count>0 && probe_scout != nullptr && pylons.size()>0) {
 		if (probe_scout->orders.empty() || (game_info_.enemy_start_locations.front()) != probe_scout->orders.front().target_pos)
-			Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, game_info_.enemy_start_locations.front());
+			SmartMove(probe_scout, game_info_.enemy_start_locations.front());
 		if (!enemy_townhalls.empty() || enemy_structures.size()>2 || game_info_.enemy_start_locations.size() == 1) {
 			if (Distance2D(probe_scout->pos, game_info_.enemy_start_locations.front())<10 || game_info_.enemy_start_locations.size() == 1) {
 				find_enemy_location = true;
@@ -270,7 +270,7 @@ void MEMIBot::scoutprobe() {
 		return;
 	}
 	if (probe_scout->orders.empty() || tag_pos != probe_scout->orders.front().target_pos)
-		Actions()->UnitCommand(probe_scout, ABILITY_ID::MOVE, tag_pos);
+		SmartMove(probe_scout, tag_pos);
 	// 도착하면 다음 확장으로
 	if (DistanceSquared2D(probe_scout->pos, tag_pos)<4) {
 		iter_exp++;

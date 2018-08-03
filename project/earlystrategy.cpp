@@ -27,6 +27,7 @@ bool MEMIBot::EarlyStrategy() {
 
 	//브랜치 지정
 	//디폴트 branch = 2
+	
 	if (flags.status("search_branch") == 1) {
 		// 정찰 실패: 입구를 막았거나 프로브가 죽었음
 		if (flags.status("search_result") == 1) {
@@ -357,7 +358,7 @@ bool MEMIBot::EarlyStrategy() {
         return false;
     case 22:
 		work_probe_forward = false;
-        Actions()->UnitCommand(probe_forward, ABILITY_ID::MOVE, advance_pylon_location);
+		SmartMove(probe_forward, advance_pylon_location);
         if (TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::ADEPTPIERCINGATTACK)) {
             stage_number=23;
             return false;

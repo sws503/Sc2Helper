@@ -66,11 +66,6 @@ void MEMIBot::Defend() {
 		selected = true;
 	}
 
-	for (const auto & unit : two_stalkers)
-	{
-
-	}
-
 	enemyUnitsInRegion.clear();
 	const float base_range = 15;
 
@@ -101,15 +96,15 @@ void MEMIBot::Defend() {
 		if (enemyUnitsInRegion.size() > 0)
 		{
 			Units defenders = observation->GetUnits(Unit::Alliance::Self, IsNearbyArmies(observation, base->pos, 35));
+
+			
 			for (const auto & defender : defenders)
 			{
-				const Unit * target = GetTarget(defender, enemyUnitsInRegion);
-
-				Kiting(defender, target);
+				const Unit* target = GetTarget(defender, enemyUnitsInRegion);
+				SmartAttackUnit(defender, target);
 			}
 		}
 	}
-
 	/*if (false)
 	{
 		if (Killers.size() < enemyUnitsInRegion.size()) {

@@ -489,7 +489,11 @@ void MEMIBot::ManageRush() {
 		{
 			Attackers.push_back(unit);
 			std::cout << "FINISH 1 !!" << std::endl;
-			timing_attack = false;
+
+			if (Attackers.size() == rangedunits.size())
+			{
+				timing_attack = false;
+			}
 		}
 
 		if (IsUnitInUnits(unit, Attackers))
@@ -638,7 +642,6 @@ void MEMIBot::ManageRush() {
 		{
 			Kiting(unit, target);
 		}*/
-
 	}
 }
 
@@ -650,17 +653,25 @@ void  MEMIBot::Roam_randombase(const Unit* unit)
 	bool good_position = false;
 	if (!bases.empty())
 	{
-		Point2D mp = bases.front()->pos;
+		const Unit * randombase;
+		GetRandomUnit(randombase, observation, bases);
+		Point2D mp = randombase->pos;
 
 		float rx = GetRandomScalar();
 		float ry = GetRandomScalar();
-		Point2D RoamPosition = Point2D(mp.x + rx * 20, mp.y + ry * 20);
+		int roam_radius = 10;
+		if (Distance2D(mp, startLocation_) < 5)
+		{
+			roam_radius = 25;
+		}
+
+		Point2D RoamPosition = Point2D(mp.x + rx * roam_radius, mp.y + ry * roam_radius);
 		
 		if (!Observation()->IsPathable(RoamPosition)) // ÀÌµ¿ÇÒ À§Ä¡°¡ Áö»óÀ¯´ÖÀÌ °¥ ¼ö ¾ø´Â °÷ÀÌ¶ó¸é
 		{
 			return;
 		}
-		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, RoamPosition);
+		SmartMove(unit, RoamPosition);
 	}
 }
 
@@ -799,7 +810,7 @@ void MEMIBot::FleeKiting(const Unit* unit, const Unit* enemyarmy)
 		{
 		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
 		}*/
-		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+		SmartMove(unit, KitingLocation);
 	}
 }
 
@@ -814,9 +825,13 @@ void MEMIBot::DistanceKiting(const Unit* unit, const Unit* enemyarmy, const Unit
 
 	const Unit& ENEMYARMY = *enemyarmy;
 
-	if (unit->weapon_cooldown == 0.0f)
+	if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // ÇöÀç °ø°ÝÀÌ ¼±µô»óÈ²ÀÓ
 	{
-		Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemyarmy->pos);
+		//°¡¸¸È÷ ÀÖµµ·Ï ÇÕ½Ã´Ù
+	}
+	else if (unit->weapon_cooldown == 0.0f)
+	{
+		SmartAttackUnit(unit, enemyarmy);
 	}
 	else // °Å¸®°¡ °¡±î¿ö¼­ µµ¸Á°¡¾ß ÇÏ´Â »óÈ²
 	{
@@ -837,7 +852,7 @@ void MEMIBot::DistanceKiting(const Unit* unit, const Unit* enemyarmy, const Unit
 		}
 		else
 		{
-			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+			SmartMove(unit, KitingLocation);
 		}
 	}
 }
@@ -853,9 +868,13 @@ void MEMIBot::FrontKiting(const Unit* unit, const Unit* enemyarmy) // ÀÏ²Û °ø°ÝÇ
 
 	const Unit& ENEMYARMY = *enemyarmy;
 
-	if (unit->weapon_cooldown == 0.0f)
+	if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // ÇöÀç °ø°ÝÀÌ ¼±µô»óÈ²ÀÓ
 	{
-		Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemyarmy->pos);
+		//°¡¸¸È÷ ÀÖµµ·Ï ÇÕ½Ã´Ù
+	}
+	else if (unit->weapon_cooldown == 0.0f)
+	{
+		SmartAttackUnit(unit, enemyarmy);
 	}
 	else if (DIST > 3.0f) // °Å¸®°¡ ¸Ö¾î¼­ Ãß°ÝÇØ¾ß ÇÏ´Â »óÈ²
 	{
@@ -880,7 +899,7 @@ void MEMIBot::FrontKiting(const Unit* unit, const Unit* enemyarmy) // ÀÏ²Û °ø°ÝÇ
 		{
 		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
 		}*/
-		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+		SmartMove(unit, KitingLocation);
 	}
 	else // °Å¸®°¡ °¡±î¿ö¼­ µµ¸Á°¡¾ß ÇÏ´Â »óÈ²
 	{
@@ -905,7 +924,7 @@ void MEMIBot::FrontKiting(const Unit* unit, const Unit* enemyarmy) // ÀÏ²Û °ø°ÝÇ
 		{
 		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
 		}*/
-		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+		SmartMove(unit, KitingLocation);
 	}
 }
 
@@ -922,9 +941,13 @@ void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
 
 	const Unit& ENEMYARMY = *enemyarmy;
 
-	if ( (unit->weapon_cooldown == 0.0f && (getAttackRangeGROUND(enemyarmy) < unitattackrange)) || DIST > getAttackRangeGROUND(enemyarmy) + 4) //Àû °ø°Ý»ç°Å¸®°¡ ³ªº¸´Ù ÂªÀ¸¸é °ø°ÝÇÑ´Ù
+	if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // ÇöÀç °ø°ÝÀÌ ¼±µô»óÈ²ÀÓ
 	{
-		Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemyarmy->pos);
+		//°¡¸¸È÷ ÀÖµµ·Ï ÇÕ½Ã´Ù
+	}
+	else if ((unit->weapon_cooldown == 0.0f && (getAttackRangeGROUND(enemyarmy) < unitattackrange)) || DIST > getAttackRangeGROUND(enemyarmy) + 4) //Àû °ø°Ý»ç°Å¸®°¡ ³ªº¸´Ù ÂªÀ¸¸é °ø°ÝÇÑ´Ù
+	{
+		SmartAttackUnit(unit, enemyarmy);
 	}
 	else
 	{
@@ -948,7 +971,7 @@ void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
 		{
 			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
 		}*/
-		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+		SmartMove(unit, KitingLocation);
 	}
 }
 
@@ -963,9 +986,15 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 
 	const Unit& ENEMYARMY = *enemyarmy;
 
-	if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
+	//ÇöÀç °ø°ÝÁßÀÎµ¥ WC°¡ 0ÀÌ¸é ³ÀµÐ´Ù or ÇöÀç °ø°Ý°¡´ÉÇÏ¸é °ø°ÝÇÏ°í or ÀûÀÌ ¸Ö¸® ¶³¾îÁö¸é
+
+	if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // ÇöÀç °ø°ÝÀÌ ¼±µô»óÈ²ÀÓ
 	{
-		Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemyarmy->pos);
+		//°¡¸¸È÷ ÀÖµµ·Ï ÇÕ½Ã´Ù
+	}
+	else if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
+	{
+		SmartAttackUnit(unit, enemyarmy);
 	}
 	else
 	{
@@ -1001,7 +1030,7 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 		{
 		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
 		}*/
-		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+		SmartMove(unit, KitingLocation);
 	}
 }
 
@@ -1035,7 +1064,7 @@ void MEMIBot::EmergencyKiting(const Unit* unit, const Unit* enemyarmy)
 	{
 		KitingLocation = KitingLocation2;
 	}
-	Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+	SmartMove(unit, KitingLocation);
 }
 
 bool MEMIBot::GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D& position) {
@@ -1075,10 +1104,10 @@ void MEMIBot::KiteEnemy(const Unit* unit, Units enemy_army, Units enemy_units, P
 	else if (!enemy_army.empty()) //Àû ±º´ë°¡ ÀÖÀ» ¶§
 	{
 		if (unit->weapon_cooldown == 0.0f || !enemiesnear) {
-			Actions()->UnitCommand(unit, ABILITY_ID::ATTACK, enemy_army.front()->pos);
+			SmartAttackUnit(unit, enemy_army.front());
 		}
 		else {
-			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
+			SmartMove(unit, KitingLocation);
 		}
 	}
 }
@@ -1260,7 +1289,6 @@ const float MEMIBot::getDpsGROUND(const Unit* target) const
 
 const float MEMIBot::getAttackRangeGROUND(const Unit* target) const
 {
-
 	const ObservationInterface* observation = Observation();
 	sc2::Weapon groundWeapons;
 	sc2::Weapon AirWeapons;
