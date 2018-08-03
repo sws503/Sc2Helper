@@ -39,8 +39,6 @@ bool MEMIBot::EarlyStrategy() {
 	std::cout << stage_number << std::endl;
 #endif
 
-
-
 	if (bases.size()==1) {
         if (observation->GetFoodWorkers()<23) {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
@@ -100,8 +98,21 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildPylonIfNeeded(2);
         }
         if (stage_number>228) {
-            //TryBuildAssimilator();
-            TryBuildArmyBranch5();
+            if (bases.size()*2<assimilator_count+2) {
+                TryBuildAssimilator();
+            }
+            if (TryBuildCannonNexus()<bases.size()){
+                return false;
+            }
+            if (observation->GetFoodUsed()>150) {
+                TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+            }
+            if (warpprisms_phasing.empty()) {
+                TryBuildArmyBranch5();
+            }
+            else {
+                TryWarpUnitPrism(ABILITY_ID::TRAINWARP_ZEALOT);
+            }
 
         }
 	}
@@ -258,6 +269,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=14;
             return false;
         }
+        return false;
     case 14:
         if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_SHIELDBATTERY)>=2) {
             stage_number=15;
@@ -340,6 +352,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=23;
             return false;
         }
+        return false;
     case 23:
         if (observation->GetMinerals() < 100 || observation->GetVespene() < 50) {
             return false;
@@ -421,7 +434,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=31;
             return false;
         }
-        TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+        return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
     case 31:
         if (bases.size()>=3) {
             stage_number=32;
@@ -558,18 +571,14 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=102;
             return false;
         }
-        if (observation->GetMinerals()>100) {
-            return TryBuildPylon(startLocation_,20.0);
-        }
-        return false;
+        return TryBuildPylon(startLocation_,20.0);
     case 102:
         if (robotics_facility_count>=1) {
             stage_number=103;
             return false;
         }
-        if (observation->GetMinerals() > 200 && observation->GetVespene() > 100) {
-            TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
-        }
+        return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+
     case 103:
         if (robotics_facility_count<1) {
             stage_number=102;
@@ -579,10 +588,7 @@ bool MEMIBot::EarlyStrategy() {
 			stage_number=104;
 			return false;
 		}
-		if (observation->GetMinerals()>150) {
-            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
-		}
-		return false;
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
     case 104:
         //TryChronoboost(cores.front());
         for (const auto& gate : gateways) {
@@ -619,15 +625,13 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=108;
             return false;
         }
-        if (observation->GetMinerals()>100) {
-            return TryBuildPylon(startLocation_,20.0);
-        }
-        return false;
+        return TryBuildPylon(startLocation_,20.0);
 	case 108:
 	    if (CountUnitType(UNIT_TYPEID::PROTOSS_WARPPRISM)<1) {
             stage_number=109;
             return false;
 	    }
+	    return false;
 	case 109:
 	    if (warpprisms.empty()) {
             stage_number=110;
@@ -641,8 +645,7 @@ bool MEMIBot::EarlyStrategy() {
             return false;
 	    }
 	case 110:
-        TryWarpUnitPrism(ABILITY_ID::TRAINWARP_STALKER);
-        return false;
+        return TryWarpUnitPrism(ABILITY_ID::TRAINWARP_STALKER);
 
 	//branch 5
 	case 200:
@@ -652,8 +655,7 @@ bool MEMIBot::EarlyStrategy() {
                 return false;
             }
 		}
-		TrybuildFirstPylon();
-		return false;
+		return TrybuildFirstPylon();
 	case 201:
 		if (gateway_count>0) {
 			stage_number=202;
@@ -855,6 +857,9 @@ bool MEMIBot::EarlyStrategy() {
 			return false;
 		}
 		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
+
+    default:
+        return false;
 
 
 

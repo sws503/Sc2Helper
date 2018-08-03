@@ -356,7 +356,7 @@ public:
 
 		flags.reset();
 
-		// 본진 좌표가 (0,0)으로 나오는 것 수정. 
+		// 본진 좌표가 (0,0)으로 나오는 것 수정.
 		for (auto& e : expansions_) {
 			if (Point2D(e) == Point2D(0, 0)) {
 				e.x = startLocation_.x;
@@ -427,9 +427,9 @@ public:
 		ManageUpgrades();
 
 		// Control 시작
-		Defend();
+		//Defend();
 		//ManageArmy();
-		ManageRush();
+		//ManageRush();
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
@@ -544,7 +544,7 @@ public:
 			}
 		}
 	}
-	
+
 	GameInfo game_info_;
 	std::vector<Point3D> expansions_;
 	Point3D startLocation_;
@@ -2141,7 +2141,7 @@ private:
 
 		// uncomment this if probe_forward should mine minerals
 
-		
+
 		if (work_probe_forward && (has_space_for_mineral || has_space_for_gas)) {
 			if (probe_forward != nullptr && probe_forward->orders.empty()) {
 				MineIdleWorkers(probe_forward);
@@ -2153,9 +2153,10 @@ private:
 		const ObservationInterface* observation = Observation();
 		size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
 		auto upgrades = observation->GetUpgrades();
+		if (branch == 0 || branch == 1) {
 		TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES,UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL,UPGRADE_ID::ADEPTPIERCINGATTACK);
 		TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::EXTENDEDTHERMALLANCE);
-
+		}
 		//TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
 		if (1) {
             if (forge_count ==0) {
@@ -2313,10 +2314,17 @@ private:
             return false;
         }
 
-        const PowerSource& random_power_source = GetRandomEntry(power_sources);
+        PowerSource& random_power_source = GetRandomEntry(power_sources);
+        for (const auto& p : power_sources) {
+            if (Distance2D(random_power_source.position, front_expansion)>Distance2D(p.position, front_expansion)) {
+                random_power_source = p;
+            }
+        }
+        /*const PowerSource& random_power_source = GetRandomEntry(power_sources);
+        const PowerSource& pylon = FindNearestUnit(front_expansion, power_sources);
         if (Distance2D(random_power_source.position,front_expansion)>20) {
             return false;
-        }
+        }*/
 
         float radius = random_power_source.radius;
         float rx = GetRandomScalar();
@@ -2441,6 +2449,36 @@ private:
             }
         }
         return false;
+    }
+
+    uint16_t TryBuildCannonNexus(){
+        const ObservationInterface* observation = Observation();
+        Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+        Units pylons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
+        uint16_t cannon = 0;
+
+        for (const auto& b :bases) {
+            const Unit* mineral = FindNearestMineralPatch(b->pos);
+            if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PHOTONCANNON, mineral->pos, 6)>0 && CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PHOTONCANNON, b->pos, 10)>0) {
+                cannon++;
+                continue;
+            }
+            if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, mineral->pos, 10)==0) {
+                TryBuildPylon(mineral->pos,6,3);
+                continue;
+            }
+            else {
+                float rx = GetRandomScalar();
+                float ry = GetRandomScalar();
+                const Unit* pylon = FindNearestUnit(mineral->pos, pylons);
+                Point2D build_location = Point2D(pylon->pos.x + rx * 7, pylon->pos.y + ry * 7);
+                if (Distance2D(build_location,mineral->pos)>3) {
+                    continue;
+                }
+                TryBuildStructure(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+            }
+        }
+        return cannon;
     }
 
 	void scout_all();
