@@ -206,6 +206,8 @@ struct IsArmy {
 		case UNIT_TYPEID::ZERG_EGG: return false;
 		case UNIT_TYPEID::TERRAN_MULE: return false;
 		case UNIT_TYPEID::TERRAN_NUKE: return false;
+		case UNIT_TYPEID::PROTOSS_WARPPRISM: return false;
+		case UNIT_TYPEID::PROTOSS_WARPPRISMPHASING: return false;
 		default: return true;
 		}
 	}
@@ -494,6 +496,21 @@ public:
 				BlinkResearched = true;
 				return;
 			}
+			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
+				std::cout << "attack1";
+				timing_attack = true;
+				return;
+			}
+			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2: {
+				std::cout << "attack2";
+				timing_attack = true;
+				return;
+			}
+			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL3: {
+				std::cout << "attack3";
+				timing_attack = true;
+				return;
+			}
             case UPGRADE_ID::WARPGATERESEARCH: {
                 warpgate_researched = true;
                 return;
@@ -652,7 +669,7 @@ private:
 							fleeingPos = Point2D(staging_location_);
 						}
 
-						if (EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHED)
+						if (EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHED || EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHING)
 						{
 							Units bases = Observation()->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 
@@ -682,6 +699,10 @@ private:
 	void Defend();
 
 	void ManageWarpBlink(const Unit * unit);
+
+	bool IsUnitInUnits(const Unit * unit, Units & units);
+
+	void OrganizeSquad();
 
 	void ManageRush();
 
@@ -900,25 +921,20 @@ private:
 		}
 	}
 
-	void RetreatSmart(const Unit* unit, Point2D retreat_position) {
+	bool RetreatSmart(const Unit* unit, Point2D retreat_position) {
+		bool moving = false;
+
 		float dist = Distance2D(unit->pos, retreat_position);
 
-		if (dist < 3) {
-			if (unit->orders.empty()) {
-				return;
-			}
-			Actions()->UnitCommand(unit, ABILITY_ID::STOP);
-			return;
-		}
-
-		if (unit->orders.empty() && dist > 4) {
-			Actions()->UnitCommand(unit, ABILITY_ID::MOVE, retreat_position);
-		}
-		else if (!unit->orders.empty() && dist > 4) {
-			if (unit->orders.front().ability_id != ABILITY_ID::MOVE) {
-				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, retreat_position);
+		if (dist >= 2) // 멀리있으면
+		{
+			if (unit->orders.front().ability_id != ABILITY_ID::UNLOADALLAT_WARPPRISM) 
+			{
+				Actions()->UnitCommand(unit, ABILITY_ID::MOVE, retreat_position); // 움직이고
+				moving = true;
 			}
 		}
+		return moving;
 	}
 
 	void RetreatWithUnit(const Unit* unit, Point2D retreat_position) {
@@ -2488,6 +2504,7 @@ private:
 	bool early_strategy;
 	bool warpgate_researched;
 	bool BlinkResearched;
+	bool timing_attack;
 	const Unit* advance_pylon;
 	const Unit* probe_scout;
 	const Unit* pylon_first;
