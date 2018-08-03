@@ -2474,7 +2474,7 @@ private:
                 cannon++;
                 continue;
             }
-            if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, mineral->pos, 10)==0) {
+            if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, mineral->pos, 6)==0) {
                 TryBuildPylon(mineral->pos,6,3);
                 continue;
             }
