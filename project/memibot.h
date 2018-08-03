@@ -2210,11 +2210,17 @@ private:
 					continue;
 				}
 
+				const Unit* nearest_base = observation->GetUnit(nearest_base_tag);
 				const Unit* target_resource = observation->GetUnit(target_tag);
 				if (target_resource == nullptr) continue;
+				if (nearest_base == nullptr) continue;
 
 				// reassign overflowing workers (minerals)
 				if (IsMineral()(*target_resource)) {
+					if (nearest_base->assigned_harvesters - nearest_base->ideal_harvesters <= 0) continue;
+					MineIdleWorkers(worker);
+					return;
+					/*
 					for (int i = 0; i < bases_size; i++) {
 						const Unit * base = bases[i];
 						int32_t& surplus = base_to_surplus[i];
@@ -2226,9 +2232,14 @@ private:
 						surplus--;
 						break;
 					}
+					*/
 				}
 				// reassign overflowing workers (geysers)
 				else {
+					if (target_resource->assigned_harvesters - target_resource->ideal_harvesters <= 0) continue;
+					MineIdleWorkers(worker);
+					return;
+					/*
 					for (int i = 0; i < geysers_size; i++) {
 						const Unit * geyser = geysers[i];
 						int32_t& surplus = geyser_to_surplus[i];
@@ -2240,11 +2251,12 @@ private:
 						surplus--;
 						break;
 					}
+					*/
 				}
 			}
 
 			// if reassigned, do checking on next step
-			if (reassigned) return;
+			//if (reassigned) return;
 		}
 
 		// if few workers are mining minerals, then mine mineral rather than gas
