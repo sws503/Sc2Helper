@@ -408,7 +408,9 @@ public:
 		ActionInterface* action = Actions();
 
 		Units units = observation->GetUnits(Unit::Self, IsArmy(observation));
-		ConvertGateWayToWarpGate();
+		if (warpgate_researched) {
+            ConvertGateWayToWarpGate();
+		}
 
 		ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE);
 
