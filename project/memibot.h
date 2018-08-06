@@ -365,7 +365,7 @@ public:
 		find_enemy_location = false;
 		work_probe_forward = true;
 
-		last_map_renewal = 0;
+		last_map_renewal = Observation()->GetGameLoop();
 		resources_to_nearest_base.clear();
 
 		flags.reset();
@@ -531,7 +531,32 @@ public:
         }
     }
 
+	virtual void OnBuildingConstructionComplete(const Unit* u) final override {
+		std::cout << UnitTypeToName(u->unit_type.ToType()) << std::endl;
+		if (u->alliance == Unit::Alliance::Self) {
+			switch (u->unit_type.ToType()) {
+			default:
+				break;
+			}
+		}
+	}
+
+	// only allies. also geyser probes, passengers etc.
+	virtual void OnUnitCreated(const Unit* u) final override {
+		switch (u->unit_type.ToType()) {
+		default:
+			break;
+		}
+	}
+
 	virtual void OnUnitDestroyed(const Unit* u) final override {
+		std::cout << UnitTypeToName(u->unit_type.ToType()) << std::endl;
+		if (u->alliance == Unit::Alliance::Self) {
+			switch (u->unit_type.ToType()) {
+			default:
+				break;
+			}
+		}
 		if (u->alliance == Unit::Alliance::Enemy) {
 			for (auto& it = enemy_units_scouter_seen.begin(); it != enemy_units_scouter_seen.end(); ++it) {
 				if ((*it)->tag == u->tag) {
@@ -548,11 +573,11 @@ public:
 		}
 	}
 
-	// add buildings we saw
+	// only enemies: add buildings we saw
 	virtual void OnUnitEnterVision(const Unit* u) final override {
-		if (IsStructure(Observation())(*u) && u->alliance == Unit::Alliance::Enemy) {
+		if (IsStructure(Observation())(*u)) {
 			// 전진 게이트 등등
-			if (Distance2D(u->pos, startLocation_) < 50 && flags.status("search_branch") != 1 ){
+			if (Distance2D(u->pos, startLocation_) < 50 && flags.status("search_branch") != 1) {
 				flags.set("search_branch", 1);
 				flags.set("search_result", 3);
 			}
@@ -561,19 +586,17 @@ public:
 				if (duplicated |= (l->tag == u->tag)) {
 					break;
 				}
-
 			}
 			if (!duplicated) {
 				enemy_units_scouter_seen.push_back(u);
 			}
 		}
-		if (IsTownHall()(*u) && u->alliance == Unit::Alliance::Enemy) {
+		if (IsTownHall()(*u)) {
 			bool duplicated = false;
 			for (auto& l : enemy_townhalls_scouter_seen) {
 				if (duplicated |= (l->tag == u->tag)) {
 					break;
 				}
-
 			}
 			if (!duplicated) {
 				enemy_townhalls_scouter_seen.push_back(u);
@@ -1906,6 +1929,11 @@ private:
 			return;
 		}
 
+		last_map_renewal = observation->GetGameLoop() + 1;
+
+		resources_to_nearest_base.clear();
+		resources_to_nearest_base.emplace(NullTag, NullTag);
+
 		Filter filter_geyser = [](const Unit& u) {
 			return u.build_progress == 1.0f &&
 				IsUnits({ UNIT_TYPEID::PROTOSS_ASSIMILATOR,
@@ -1915,22 +1943,13 @@ private:
 
 		Filter filter_bases = [](const Unit& u) {
 			return u.build_progress == 1.0f &&
-				IsTownHall()(u) &&
-				u.ideal_harvesters != 0;
+				IsTownHall()(u);
 		};
 
 		Units geysers = observation->GetUnits(Unit::Alliance::Self, filter_geyser);
 		Units bases = observation->GetUnits(Unit::Alliance::Self, filter_bases);
 		Units minerals = observation->GetUnits(Unit::Alliance::Neutral, IsMineral());
-
-		if (bases.empty()) {
-			return;
-		}
-
-		last_map_renewal = observation->GetGameLoop() + 1;
-
-		resources_to_nearest_base.clear();
-		resources_to_nearest_base.emplace(NullTag, NullTag);
+		
 		for (const auto& m : minerals) {
 			const Unit* b = FindNearestUnit(m->pos, bases, 11.5);
 			Tag b_tag = (b != nullptr) ? b->tag : NullTag;
@@ -1997,7 +2016,7 @@ private:
 		}
 		// Search for a base that is missing workers.
 		for (const auto& geyser : geysers) {
-			Tag base_tag = resources_to_nearest_base.at(geyser->tag);
+			Tag base_tag = resources_to_nearest_base.count(geyser->tag) ? resources_to_nearest_base.at(geyser->tag) : NullTag;
 			if (base_tag == NullTag) continue;
 			if (geyser->assigned_harvesters < geyser->ideal_harvesters) {
 				has_space_for_gas = true;
@@ -2012,7 +2031,7 @@ private:
 		// Search for a base that is missing mineral workers.
 		if (has_space_for_half_mineral && !EnemyRush) {
 			for (const auto& mineral : minerals) {
-				Tag b = resources_to_nearest_base.at(mineral->tag);
+				Tag b = resources_to_nearest_base.count(mineral->tag) ? resources_to_nearest_base.at(mineral->tag) : NullTag;
 				if (b == NullTag) continue;
 				const Unit* base = observation->GetUnit(b);
 				if (base == nullptr) continue;
@@ -2033,7 +2052,7 @@ private:
 		// Search for a base that does not have full of gas workers.
 		for (const auto& geyser : geysers) {
 			if (geyser->assigned_harvesters >= geyser->ideal_harvesters) continue;
-			Tag b = resources_to_nearest_base.at(geyser->tag);
+			Tag b = resources_to_nearest_base.count(geyser->tag) ? resources_to_nearest_base.at(geyser->tag) : NullTag;
 			if (b == NullTag) continue;
 			const Unit* base = observation->GetUnit(b);
 			if (base == nullptr) continue;
@@ -2051,7 +2070,7 @@ private:
 
 		// Search for a base that does not have full of mineral workers.
 		for (const auto& mineral : minerals) {
-			Tag b = resources_to_nearest_base.at(mineral->tag);
+			Tag b = resources_to_nearest_base.count(mineral->tag) ? resources_to_nearest_base.at(mineral->tag) : NullTag;
 			if (b == NullTag) continue;
 			const Unit* base = observation->GetUnit(b);
 			if (base == nullptr) continue;
@@ -2135,20 +2154,6 @@ private:
 
 		MakeBaseResourceMap();
 
-		std::vector<int32_t> base_to_surplus(bases_size, 0);
-		for (int i = 0; i < bases_size; i++) {
-			const Unit * base = bases[i];
-			int32_t surplus = base->assigned_harvesters - base->ideal_harvesters;
-			base_to_surplus[i] = (surplus <= 0) ? 0 : surplus;
-		}
-
-		std::vector<int32_t> geyser_to_surplus(geysers_size, 0);
-		for (int i = 0; i < geysers_size; i++) {
-			const Unit * geyser = geysers[i];
-			int32_t surplus = geyser->assigned_harvesters - geyser->ideal_harvesters;
-			geyser_to_surplus[i] = (surplus <= 0) ? 0 : surplus;
-		}
-
 		bool has_space_for_half_mineral = true;
 		bool has_space_for_gas = false;
 		bool has_space_for_mineral = false;
@@ -2173,7 +2178,7 @@ private:
 		}
 		// Search for a base that is missing workers.
 		for (const auto& geyser : geysers) {
-			Tag base_tag = resources_to_nearest_base.at(geyser->tag);
+			Tag base_tag = resources_to_nearest_base.count(geyser->tag) ? resources_to_nearest_base.at(geyser->tag) : NullTag;
 			if (base_tag == NullTag) continue;
 			if (geyser->assigned_harvesters < geyser->ideal_harvesters) {
 				has_space_for_gas = true;
@@ -2185,7 +2190,6 @@ private:
 		// if there is a space
 		if (has_space_for_mineral || has_space_for_gas) {
 			
-			bool reassigned = false;
 			for (const auto& worker : workers) {
 				if (worker == probe_scout) continue;
 				if (worker == probe_forward && !work_probe_forward) continue;
@@ -2199,9 +2203,8 @@ private:
 				// reassign workers that mines resources far from nexuses. (get all)
 				if (nearest_base_tag == NullTag) {
 					MineIdleWorkers(worker);
-					reassigned = true;
 					Print("reassigning no nexus workers");
-					continue;
+					return;
 				}
 
 				const Unit* nearest_base = observation->GetUnit(nearest_base_tag);
@@ -2214,43 +2217,14 @@ private:
 					if (nearest_base->assigned_harvesters - nearest_base->ideal_harvesters <= 0) continue;
 					MineIdleWorkers(worker);
 					return;
-					/*
-					for (int i = 0; i < bases_size; i++) {
-						const Unit * base = bases[i];
-						int32_t& surplus = base_to_surplus[i];
-						if (base->tag != nearest_base_tag) continue;
-						if (surplus <= 0) break;
-
-						MineIdleWorkers(worker);
-						reassigned = true;
-						surplus--;
-						break;
-					}
-					*/
 				}
 				// reassign overflowing workers (geysers)
 				else {
 					if (target_resource->assigned_harvesters - target_resource->ideal_harvesters <= 0) continue;
 					MineIdleWorkers(worker);
 					return;
-					/*
-					for (int i = 0; i < geysers_size; i++) {
-						const Unit * geyser = geysers[i];
-						int32_t& surplus = geyser_to_surplus[i];
-						if (geyser->tag != target_tag) continue;
-						if (surplus <= 0) break;
-
-						MineIdleWorkers(worker);
-						reassigned = true;
-						surplus--;
-						break;
-					}
-					*/
 				}
 			}
-
-			// if reassigned, do checking on next step
-			//if (reassigned) return;
 		}
 
 		// if few workers are mining minerals, then mine mineral rather than gas
