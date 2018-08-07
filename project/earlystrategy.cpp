@@ -715,10 +715,15 @@ bool MEMIBot::EarlyStrategy() {
         return TryBuildPylon(startLocation_,20.0);
 	case 207:
 	    if (try_stalker>0) {
-            stage_number=208;
-            return false;
+            if (gateways.front()->buffs.empty()) {
+                return TryChronoboost(gateways.front());
+            }
+            else {
+                stage_number=208;
+                return false;
+            }
 	    }
-        return TryBuildUnitChrono(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
+        return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
     case 208:
         if (!cores.front()->orders.empty()) {
             stage_number=209;

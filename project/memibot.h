@@ -365,7 +365,7 @@ public:
 		base = nullptr;
 		find_enemy_location = false;
 		work_probe_forward = true;
-		
+
 
 		try_adept = 0;
 		try_stalker = 0;
@@ -443,9 +443,9 @@ public:
 		ManageUpgrades();
 
 		// Control 시작
-		Defend();
+		//Defend();
 		//ManageArmy();
-		ManageRush();
+		//ManageRush();
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
@@ -721,7 +721,7 @@ public:
 			Actions()->UnitCommand(attacker, sc2::ABILITY_ID::MOVE, targetPosition);
 		}
 	}
-	
+
 
 	GameInfo game_info_;
 	std::vector<Point3D> expansions_;
@@ -1124,7 +1124,7 @@ private:
 			{
 				SmartMove(unit, retreat_position); // 움직여라
 			}
-			
+
 		}
 		return moving;
 	}
@@ -2006,7 +2006,7 @@ private:
 		Units geysers = observation->GetUnits(Unit::Alliance::Self, filter_geyser);
 		Units bases = observation->GetUnits(Unit::Alliance::Self, filter_bases);
 		Units minerals = observation->GetUnits(Unit::Alliance::Neutral, IsMineral());
-		
+
 		for (const auto& m : minerals) {
 			const Unit* b = FindNearestUnit(m->pos, bases, 11.5);
 			Tag b_tag = (b != nullptr) ? b->tag : NullTag;
