@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Terran, Difficulty::CheatVision),
+			CreateComputer(Race::Terran, Difficulty::Easy),
 			});
 	}
 

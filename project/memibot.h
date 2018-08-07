@@ -10,6 +10,7 @@
 #include <typeinfo>
 #include <list>
 #include <unordered_map>
+#include <stack>
 #include "flag.h"
 //#include "balance_unit.h"
 
@@ -336,7 +337,7 @@ public:
 		ep.radiuses_.push_back(5.9f);
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
-
+        Observation()->GetUnitTypeData();
 
 
 		//상대 종족
@@ -365,10 +366,6 @@ public:
 		base = nullptr;
 		find_enemy_location = false;
 		work_probe_forward = true;
-
-
-		try_adept = 0;
-		try_stalker = 0;
 
 		last_map_renewal = 0;
 		resources_to_nearest_base.clear();
@@ -1392,6 +1389,41 @@ private:
 		return false;
 	}
 
+	bool TryBuildUnit(AbilityID ability_type_for_unit, UnitTypeID building_type, UnitTypeID unit_type, Filter priority_filter = {}) {
+		const ObservationInterface* observation = Observation();
+
+		//If we are at supply cap, don't build anymore units, unless its an overlord.
+		if (observation->GetFoodUsed()+observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
+			return false;
+		}
+
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
+            return false;
+		}
+
+		const Unit* unit = nullptr;
+		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(building_type));
+		for (const auto& candidate_unit : target_units) {
+			// is not completely built?
+			if (candidate_unit->build_progress != 1.0f) continue;
+			// is doing something?
+			if (!candidate_unit->orders.empty()) continue;
+			// is unpowered?
+			if (IsUnpowered()(*candidate_unit)) continue;
+			unit = candidate_unit;
+			// pick prioritized structures first
+			/*if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
+				break;
+			}*/
+			if (!unit->buffs.empty()) break;
+		}
+		if (unit == nullptr) {
+			return false;
+		}
+		Actions()->UnitCommand(unit, ability_type_for_unit);
+		return true;
+	}
+
 	bool TryBuildUnitChrono(AbilityID ability_type_for_unit, UnitTypeID building_type, UnitTypeID unit_type) {
 		const ObservationInterface* observation = Observation();
 
@@ -1418,19 +1450,13 @@ private:
 			/*if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
 				break;
 			}*/
-			if (unit->buffs.empty()) break;
+			if (!unit->buffs.empty()) break;
 		}
 		if (unit == nullptr) {
 			return false;
 		}
 		Actions()->UnitCommand(unit, ability_type_for_unit);
 		TryChronoboost(unit);
-		if (unit_type.ToType() == UNIT_TYPEID::PROTOSS_ADEPT) {
-			try_adept++;
-		}
-		if (unit_type.ToType() == UNIT_TYPEID::PROTOSS_STALKER) {
-			try_stalker++;
-		}
 		return true;
 	}
 
@@ -1477,47 +1503,6 @@ private:
             }
         }
     }
-
-	bool TryBuildUnit(AbilityID ability_type_for_unit, UnitTypeID building_type, UnitTypeID unit_type, Filter priority_filter = {}) {
-		const ObservationInterface* observation = Observation();
-
-		//If we are at supply cap, don't build anymore units, unless its an overlord.
-		if (observation->GetFoodUsed()+observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
-			return false;
-		}
-
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
-            return false;
-		}
-
-		const Unit* unit = nullptr;
-		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(building_type));
-		for (const auto& candidate_unit : target_units) {
-			// is not completely built?
-			if (candidate_unit->build_progress != 1.0f) continue;
-			// is doing something?
-			if (!candidate_unit->orders.empty()) continue;
-			// is unpowered?
-			if (IsUnpowered()(*candidate_unit)) continue;
-			unit = candidate_unit;
-			// pick prioritized structures first
-			/*if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
-				break;
-			}*/
-			if (unit->buffs.empty()) break;
-		}
-		if (unit == nullptr) {
-			return false;
-		}
-		Actions()->UnitCommand(unit, ability_type_for_unit);
-		if (unit_type.ToType() == UNIT_TYPEID::PROTOSS_ADEPT) {
-			try_adept++;
-		}
-		if (unit_type.ToType() == UNIT_TYPEID::PROTOSS_STALKER) {
-			try_stalker++;
-		}
-		return true;
-	}
 
 	bool TryBuildUpgrade(AbilityID ability_type_for_unit, UnitTypeID building_type, UpgradeID upgrade_type) {
         const ObservationInterface* observation = Observation();
@@ -2572,13 +2557,6 @@ private:
 			for (const auto& ability : abilities.abilities) {
 				if (ability.ability_id == ability_type_for_unit) {
 					Actions()->UnitCommand(target_warpgate, ability_type_for_unit, build_location);
-
-					if (unit_type.ToType() == UNIT_TYPEID::PROTOSS_ADEPT) {
-						try_adept++;
-					}
-					if (unit_type.ToType() == UNIT_TYPEID::PROTOSS_STALKER) {
-						try_stalker++;
-					}
 					return true;
 				}
 			}
@@ -2745,10 +2723,7 @@ private:
 	uint16_t branch;
 	const size_t max_worker_count_ = 68;
 
-	uint16_t try_adept;
-    uint16_t try_stalker;
-
 	bool try_initialbalance = false;
 	bool Timeto_warpzealot = false;
-
+uint16_t try_adept,try_stalker;
 };
