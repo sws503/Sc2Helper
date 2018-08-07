@@ -98,6 +98,8 @@ void MEMIBot::Defend() {
 		}
 	}
 	
+	EnemyRush = !enemyUnitsInRegion.empty();
+
 	/*Units defenders = FindUnitsNear(startLocation_, 50, Unit::Alliance::Self, IsArmy(Observation()));
 	for (const auto & defender : defenders)
 	{
