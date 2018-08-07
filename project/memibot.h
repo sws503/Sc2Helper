@@ -558,10 +558,10 @@ public:
 	virtual void OnUnitCreated(const Unit* u) final override {
 		switch (u->unit_type.ToType()) {
 		case UNIT_TYPEID::PROTOSS_ADEPT:
-			try_adept++;
+			//try_adept++;
 			break;
 		case UNIT_TYPEID::PROTOSS_STALKER:
-			try_stalker++;
+			//try_stalker++;
 			break;
 		default:
 			break;
@@ -1425,7 +1425,12 @@ private:
 		}
 		Actions()->UnitCommand(unit, ability_type_for_unit);
 		TryChronoboost(unit);
-
+		if (unit_type.ToType() == UNIT_TYPEID::PROTOSS_ADEPT) {
+			try_adept++;
+		}
+		if (unit_type.ToType() == UNIT_TYPEID::PROTOSS_STALKER) {
+			try_stalker++;
+		}
 		return true;
 	}
 
@@ -2248,40 +2253,42 @@ private:
 			}
 		}
 
-		for (const auto& worker : workers) {
-			if (worker == probe_scout) continue;
-			if (worker == probe_forward && !work_probe_forward) continue;
-			if (worker->orders.empty()) continue;
-			const UnitOrder& o = worker->orders.front();
-			if (o.ability_id != ABILITY_ID::HARVEST_GATHER) continue;
+		if (has_space_for_mineral || has_space_for_gas) {
+			for (const auto& worker : workers) {
+				if (worker == probe_scout) continue;
+				if (worker == probe_forward && !work_probe_forward) continue;
+				if (worker->orders.empty()) continue;
+				const UnitOrder& o = worker->orders.front();
+				if (o.ability_id != ABILITY_ID::HARVEST_GATHER) continue;
 
-			Tag target_tag = o.target_unit_tag;
-			Tag nearest_base_tag = resources_to_nearest_base.count(target_tag) ? resources_to_nearest_base.at(target_tag) : NullTag;
+				Tag target_tag = o.target_unit_tag;
+				Tag nearest_base_tag = resources_to_nearest_base.count(target_tag) ? resources_to_nearest_base.at(target_tag) : NullTag;
 
-			// reassign workers that mines resources far from nexuses. (get all)
-			if (nearest_base_tag == NullTag) {
-				MineIdleWorkers(worker);
-				Print("reassigning no nexus workers");
-				return;
-			}
+				// reassign workers that mines resources far from nexuses. (get all)
+				if (nearest_base_tag == NullTag) {
+					MineIdleWorkers(worker);
+					Print("reassigning no nexus workers");
+					return;
+				}
 
-			const Unit* nearest_base = observation->GetUnit(nearest_base_tag);
-			const Unit* target_resource = observation->GetUnit(target_tag);
-			if (target_resource == nullptr) continue;
-			if (nearest_base == nullptr) continue;
+				const Unit* nearest_base = observation->GetUnit(nearest_base_tag);
+				const Unit* target_resource = observation->GetUnit(target_tag);
+				if (target_resource == nullptr) continue;
+				if (nearest_base == nullptr) continue;
 
-			// reassign overflowing workers (geysers)
-			if (!IsMineral()(*target_resource)) {
-				if (target_resource->assigned_harvesters - target_resource->ideal_harvesters <= 0) continue;
-				MineIdleWorkers(worker);
-				return;
-			}
-			// if there is a space
-			// reassign overflowing workers (minerals)
-			else if (has_space_for_mineral || has_space_for_gas) {
-				if (nearest_base->assigned_harvesters - nearest_base->ideal_harvesters <= 0) continue;
-				MineIdleWorkers(worker);
-				return;
+				// reassign overflowing workers (geysers)
+				if (!IsMineral()(*target_resource)) {
+					if (target_resource->assigned_harvesters - target_resource->ideal_harvesters <= 0) continue;
+					MineIdleWorkers(worker);
+					return;
+				}
+				// if there is a space
+				// reassign overflowing workers (minerals)
+				else {
+					if (nearest_base->assigned_harvesters - nearest_base->ideal_harvesters <= 0) continue;
+					MineIdleWorkers(worker);
+					return;
+				}
 			}
 		}
 
@@ -2565,6 +2572,13 @@ private:
 			for (const auto& ability : abilities.abilities) {
 				if (ability.ability_id == ability_type_for_unit) {
 					Actions()->UnitCommand(target_warpgate, ability_type_for_unit, build_location);
+
+					if (unit_type.ToType() == UNIT_TYPEID::PROTOSS_ADEPT) {
+						try_adept++;
+					}
+					if (unit_type.ToType() == UNIT_TYPEID::PROTOSS_STALKER) {
+						try_stalker++;
+					}
 					return true;
 				}
 			}
