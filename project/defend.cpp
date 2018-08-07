@@ -40,6 +40,19 @@ private:
 	int radius;
 };
 
+bool MEMIBot::DefendDuty(const Unit * unit)
+{
+	const Unit * target = GetTarget(unit, enemyUnitsInRegion);
+
+	if (target != nullptr && Distance2D(unit->pos, target->pos) < 20)
+	{
+		Kiting(unit, target);
+		return true;
+	}
+
+	return false;
+}
+
 
 void MEMIBot::Defend() {
 	const ObservationInterface* observation = Observation();
@@ -55,16 +68,11 @@ void MEMIBot::Defend() {
 
 
 	Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
-	Units enemy_armies = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
+	Units enemy_armies = FindUnitsNear(startLocation_, 50, Unit::Alliance::Enemy, IsArmy(Observation()));
 	Units my_armies = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
-	Units enemyUnitsInRegion;
+	
 
-	if (Stalkers.empty())
-		return;
-	else if (!Stalkers.empty() && CurrentStalker == 2 && !selected) {
-		two_stalkers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_STALKER));
-		selected = true;
-	}
+
 
 	enemyUnitsInRegion.clear();
 	const float base_range = 15;
@@ -90,7 +98,7 @@ void MEMIBot::Defend() {
 		}
 	}
 	
-	Units defenders = FindUnitsNear(startLocation_, 50, Unit::Alliance::Self, IsArmy(Observation()));
+	/*Units defenders = FindUnitsNear(startLocation_, 50, Unit::Alliance::Self, IsArmy(Observation()));
 	for (const auto & defender : defenders)
 	{
 		const Unit* target = GetTarget(defender, enemyUnitsInRegion);
@@ -98,8 +106,7 @@ void MEMIBot::Defend() {
 		{
 			SmartAttackUnit(defender, target);
 		}
-		
-	}
+	}*/
 
 	/*for (const auto & base : bases) //기지별로
 	{

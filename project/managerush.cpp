@@ -404,7 +404,7 @@ bool MEMIBot::IsUnitInUnits(const Unit* unit, Units& units) {
 		AdeptPhaseToLocation(unit, HarassLocation, Timer, ComeOn);
 	}
 }*/
-Units Attackers;
+
 
 void MEMIBot::ManageRush() {
 
@@ -556,52 +556,54 @@ void MEMIBot::ManageRush() {
 		const Unit * target = GetTarget(unit, NearbyEnemies);
 		// 스킬은 알아서 피하시구요 *^^*
 		
-		/*if (timing_attack)
+
+		if (timing_attack)
 		{
-			Timeto_warpzealot = true;
 			Attackers.push_back(unit);
 
 			// TODO 
 			std::cout << "FINISH 1 !!" << std::endl;
 
+			std::cout << "Attackers 1 !!" << Attackers.size() <<  "  ranged units 1 !!" << rangedunits.size() << std::endl;
 			if (Attackers.size() == rangedunits.size())
 			{
 				timing_attack = false;
-			}
-		}*/
-
-		//if (IsUnitInUnits(unit, Attackers))
-		if(AdeptMustAttack)
-		{
-			if (target == nullptr)
-			{
-				SmartAttackMove(unit, EnemyBaseLocation);
-				//ScoutWithUnit(unit, observation);
-			}
-		}
-		else
-		{
-			if (unit->orders.empty())
-			{
-				Roam_randombase(unit);
 			}
 		}
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
 		{
 			if (EvadeEffect(unit)) {}
+			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				Kiting(unit, target);
+			}
+			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+			{
+				ScoutWithUnit(unit, observation);
+			}
+			else if (unit->orders.empty())
+			{
+				Roam_randombase(unit);
 			}
 		}
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
 		{
 			if (EvadeEffect(unit)) {}
+			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				Kiting(unit, target);
+			}
+			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+			{
+				ScoutWithUnit(unit, observation);
+			}
+			else if (unit->orders.empty())
+			{
+				Roam_randombase(unit);
 			}
 		}
 
@@ -613,8 +615,8 @@ void MEMIBot::ManageRush() {
 			}
 
 			//ManageWarpBlink(unit);
-
 			if (EvadeEffect(unit)) {}
+			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				if (BlinkResearched)
@@ -622,6 +624,14 @@ void MEMIBot::ManageRush() {
 					ManageBlink(unit, target);
 				}
 				Kiting(unit, target);
+			}
+			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+			{
+				ScoutWithUnit(unit, observation);
+			}
+			else if (unit->orders.empty())
+			{
+				Roam_randombase(unit);
 			}
 		}
 
@@ -649,6 +659,7 @@ void MEMIBot::ManageRush() {
 			bool ComeOn = false;
 
 			if (EvadeEffect(unit)) {}
+			else if (DefendDuty(unit)) {}
 			else if(target != nullptr)
 			{
 				if (getunitsDpsGROUND(NearbyArmies) > 20.0f)
@@ -685,9 +696,18 @@ void MEMIBot::ManageRush() {
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
 		{
 			if (EvadeEffect(unit)) {}
+			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				Kiting(unit, target);
+			}
+			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+			{
+				ScoutWithUnit(unit, observation);
+			}
+			else if (unit->orders.empty())
+			{
+				Roam_randombase(unit);
 			}
 		}
 
@@ -932,22 +952,7 @@ void MEMIBot::DistanceKiting(const Unit* unit, const Unit* enemyarmy, const Unit
 		sc2::Point2D KitingLocation = unit->pos;
 		KitingLocation += CalcKitingPosition(unit->pos, army->pos) * 6.0f;
 
-		if (!Observation()->IsPathable(KitingLocation)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
-		{
-			EmergencyKiting(unit, enemyarmy);
-		}
-		else if (float pathingdistance = Query()->PathingDistance(unit, KitingLocation) > 10) // 이동할 위치가 멀리 돌아가야하는 곳이라면
-		{
-			EmergencyKiting(unit, enemyarmy);
-		}
-		else if (pathingdistance == 0)
-		{
-			EmergencyKiting(unit, enemyarmy);
-		}
-		else
-		{
-			SmartMove(unit, KitingLocation);
-		}
+		SmartMoveEfficient(unit, KitingLocation, army);
 	}
 }
 
@@ -1071,8 +1076,6 @@ void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
 
 void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 {
-
-
 	//Distance to target
 	float dist = Distance2D(unit->pos, enemyarmy->pos);
 	float DIST = dist - unit->radius - enemyarmy->radius;
@@ -1088,6 +1091,7 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 	//float myDps = getunitsDpsGROUND(my_army);
 	//float enemyDps = getunitsDpsGROUND(enemy_army);
 
+
 	//현재 공격중인데 WC가 0이면 냅둔다 or 현재 공격가능하면 공격하고 or 적이 멀리 떨어지면
 
 	if (Distance2D(unit->pos, enemyarmy->pos) < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
@@ -1098,59 +1102,64 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 	{
 		SmartAttackUnit(unit, enemyarmy);
 	}
+	else if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::MOVE) // 움직이고 있는 상황일 때도
+	{
+
+	}
 	else
 	{
 		sc2::Point2D KitingLocation = unit->pos;
-		//If its a building we want range -1 distance
-		//The same is true if it outranges us. We dont want to block following units
+		KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 10.0f;
+		sc2::Point2D FrontKitingLocation = unit->pos;
+		FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
+
 		if (IsStructure(Observation())(ENEMYARMY)) // 건물이면
 		{
-			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos);
+			SmartMove(unit, FrontKitingLocation);
 		}
 		else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
 		{
-			KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
+			SmartMove(unit, FrontKitingLocation);
 		}
 		//else if (getAttackRangeGROUND(enemyarmy) == unitattackrange && (myDps > (enemyDps + 50)) ) // 압도적이면 앞으로 가서 싸워라 TODO : enemy_army.size() * 5 로 가중치를 둘까요??
 		//{
 		//	KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
 		//}
-		else // 적 사정거리가 나보다 짧으면
+		else // 적 사정거리가 나랑 같거나 짧으면
 		{
-			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 7.0f;
+			SmartMoveEfficient(unit, KitingLocation, enemyarmy);
 		}
+	}
+}
 
-		/*if (!Observation()->IsPathable(KitingLocation)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
-		{
+void MEMIBot::SmartMoveEfficient(const Unit* unit, Point2D KitingLocation, const Unit * enemyarmy)
+{
+	float pathingdistance;
+
+	if ((pathingdistance = Query()->PathingDistance(unit, KitingLocation)) > 30) // 이동할 위치가 멀리 돌아가야하는 곳이라면
+	{
+		std::cout << " 2번 ";
 		EmergencyKiting(unit, enemyarmy);
-		}
-		else if (float pathingdistance = Query()->PathingDistance(unit, KitingLocation) > 10) // 이동할 위치가 멀리 돌아가야하는 곳이라면
-		{
+	}
+	else if (pathingdistance == 0)
+	{
+		std::cout << " 3번 ";
 		EmergencyKiting(unit, enemyarmy);
-		}
-		else if (pathingdistance == 0)
-		{
-		EmergencyKiting(unit, enemyarmy);
-		}
-		else
-		{
-		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-		}*/
+	}
+	else
+	{
+		std::cout << " 4번 ";
 		SmartMove(unit, KitingLocation);
 	}
 }
 
-void MEMIBot::EmergencyKiting(const Unit* unit, const Unit* enemyarmy)
+void MEMIBot::EmergencyKiting(const Unit* unit, const Unit * enemyarmy)
 {
 	const ObservationInterface* observation = Observation();
 	// 적의 평균 위치를 받아옵니다
 	Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 10));
 	Point2D enemyposition;
 	GetPosition(NearbyArmies, Unit::Alliance::Enemy, enemyposition);
-
-	//Distance to target
-	float dist = Distance2D(unit->pos, enemyarmy->pos);
-	float DIST = dist - unit->radius - enemyarmy->radius;
 
 	Point2D KitingLocation1 = unit->pos;
 	Point2D KitingLocation2 = unit->pos;
@@ -1160,17 +1169,17 @@ void MEMIBot::EmergencyKiting(const Unit* unit, const Unit* enemyarmy)
 	KitingLocation1 += Point2D(-Vector.y, +Vector.x) * 5;
 	KitingLocation2 += Point2D(+Vector.y, -Vector.x) * 5;
 
-	Point2D KitingLocation;
+	Point2D RealKitingLocation;
 
 	if (Distance2D(KitingLocation1, enemyposition) < Distance2D(KitingLocation2, enemyposition)) //1로 가는게 2로 가는 것보다 안전한 경우
 	{
-		KitingLocation = KitingLocation1;
+		RealKitingLocation = KitingLocation1;
 	}
 	else
 	{
-		KitingLocation = KitingLocation2;
+		RealKitingLocation = KitingLocation2;
 	}
-	SmartMove(unit, KitingLocation);
+	SmartMove(unit, RealKitingLocation);
 }
 
 bool MEMIBot::GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D& position) {
