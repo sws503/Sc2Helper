@@ -364,6 +364,7 @@ public:
 		base = nullptr;
 		find_enemy_location = false;
 		work_probe_forward = true;
+		
 
 		last_map_renewal = 0;
 		resources_to_nearest_base.clear();
@@ -515,11 +516,19 @@ public:
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2: {
 				std::cout << "attack2";
 				timing_attack = true;
+				Attackers.clear();
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL3: {
 				std::cout << "attack3";
 				timing_attack = true;
+				Attackers.clear();
+				return;
+			}
+			case UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL1: {
+				std::cout << "attack3";
+				timing_attack = true;
+				Attackers.clear();
 				return;
 			}
             case UPGRADE_ID::WARPGATERESEARCH: {
@@ -607,11 +616,11 @@ public:
 		Actions()->UnitCommand(attacker, sc2::ABILITY_ID::MOVE, target);
 	}
 
-	void SmartMove(const Unit * attacker, sc2::Point3D & targetPosition)
+	void SmartMove(const Unit * attacker, const Point3D & targetPosition)
 	{
 		SmartMove(attacker, Point2D(targetPosition));
 	}
-	void SmartMove(const Unit * attacker, sc2::Point2D & targetPosition)
+	void SmartMove(const Unit * attacker, const Point2D & targetPosition)
 	{
 		if (!attacker->orders.empty() && attacker->orders.front().ability_id == sc2::ABILITY_ID::MOVE && Distance2D(attacker->orders.front().target_pos, targetPosition) < 0.01f || Distance2D(attacker->pos, targetPosition) < 0.01f)
 		{
@@ -692,6 +701,8 @@ public:
 	Point2D ReadyLocation1;
 	Point2D ReadyLocation2;
 	Point2D KitingLocation;
+	Units enemyUnitsInRegion;
+	Units Attackers;
 private:
 	void ChatVersion() {
 		Actions()->SendChat(botname + " " + version);
@@ -826,6 +837,8 @@ private:
 		return moving;
 	}
 
+	bool DefendDuty(const Unit * unit);
+
 	void Defend();
 
 	void ManageWarpBlink(const Unit * unit);
@@ -859,6 +872,9 @@ private:
 	void ComeOnKiting(const Unit * unit, const Unit * enemyarmy);
 
 	void Kiting(const Unit * unit, const Unit * enemyarmy);
+
+	void SmartMoveEfficient(const Unit * unit, Point2D KitingLocation, const Unit * enemyarmy);
+
 
 	void EmergencyKiting(const Unit * unit, const Unit * enemyarmy);
 
