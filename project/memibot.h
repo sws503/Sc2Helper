@@ -1220,7 +1220,7 @@ private:
 		if (distance < 0) return Units();
 		float distance_squared = (distance == std::numeric_limits<float>::max()) ? distance : distance * distance;
 		Filter f2 = [start, distance_squared, f](const Unit& u) {
-			return f(u) && DistanceSquared2D(u.pos, start) <= distance_squared;
+			return ( !f || f(u) ) && DistanceSquared2D(u.pos, start) <= distance_squared;
 		};
 		return Observation()->GetUnits(f2);
 	}
@@ -1229,7 +1229,7 @@ private:
 		if (distance < 0) return Units();
 		float distance_squared = (distance == std::numeric_limits<float>::max()) ? distance : distance * distance;
 		Filter f2 = [start, distance_squared, f](const Unit& u) {
-			return f(u) && DistanceSquared2D(u.pos, start) <= distance_squared;
+			return ( !f || f(u) ) && DistanceSquared2D(u.pos, start) <= distance_squared;
 		};
 		return Observation()->GetUnits(a, f2);
 	}
@@ -1264,7 +1264,7 @@ private:
 		if (distance < 0) return Units();
 		float distance_squared = (distance == std::numeric_limits<float>::max()) ? distance : distance * distance;
 		Filter f2 = [from_us, distance_squared, f](const Unit& u) {
-			if (!f(u)) return false;
+			if (f && !f(u)) return false;
 			for (const auto& me : from_us) {
 				if (DistanceSquared2D(u.pos, me->pos) <= distance_squared) {
 					return true;
@@ -1279,7 +1279,7 @@ private:
 		if (distance < 0) return Units();
 		float distance_squared = (distance == std::numeric_limits<float>::max()) ? distance : distance * distance;
 		Filter f2 = [from_us, distance_squared, f](const Unit& u) {
-			if (!f(u)) return false;
+			if (f && !f(u)) return false;
 			for (const auto& me : from_us) {
 				if (DistanceSquared2D(u.pos, me->pos) <= distance_squared) {
 					return true;
