@@ -747,6 +747,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
     case 211:
+		// todo: 여기서 황혼의회 터지면 게임도 터짐
         if (BlinkResearched || !observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
             stage_number=212;
             return false;

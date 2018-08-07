@@ -12,8 +12,8 @@ static const std::string current_version = "v0.5";
 
 #ifdef DEBUG
 static const bool VsHuman = false;
-static const int stepsize = 10;
-static const bool Realtime = false;
+static const int stepsize = 2;
+static const bool Realtime = true;
 static const bool ControlTest = false;
 static const std::vector<std::string> map_names( {
 	"CatalystLE",
