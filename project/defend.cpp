@@ -90,6 +90,7 @@ void MEMIBot::Defend() {
 			}
 		}
 	}
+	EnemyRush = !enemyUnitsInRegion.empty();
 
 	for (const auto & base : bases) //기지별로
 	{
