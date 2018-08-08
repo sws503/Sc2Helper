@@ -42,7 +42,7 @@ bool MEMIBot::DefendDuty(const Unit * unit)
 	const Unit * target = GetTarget(unit, enemyUnitsInRegion);
 	Units bases = Observation()->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 
-	if (Distance2D(unit->pos, startLocation_) > 30)
+	if (Distance2D(unit->pos, startLocation_) > 50)
 	{
 		if (target == nullptr)
 		{
@@ -82,7 +82,7 @@ void MEMIBot::Defend() {
 	Units my_armies = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
 
 	enemyUnitsInRegion.clear();
-	const float base_range = 15;
+	const float base_range = 1;
 
 	for (const auto & unit : enemy_units)
 	{
