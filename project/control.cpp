@@ -220,7 +220,7 @@ void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
 	}
 }
 
-void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
+void MEMIBot::ColossusKiting(const Unit* unit, const Unit* enemyarmy)
 {
 	//Distance to target
 	float dist = Distance2D(unit->pos, enemyarmy->pos);
@@ -240,90 +240,92 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 
 	//현재 공격중인데 WC가 0이면 냅둔다 or 현재 공격가능하면 공격하고 or 적이 멀리 떨어지면
 
-	float Wait = 0.0f;
-	if (unit->unit_type == UNIT_TYPEID::PROTOSS_COLOSSUS)
+	float Wait = 21.0f;
+
+	if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
 	{
-		Wait = 21.0f;
-
-		if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
-		{
-			//가만히 있도록 합시다
-		}
-		else if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown >= Wait) // 후딜을 기다려
-		{
-		}
-		else if (unitattackrange - 0.3f < DIST && DIST <= unitattackrange + 2.0f) // 최대사거리를 0.3 낮춤
-		{
-			SmartMove(unit, enemyarmy->pos);
-		}
-		else if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
-		{
-			std::cout << unitattackrange;
-			SmartAttackUnit(unit, enemyarmy);
-		}
-		else
-		{
-			sc2::Point2D KitingLocation = unit->pos;
-			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 10.0f;
-			sc2::Point2D FrontKitingLocation = unit->pos;
-			FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
-
-			if (IsStructure(Observation())(ENEMYARMY)) // 건물이면
-			{
-				SmartMove(unit, FrontKitingLocation);
-			}
-			else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
-			{
-				SmartMove(unit, FrontKitingLocation);
-			}
-			else // 적 사정거리가 나랑 같거나 짧으면
-			{
-				SmartMoveEfficient(unit, KitingLocation, enemyarmy);
-			}
-		}
+		//가만히 있도록 합시다
+	}
+	else if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown >= Wait) // 후딜을 기다려
+	{
+	}
+	else if (unitattackrange - 0.3f < DIST && DIST <= unitattackrange + 2.0f) // 최대사거리를 0.3 낮춤
+	{
+		SmartMove(unit, enemyarmy->pos);
+	}
+	else if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
+	{
+		std::cout << unitattackrange;
+		SmartAttackUnit(unit, enemyarmy);
 	}
 	else
 	{
-		if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
-		{
-			//가만히 있도록 합시다
-		}
-		else if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
-		{
-			SmartAttackUnit(unit, enemyarmy);
-		}
-		else if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::MOVE) // 움직이고 있는 상황일 때도
-		{
+		sc2::Point2D KitingLocation = unit->pos;
+		KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 10.0f;
+		sc2::Point2D FrontKitingLocation = unit->pos;
+		FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
 
-		}
-		else
+		if (IsStructure(Observation())(ENEMYARMY)) // 건물이면
 		{
-			sc2::Point2D KitingLocation = unit->pos;
-			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 10.0f;
-			sc2::Point2D FrontKitingLocation = unit->pos;
-			FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
-
-			if (IsStructure(Observation())(ENEMYARMY)) // 건물이면
-			{
-				SmartMove(unit, FrontKitingLocation);
-			}
-			else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
-			{
-				SmartMove(unit, FrontKitingLocation);
-			}
-			//else if (getAttackRangeGROUND(enemyarmy) == unitattackrange && (myDps > (enemyDps + 50)) ) // 압도적이면 앞으로 가서 싸워라 TODO : enemy_army.size() * 5 로 가중치를 둘까요??
-			//{
-			//	KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
-			//}
-			else // 적 사정거리가 나랑 같거나 짧으면
-			{
-				SmartMoveEfficient(unit, KitingLocation, enemyarmy);
-			}
+			SmartMove(unit, FrontKitingLocation);
 		}
+		else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
+		{
+			SmartMove(unit, FrontKitingLocation);
+		}
+		else // 적 사정거리가 나랑 같거나 짧으면
+		{
+			SmartMoveEfficient(unit, KitingLocation, enemyarmy);
+		}
+	}
+}
+
+void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
+{
+	float dist = Distance2D(unit->pos, enemyarmy->pos);
+	float DIST = dist - unit->radius - enemyarmy->radius;
+
+	//Our range
+	float unitattackrange = getAttackRangeGROUND(unit);
+
+	const Unit& ENEMYARMY = *enemyarmy;
+
+	if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
+	{
+		//가만히 있도록 합시다
+	}
+	else if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
+	{
+		SmartAttackUnit(unit, enemyarmy);
+	}
+	else if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::MOVE) // 움직이고 있는 상황일 때도
+	{
 
 	}
+	else
+	{
+		sc2::Point2D KitingLocation = unit->pos;
+		KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 10.0f;
+		sc2::Point2D FrontKitingLocation = unit->pos;
+		FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
 
-
+		if (IsStructure(Observation())(ENEMYARMY)) // 건물이면
+		{
+			SmartMove(unit, FrontKitingLocation);
+		}
+		else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
+		{
+			SmartMove(unit, FrontKitingLocation);
+		}
+		//else if (getAttackRangeGROUND(enemyarmy) == unitattackrange && (myDps > (enemyDps + 50)) ) // 압도적이면 앞으로 가서 싸워라 TODO : enemy_army.size() * 5 로 가중치를 둘까요??
+		//{
+		//	KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
+		//}
+		else // 적 사정거리가 나랑 같거나 짧으면
+		{
+			SmartMoveEfficient(unit, KitingLocation, enemyarmy);
+		}
+	}
 }
 
 void MEMIBot::SmartMoveEfficient(const Unit* unit, Point2D KitingLocation, const Unit * enemyarmy)

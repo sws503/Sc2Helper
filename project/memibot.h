@@ -210,6 +210,7 @@ struct IsArmy {
 		case UNIT_TYPEID::TERRAN_NUKE: return false;
 		case UNIT_TYPEID::PROTOSS_WARPPRISM: return false;
 		case UNIT_TYPEID::PROTOSS_WARPPRISMPHASING: return false;
+		
 		default: return true;
 		}
 	}
@@ -516,6 +517,7 @@ public:
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
 				std::cout << "attack1";
 				timing_attack = true;
+				Attackers.clear();
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2: {
@@ -890,6 +892,8 @@ private:
 
 	void DoGuerrillaWarp(const Unit * unit);
 
+	void Merge(const Unit * unit, Point2D mergelocation);
+
 	void ManageRush();
 
 	void Roam_randombase(const Unit * unit);
@@ -913,6 +917,8 @@ private:
 	bool CanHitMe(const Unit * unit);
 
 	void ComeOnKiting(const Unit * unit, const Unit * enemyarmy);
+
+	void ColossusKiting(const Unit * unit, const Unit * enemyarmy);
 
 	void Kiting(const Unit * unit, const Unit * enemyarmy);
 
