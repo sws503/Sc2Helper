@@ -425,7 +425,7 @@ public:
 
 		ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE);
 
-		if (!early_strategy) {
+		if (!early_strategy && observation->GetGameLoop()%10==0) {
 			EarlyStrategy();
 		}
 

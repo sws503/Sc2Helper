@@ -44,7 +44,7 @@ bool MEMIBot::EarlyStrategy() {
 			branch = 1;
 		}
 	}
-    branch=0;
+    branch=2;
 
 	size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
 	size_t cannon_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_PHOTONCANNON);
@@ -87,10 +87,10 @@ bool MEMIBot::EarlyStrategy() {
 	}
 
 
-	if (branch<2 && stage_number>30) {
+	if (branch<2 && stage_number>30 && stage_number<100) {
         TryBuildPylonIfNeeded(2);
 	}
-	if (branch<2 && stage_number>38) {
+	if (branch<2 && stage_number>38 && stage_number<100) {
         if (bases.size()*2>assimilator_count) {
             TryBuildAssimilator();
         }
@@ -331,16 +331,32 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureNearPylon(ABILITY_ID::BUILD_TWILIGHTCOUNCIL, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
     case 18:
-        for (const auto& gate : gateways) {
+        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT)) {
+            stage_number=318;
+            return false;
+        }
+        return false;
+    case 318:
+        stage_number=19;
+        return false;
+    case 19:
+        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT)) {
+            stage_number=20;
+            return false;
+        }
+        return false;
+
+
+        /*for (const auto& gate : gateways) {
             if (gate->orders.empty()){
                 return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
             }
-            if (gate->orders.front().progress>0.7f) {
+            if (gate->orders.front().progress>0.4f) {
                 return false;
             }
         }
         stage_number=20;
-        return false;
+        return false;*/
     case 20:
 		if (gateway_count>2) {
 			stage_number=21;
@@ -422,27 +438,34 @@ bool MEMIBot::EarlyStrategy() {
         }
         TryBuildPylon(front_expansion, 6.0);
     case 29:
-        if ()
-
         if (TryWarpAdept()) {
-            stage_number=30;
+            stage_number=329;
             return false;
         }
+        return false;
+    case 329:
+        stage_number=30;
         return false;
     case 30:
         if (TryWarpAdept()) {
-            stage_number=31;
+            stage_number=330;
             return false;
         }
+        return false;
+    case 330:
+        stage_number=31;
         return false;
     case 31:
         if (TryWarpAdept()) {
-            stage_number=32;
+            stage_number=331;
             return false;
         }
         return false;
+    case 331:
+        stage_number=32;
+        return false;
     case 32:
-        if (CountUnitType(observation,UNIT_TYPEID::PROTOSS_STALKER)>10) {
+        if (stalkers.size()>10) {
             stage_number=33;
             return false;
         }
@@ -615,29 +638,25 @@ bool MEMIBot::EarlyStrategy() {
         stage_number=105;
         return false;
     case 105:
-        if (robotics.front()->orders.empty()) {
+
+        if (!warpprisms.empty()) {
+            stage_number=106;
+            return false;
+        }
+        else if (robotics.front()->orders.empty()) {
             return TryBuildUnit(ABILITY_ID::TRAIN_WARPPRISM, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_WARPPRISM);
         }
         else {
-            if (robotics.front()->orders.front().progress>0.8f) {
-                stage_number=106;
-                return false;
-            }
-            else {
-                return TryChronoboost(robotics.front());
-            }
+            return TryChronoboost(robotics.front());
         }
     case 106:
         if (robotics.front()->orders.empty()) {
             return TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
         }
         else {
-            if (robotics.front()->orders.front().progress<0.3f) {
-                stage_number=107;
-                return false;
-            }
+            stage_number=107;
+            return false;
         }
-        return false;
     case 107:
         if (pylons.size()>3) {
             stage_number=108;

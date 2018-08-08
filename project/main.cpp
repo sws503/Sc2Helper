@@ -14,7 +14,7 @@ static const std::string current_version = "v0.5";
 static const bool VsHuman = false;
 static const int stepsize = 3;
 static const bool Realtime = false;
-static const bool ControlTest = true;
+static const bool ControlTest = false;
 static const std::vector<std::string> map_names( {
 	"CatalystLE",
 	"AcidPlantLE",
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Protoss, Difficulty::CheatVision),
+			CreateComputer(Race::Protoss, Difficulty::Easy),
 			});
 	}
 
