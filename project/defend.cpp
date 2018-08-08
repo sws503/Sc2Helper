@@ -52,18 +52,14 @@ void MEMIBot::Defend() {
 	Units EnemyCannon = observation->GetUnits(Unit::Alliance::Enemy, Rusher(startLocation_));
 
 
-	Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
+	Units enemy_units = FindUnitsNear(startLocation_, 50, Unit::Alliance::Enemy);
 	Units enemy_armies = FindUnitsNear(startLocation_, 50, Unit::Alliance::Enemy, IsArmy(Observation()));
-	Units my_armies = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
-	
-
-
+	Units my_armies = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
 
 	enemyUnitsInRegion.clear();
 	const float base_range = 15;
 
-	
-	for (const auto & unit : enemy_armies)
+	for (const auto & unit : enemy_units)
 	{
 		for (const auto & base : bases) //기지별로
 		{
