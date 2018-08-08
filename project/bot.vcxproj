@@ -136,6 +136,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="control.cpp" />
     <ClCompile Include="defend.cpp" />
     <ClCompile Include="earlystrategy.cpp" />
     <ClCompile Include="main.cpp" />

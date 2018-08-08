@@ -40,18 +40,6 @@ private:
 	int radius;
 };
 
-bool MEMIBot::DefendDuty(const Unit * unit)
-{
-	const Unit * target = GetTarget(unit, enemyUnitsInRegion);
-
-	if (target != nullptr && Distance2D(unit->pos, target->pos) < 20)
-	{
-		Kiting(unit, target);
-		return true;
-	}
-
-	return false;
-}
 
 
 void MEMIBot::Defend() {

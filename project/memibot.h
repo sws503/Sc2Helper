@@ -440,9 +440,9 @@ public:
 		ManageUpgrades();
 
 		// Control Ω√¿€
-		//Defend();
+		Defend();
 		//ManageArmy();
-		//ManageRush();
+		ManageRush();
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
@@ -514,12 +514,11 @@ public:
 				ColossusRangeUp = true;
 				return;
 			}
-
-			/*case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
+			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
 				std::cout << "attack1";
 				timing_attack = true;
 				return;
-			}*/
+			}
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2: {
 				std::cout << "attack2";
 				timing_attack = true;
@@ -909,6 +908,8 @@ private:
 	void DistanceKiting(const Unit * unit, const Unit * enemyarmy, const Unit * army);
 
 	void FrontKiting(const Unit * unit, const Unit * enemyarmy);
+
+	bool CanHitMe(const Unit * unit);
 
 	void ComeOnKiting(const Unit * unit, const Unit * enemyarmy);
 
@@ -2484,7 +2485,7 @@ private:
 	void determine_enemy_expansion();
 
 	bool TryWarpAdept() {
-		return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT);
+		return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT, advance_pylon_location);
 	}
 	bool TryWarpStalker() {
 		return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
