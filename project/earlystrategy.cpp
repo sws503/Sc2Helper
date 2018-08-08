@@ -90,7 +90,7 @@ bool MEMIBot::EarlyStrategy() {
 	if (branch<2 && stage_number>30) {
         TryBuildPylonIfNeeded(2);
 	}
-	if (branch<2 && stage_number>36) {
+	if (branch<2 && stage_number>38) {
         if (bases.size()*2>assimilator_count) {
             TryBuildAssimilator();
         }
@@ -132,7 +132,7 @@ bool MEMIBot::EarlyStrategy() {
             if (TryBuildCannonNexus()<bases.size()){
                 return false;
             }
-            if (observation->GetFoodUsed()>150) {
+            if (observation->GetFoodUsed()>150 || bases.size()<3) {
                 TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
             }
             if (warpprisms_phasing.empty()) {
@@ -471,18 +471,18 @@ bool MEMIBot::EarlyStrategy() {
         }
         TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
         return false;
-    case 34:
+    case 36:
         if (gateway_count>=7) {
-			stage_number=35;
+			stage_number=37;
 			return false;
 		}
 		if (observation->GetMinerals()>150) {
             return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
 		}
 		return false;
-    case 35:
+    case 37:
         if (robotics_bay_count > 0) {
-            stage_number = 36;
+            stage_number = 38;
             return false;
         }
         if (robotics_facility_count > 0 && robotics_bay_count < 1) {
@@ -491,9 +491,9 @@ bool MEMIBot::EarlyStrategy() {
             }
         }
         return false;
-    case 36:
+    case 38:
         if (BlinkResearched || !observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
-            stage_number=37;
+            stage_number=39;
             return false;
         }
         TryBuildUpgrade(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::BLINKTECH);
