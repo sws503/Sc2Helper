@@ -404,6 +404,11 @@ bool MEMIBot::IsUnitInUnits(const Unit* unit, Units& units) {
 		AdeptPhaseToLocation(unit, HarassLocation, Timer, ComeOn);
 	}
 }*/
+void MEMIBot::Merge(const Unit* unit, Point2D mergelocation)
+{
+
+}
+
 
 
 void MEMIBot::ManageRush() {
@@ -547,17 +552,21 @@ void MEMIBot::ManageRush() {
 		// attacker 세팅
 		if (Attackers.empty()) {
 			for (const auto& unit : rangedunits) {
-				if (DistanceSquared2D(startLocation_, unit->pos) < 250)
+				if (Distance2D(startLocation_, unit->pos) < 1000)
+				{
 					Attackers.push_back(unit);
+					std::cout << " 소집되었습니다 *^^*";
+				}
 			}
 		}
-		// 기모으기
+		// 다 모였는지 체크
 		else {
-			Point2D attackers_avg_pos(0,0);
-			bool alldead = !GetPosition(Attackers, attackers_avg_pos);
-			if (alldead || DistanceSquared2D(attackers_avg_pos, meeting_spot) < 50) {
+			Point2D attackers_avg_pos = Point2D(0,0);
+			GetPosition(Attackers, attackers_avg_pos);
+			if (Distance2D(attackers_avg_pos, meeting_spot) < 20) {
 				timing_attack = false;
 			}
+			
 		}
 	}
 
@@ -584,11 +593,11 @@ void MEMIBot::ManageRush() {
 			}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
-				if (!timing_attack) { // 다 모여서 공격
-					ScoutWithUnit(unit, observation);
-				}
-				else { // 기모으기
+				if (timing_attack == 1) { // 모이자~
 					RetreatSmart(unit, meeting_spot);
+				}
+				else if(timing_attack == 0) { // 처들어가자~
+					ScoutWithUnit(unit, observation);
 				}
 			}
 			else if (unit->orders.empty())
@@ -607,11 +616,11 @@ void MEMIBot::ManageRush() {
 			}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
-				if (!timing_attack) { // 다 모여서 공격
-					ScoutWithUnit(unit, observation);
-				}
-				else { // 기모으기
+				if (timing_attack == 1) { // 모이자~
 					RetreatSmart(unit, meeting_spot);
+				}
+				else if (timing_attack == 0) { // 처들어가자~
+					ScoutWithUnit(unit, observation);
 				}
 			}
 			else if (unit->orders.empty())
@@ -623,6 +632,7 @@ void MEMIBot::ManageRush() {
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_STALKER)
 		{
 			//ManageWarpBlink(unit);
+
 			if (EvadeEffect(unit)) {}
 			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
@@ -635,11 +645,11 @@ void MEMIBot::ManageRush() {
 			}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
-				if (!timing_attack) { // 다 모여서 공격
-					ScoutWithUnit(unit, observation);
-				}
-				else { // 기모으기
+				if (timing_attack == 1) { // 모이자~
 					RetreatSmart(unit, meeting_spot);
+				}
+				else if (timing_attack == 0) { // 처들어가자~
+					ScoutWithUnit(unit, observation);
 				}
 			}
 			else if (unit->orders.empty())
@@ -698,15 +708,17 @@ void MEMIBot::ManageRush() {
 					Kiting(unit, target);
 				}
 			}
-			else if (stage_number >= 32) //AdeptMustAttack) // target이 없음
+			else if (32 <= stage_number && stage_number < 40) //AdeptMustAttack) // target이 없음
 			{
 				ScoutWithUnit(unit, observation);
 			}
 			else if (unit->orders.empty())
 			{
-				SmartMove(unit, advance_pylon_location);
+				RetreatSmart(unit, advance_pylon_location);
 				//Roam_randombase(unit);
 			}
+
+
 		}
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
@@ -717,15 +729,15 @@ void MEMIBot::ManageRush() {
 			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
-				Kiting(unit, target);
+				ColossusKiting(unit, target);
 			}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
-				if (!timing_attack) {	// 다 모여서 공격
-					ScoutWithUnit(unit, observation);
-				}
-				else {	// 기모으기
+				if (timing_attack == 1) { // 모이자~
 					RetreatSmart(unit, meeting_spot);
+				}
+				else if (timing_attack == 0) { // 처들어가자~
+					ScoutWithUnit(unit, observation);
 				}
 			}
 			else if (unit->orders.empty())
@@ -1023,6 +1035,10 @@ int MEMIBot::getAttackPriority(const Unit * u)
 		{
 			return 11;
 		}
+		if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR)
+		{
+			return 0;
+		}
 		return 10;
 	}
 	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
@@ -1037,6 +1053,10 @@ int MEMIBot::getAttackPriority(const Unit * u)
 	{
 		return 10;
 	}
+	if (unit.build_progress != 1.0)
+	{
+		return 5;
+	}
 	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_PYLON || unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_SPORECRAWLER || unit.unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_MISSILETURRET)
 	{
 		return 5;
@@ -1045,6 +1065,7 @@ int MEMIBot::getAttackPriority(const Unit * u)
 	{
 		return 4;
 	}
+	
 	return 2;
 }
 
@@ -1062,6 +1083,10 @@ int MEMIBot::getAttackPriority(const Unit * u)
 	for (const auto & targetUnit : targets)
 	{
 		if (!targetUnit->is_alive)
+		{
+			continue;
+		}
+		if (targetUnit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR)
 		{
 			continue;
 		}
@@ -1220,6 +1245,10 @@ const float MEMIBot::getAttackRangeGROUND(const Unit* target) const
 		if (target->unit_type.ToType() == UNIT_TYPEID::PROTOSS_COLOSSUS && ColossusRangeUp == true)
 		{
 			return 9.0f;
+		}
+		if (target->unit_type.ToType() == UNIT_TYPEID::PROTOSS_CARRIER)
+		{
+			return 8.0f;
 		}
 		if (Weapon.type == sc2::Weapon::TargetType::Air || Weapon.type == sc2::Weapon::TargetType::Any)
 		{
