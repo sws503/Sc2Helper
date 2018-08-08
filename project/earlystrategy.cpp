@@ -27,7 +27,6 @@ bool MEMIBot::EarlyStrategy() {
 			break;
 		}
 	}
-
 	//브랜치 지정
 	//디폴트 branch = 2
 	if (branch !=5 && flags.status("search_branch") == 1) {
@@ -45,6 +44,7 @@ bool MEMIBot::EarlyStrategy() {
 			branch = 1;
 		}
 	}
+    branch=0;
 
 	size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
 	size_t cannon_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_PHOTONCANNON);
@@ -227,7 +227,7 @@ bool MEMIBot::EarlyStrategy() {
             return false;
         }
         if (observation->GetMinerals()>100) {
-            return TryBuildPylon(startLocation_,20.0);
+            return TryBuildPylon(startLocation_,15.0f);
         }
         return false;
     case 6:
@@ -236,21 +236,15 @@ bool MEMIBot::EarlyStrategy() {
 			stage_number=7;
 			return false;
 		}
-		if (observation->GetMinerals()>150) {
-			return TryBuildStructureNearPylon(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
-		}
-		return false;
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
     case 7:
 		if (assimilator_count>=2) {
 			stage_number=8;
 			return false;
 		}
-		if (observation->GetMinerals()>75) {
-			return TryBuildGas(base->pos);
-		}
-		return false;
+		return TryBuildGas(base->pos);
     case 8:
-        if (cores.front()->build_progress == 1.0) {
+        if (cores.front()->build_progress == 1.0f) {
             stage_number=9;
             return false;
         }
@@ -297,10 +291,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=14;
             return false;
         }
-        if (observation->GetMinerals()>100) {
-            return TryBuildPylon(startLocation_,20.0);
-        }
-        return false;
+        return TryBuildPylon(startLocation_,15.0);
     case 14:
 		// 정찰: 분기 1 결정.
         if (branch == 0 || branch == 3) {
@@ -340,16 +331,15 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureNearPylon(ABILITY_ID::BUILD_TWILIGHTCOUNCIL, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
     case 18:
-        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT)) {
-            stage_number=19;
-            return false;
+        for (const auto& gate : gateways) {
+            if (gate->orders.empty()){
+                return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
+            }
+            if (gate->orders.front().progress>0.7f) {
+                return false;
+            }
         }
-        return false;
-    case 19:
-        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT)) {
-            stage_number=20;
-            return false;
-        }
+        stage_number=20;
         return false;
     case 20:
 		if (gateway_count>2) {
@@ -366,16 +356,25 @@ bool MEMIBot::EarlyStrategy() {
     case 22:
 		work_probe_forward = false;
 		SmartMove(probe_forward, advance_pylon_location);
-        if (TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::ADEPTPIERCINGATTACK)) {
+        if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
             stage_number=23;
             return false;
         }
-        return false;
+        return TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::ADEPTPIERCINGATTACK);
+
     case 23:
-        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT)) {
-            stage_number=24;
-            return false;
+        for (const auto& gate : gateways) {
+            if (gate->build_progress != 1.0f) {
+                continue;
+            }
+            if (gate->orders.empty()){
+                return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
+            }
+            if (gate->orders.front().progress>0.7f) {
+                return false;
+            }
         }
+        stage_number=26;
         return false;
     case 24:
         if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT)) {
@@ -411,10 +410,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=28;
             return false;
         }
-        if (observation->GetMinerals()>400) {
-            TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
-        }
-        return false;
+        return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
     case 28:
         if (bases.size()<2) {
             stage_number=27;
@@ -424,11 +420,10 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=29;
             return false;
         }
-        if (observation->GetMinerals() > 100) {
-            TryBuildPylon(front_expansion, 6.0);
-        }
-        return false;
+        TryBuildPylon(front_expansion, 6.0);
     case 29:
+        if ()
+
         if (TryWarpAdept()) {
             stage_number=30;
             return false;
@@ -841,23 +836,11 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 222:
-        if (TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion)) {
-            stage_number=223;
-            return false;
-        }
-        return false;
-    case 223:
-        if (TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion)) {
-            stage_number=224;
-            return false;
-        }
-        return false;
-    case 224:
-        if (TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion)) {
+        if (stalkers.size()>=7) {
             stage_number=225;
             return false;
         }
-        return false;
+        return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
     case 225:
         if (gateway_count>4) {
 			stage_number=226;
@@ -869,11 +852,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=227;
             return false;
         }
-        if (TryBuildUpgrade(ABILITY_ID::RESEARCH_CHARGE, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::CHARGE)) {
-            stage_number=227;
-            return false;
-        }
-        return false;
+        return TryBuildUpgrade(ABILITY_ID::RESEARCH_CHARGE, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::CHARGE);
     case 227:
         if (forge_count<2) {
             return TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_FORGE);
@@ -883,11 +862,13 @@ bool MEMIBot::EarlyStrategy() {
             return false;
         }
     case 228:
-        if (TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion)) {
-            stage_number=229;
-            return false;
+        for (const auto& s : stalkers) {
+            if (s->build_progress<1.0f) {
+                stage_number=229;
+                return false;
+            }
         }
-        return false;
+        return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
     case 229:
         if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY)).front()->orders.empty()) {
             if (observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY)).front()->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {

@@ -2474,7 +2474,7 @@ private:
 	void determine_enemy_expansion();
 
 	bool TryWarpAdept() {
-		return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT);
+		return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT, advance_pylon_location);
 	}
 	bool TryWarpStalker() {
 		return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
