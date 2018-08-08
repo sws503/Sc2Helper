@@ -1043,7 +1043,7 @@ int MEMIBot::getAttackPriority(const Unit * u)
 	}
 	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 	{
-		return 10;
+		return 11;
 	}
 	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_SPINECRAWLER)
 	{

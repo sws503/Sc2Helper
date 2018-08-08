@@ -37,7 +37,18 @@ private:
 	int radius;
 };
 
+bool MEMIBot::DefendDuty(const Unit * unit)
+{
+	const Unit * target = GetTarget(unit, enemyUnitsInRegion);
 
+	if (target != nullptr && Distance2D(unit->pos, target->pos) < 20)
+	{
+		Kiting(unit, target);
+		return true;
+	}
+
+	return false;
+}
 
 void MEMIBot::Defend() {
 	const ObservationInterface* observation = Observation();
@@ -65,7 +76,7 @@ void MEMIBot::Defend() {
 		{
 			if (Distance2D(base->pos, startLocation_) < 15)
 			{
-				if (Distance2D(base->pos, unit->pos) < 30)
+				if (Distance2D(base->pos, unit->pos) < base_range + 10)
 				{
 					enemyUnitsInRegion.push_back(unit);
 					break;
@@ -79,7 +90,40 @@ void MEMIBot::Defend() {
 		}
 	}
 	
+	if (!enemyUnitsInRegion.empty() && my_armies.empty())
+	{
+		for (const auto & worker : Workers)
+		{
+			const Unit* target = GetTarget(worker, enemyUnitsInRegion);
+
+			if (target != nullptr && Distance2D(worker->pos, target->pos) < 10 && Killers.size() <= enemyUnitsInRegion.size() + 1)
+			{
+				Killers.push_back(worker);
+			}
+		}
+		std::cout << enemyUnitsInRegion.size();
+		for (auto& it = Killers.begin(); it != Killers.end();)
+		{
+			const Unit* killer = *it;
+			if (Distance2D(killer->pos, startLocation_) > 10 || !killer->is_alive)
+			{
+				std::cout << " ¹æ±Ý »«°Ç ";
+				Killers.erase(it++);
+				Actions()->UnitCommand(killer, ABILITY_ID::STOP);
+				continue;
+			}
+			it++;
+			const Unit* target = GetTarget(killer, enemyUnitsInRegion);
+			SmartAttackUnit(killer, target);
+		}
+	}
+	else
+	{
+		Killers.clear();
+	}
+
 	EnemyRush = !enemyUnitsInRegion.empty();
+	ManyEnemyRush = (enemyUnitsInRegion.size() > 3);
 
 	/*Units defenders = FindUnitsNear(startLocation_, 50, Unit::Alliance::Self, IsArmy(Observation()));
 	for (const auto & defender : defenders)

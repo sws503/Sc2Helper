@@ -11,7 +11,7 @@ static const std::string bot_name = "AdeptBot";
 static const std::string current_version = "v0.5";
 
 #ifdef DEBUG
-static const bool VsHuman = false;
+static const bool VsHuman = true;
 static const int stepsize = 3;
 static const bool Realtime = false;
 static const bool ControlTest = false;
@@ -24,7 +24,7 @@ static const std::vector<std::string> map_names( {
 	"Redshift",
 	"16BitLE"
 	} );
-static const std::string ControlMap = "1pTest.SC2Map"; // 1pTest 2pTest
+static const std::string ControlMap = "BackwaterLE.SC2Map"; // 1pTest 2pTest
 
 class Human : public sc2::Agent {
 public:
