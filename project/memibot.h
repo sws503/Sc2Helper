@@ -509,6 +509,12 @@ public:
 				BlinkResearched = true;
 				return;
 			}
+			case UPGRADE_ID::EXTENDEDTHERMALLANCE: {
+				std::cout << "COLOSSUS UPGRADE DONE!!";
+				ColossusRangeUp = true;
+				return;
+			}
+
 			/*case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
 				std::cout << "attack1";
 				timing_attack = true;
@@ -555,12 +561,14 @@ public:
 	virtual void OnUnitCreated(const Unit* u) final override {
 		switch (u->unit_type.ToType()) {
 		case UNIT_TYPEID::PROTOSS_ADEPT:
-			//try_adept++;
+			num_adept++;
 			break;
 		case UNIT_TYPEID::PROTOSS_STALKER:
-			//try_stalker++;
+			num_stalker++;
 			break;
+
 		default:
+
 			break;
 		}
 	}
@@ -936,6 +944,8 @@ private:
 	void ManageWarpBlink(const Unit * unit, const Unit * shuttle);
 
 	const Unit * GetTarget(const Unit * rangedUnit, Units & targets);
+
+	const Unit * GetNearTarget(const Unit * rangedUnit, Units & targets);
 
 	const float getunitsDpsGROUND(Units targets) const;
 
@@ -2707,7 +2717,9 @@ private:
 	bool early_strategy;
 	bool warpgate_researched;
 	bool BlinkResearched;
+	bool ColossusRangeUp;
 	bool timing_attack;
+
 	const Unit* advance_pylon;
 	const Unit* probe_scout;
 	const Unit* pylon_first;
@@ -2722,6 +2734,9 @@ private:
 	const Unit* base;
 	uint16_t branch;
 	const size_t max_worker_count_ = 68;
+
+	uint16_t num_adept = 0;
+	uint16_t num_stalker = 0;
 
 	bool try_initialbalance = false;
 	bool Timeto_warpzealot = false;
