@@ -126,7 +126,7 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildPylonIfNeeded(2);
         }
         if (stage_number>230) {
-            if (bases.size()*2<assimilator_count+2) {
+            if (bases.size()*2>assimilator_count+2) {
                 TryBuildAssimilator();
             }
             if (TryBuildCannonNexus()<bases.size()){
