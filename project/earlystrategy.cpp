@@ -837,22 +837,22 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildPylon(startLocation_,20.0);
     case 219:
-        if (TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER)) {
+        if (TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL)) {
             stage_number=220;
             return false;
         }
         return false;
     case 220:
         if (bases.size()>=3) {
-            stage_number=221;
+            stage_number=222;
             return false;
         }
         return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
     case 221:
-        if (TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER)) {
+        /*if (TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER)) {
             stage_number=222;
             return false;
-        }
+        }*/
         return false;
     case 222:
         if (stalkers.size()>=7) {
