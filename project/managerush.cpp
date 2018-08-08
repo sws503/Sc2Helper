@@ -586,11 +586,11 @@ void MEMIBot::ManageRush() {
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
 		{
 			if (EvadeEffect(unit)) {}
-			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				Kiting(unit, target);
 			}
+			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
 				if (timing_attack == 1) { // 모이자~
@@ -609,11 +609,11 @@ void MEMIBot::ManageRush() {
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
 		{
 			if (EvadeEffect(unit)) {}
-			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				Kiting(unit, target);
 			}
+			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
 				if (timing_attack == 1) { // 모이자~
@@ -634,7 +634,6 @@ void MEMIBot::ManageRush() {
 			//ManageWarpBlink(unit);
 
 			if (EvadeEffect(unit)) {}
-			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				if (BlinkResearched)
@@ -643,6 +642,7 @@ void MEMIBot::ManageRush() {
 				}
 				Kiting(unit, target);
 			}
+			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
 				if (timing_attack == 1) { // 모이자~
@@ -675,7 +675,6 @@ void MEMIBot::ManageRush() {
 			bool ComeOn = false;
 
 			if (EvadeEffect(unit)) {}
-			else if (DefendDuty(unit)) {}
 			else if(target != nullptr)
 			{
 				if (getunitsDpsGROUND(NearbyArmies) > 20.0f)
@@ -708,6 +707,7 @@ void MEMIBot::ManageRush() {
 					Kiting(unit, target);
 				}
 			}
+			else if (DefendDuty(unit)) {}
 			else if (32 <= stage_number && stage_number < 40) //AdeptMustAttack) // target이 없음
 			{
 				ScoutWithUnit(unit, observation);
@@ -726,11 +726,11 @@ void MEMIBot::ManageRush() {
 			const Unit * target = GetNearTarget(unit, NearbyEnemies);
 
 			if (EvadeEffect(unit)) {}
-			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				ColossusKiting(unit, target);
 			}
+			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
 				if (timing_attack == 1) { // 모이자~

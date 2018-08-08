@@ -52,8 +52,7 @@ bool MEMIBot::DefendDuty(const Unit * unit)
 		{
 			FleeKiting(unit, target);
 		}
-		
-		return false;
+		return true;
 	}
 	else if (target != nullptr && Distance2D(unit->pos, target->pos) < 20)
 	{
