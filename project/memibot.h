@@ -2405,6 +2405,13 @@ private:
 
 	bool TryExpand(AbilityID build_ability, UnitTypeID worker_type) {
 		const ObservationInterface* observation = Observation();
+		Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+		for (const auto& b :bases) {
+            if (b->build_progress != 1.0f) {
+                return false;
+            }
+		}
+
 		float minimum_distance = std::numeric_limits<float>::max();
 		Point3D closest_expansion;
 		for (const auto& expansion : expansions_) {
@@ -2667,16 +2674,13 @@ private:
 
     }*/
 
-    uint16_t TryBuildCannonNexus(){
+    void TryBuildCannonNexus(){
         const ObservationInterface* observation = Observation();
         Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
         Units pylons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
-        uint16_t cannon = 0;
-
         for (const auto& b :bases) {
             const Unit* mineral = FindNearestMineralPatch(b->pos);
             if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PHOTONCANNON, mineral->pos, 6)>0 && CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PHOTONCANNON, b->pos, 10)>0) {
-                cannon++;
                 continue;
             }
             if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, mineral->pos, 6)==0) {
@@ -2694,7 +2698,6 @@ private:
                 TryBuildStructure(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
             }
         }
-        return cannon;
     }
 
 	void scout_all();

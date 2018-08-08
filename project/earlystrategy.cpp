@@ -44,7 +44,6 @@ bool MEMIBot::EarlyStrategy() {
 			branch = 1;
 		}
 	}
-    branch=2;
 
 	size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
 	size_t cannon_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_PHOTONCANNON);
@@ -98,7 +97,7 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_FORGE);
         }
 
-        if (gateway_count<=bases.size()*2 && gateway_count<10) {
+        if (gateway_count<bases.size()*2 && gateway_count<10) {
             TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
         }
         else if (observation->GetFoodUsed()>120 && GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() ) {
@@ -123,14 +122,15 @@ bool MEMIBot::EarlyStrategy() {
             TryChronoboost(observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front());
         }
         if (stage_number>218) {
-            TryBuildPylonIfNeeded(2);
+            TryBuildPylonIfNeeded(3);
         }
         if (stage_number>230) {
+            TryBuildCannonNexus();
             if (bases.size()*2>assimilator_count+2) {
                 TryBuildAssimilator();
             }
-            if (TryBuildCannonNexus()<bases.size()){
-                return false;
+            if (gateway_count<bases.size()*2) {
+                TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
             }
             if (observation->GetFoodUsed()>150 || bases.size()<3) {
                 TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
@@ -902,7 +902,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 230:
-        if (gateway_count>6) {
+        if (gateway_count>4) {
 			stage_number=231;
 			return false;
 		}
