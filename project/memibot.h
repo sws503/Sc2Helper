@@ -2417,6 +2417,9 @@ private:
                 return false;
             }
 		}
+		if (ManyEnemyRush) {
+            return false;
+		}
 
 		float minimum_distance = std::numeric_limits<float>::max();
 		Point3D closest_expansion;
