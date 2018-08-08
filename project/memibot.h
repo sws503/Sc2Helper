@@ -2411,6 +2411,9 @@ private:
                 return false;
             }
 		}
+		if (ManyEnemyRush) {
+            return false;
+		}
 
 		float minimum_distance = std::numeric_limits<float>::max();
 		Point3D closest_expansion;
@@ -2719,6 +2722,7 @@ private:
 	std::string version;
 	std::string botname;
 	bool EnemyRush;
+	bool ManyEnemyRush;
 	bool PhotonRush;
 	Point2D pylonlocation;
 	Units Killers;
