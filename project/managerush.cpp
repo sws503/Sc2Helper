@@ -424,6 +424,8 @@ void MEMIBot::ManageRush() {
 	size_t CurrentStalker = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER);
 	size_t CurrentAdept = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ADEPT);
 
+	Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
+
 	Units RangedUnitTargets;
 
 	Units rangedunits = observation->GetUnits(Unit::Alliance::Self, IsRanged(observation));
@@ -539,7 +541,25 @@ void MEMIBot::ManageRush() {
 		}
 	}
 
-
+	Point2D meeting_spot = advance_pylon_location;
+	if (timing_attack && !EnemyRush)
+	{
+		// attacker 세팅
+		if (Attackers.empty()) {
+			for (const auto& unit : rangedunits) {
+				if (DistanceSquared2D(startLocation_, unit->pos) < 250)
+					Attackers.push_back(unit);
+			}
+		}
+		// 기모으기
+		else {
+			Point2D attackers_avg_pos(0,0);
+			bool alldead = !GetPosition(Attackers, attackers_avg_pos);
+			if (alldead || DistanceSquared2D(attackers_avg_pos, meeting_spot) < 50) {
+				timing_attack = false;
+			}
+		}
+	}
 
 	//유닛이라면 기본적으로 해야할 행동 강령
 	for (const auto& unit : rangedunits) {
@@ -553,21 +573,6 @@ void MEMIBot::ManageRush() {
 		// 타겟을 받아옵니다 *^^*
 		const Unit * target = GetTarget(unit, NearbyEnemies);
 		// 스킬은 알아서 피하시구요 *^^*
-		
-
-		if (timing_attack)
-		{
-			Attackers.push_back(unit);
-
-			// TODO 
-			std::cout << "FINISH 1 !!" << std::endl;
-
-			std::cout << "Attackers 1 !!" << Attackers.size() <<  "  ranged units 1 !!" << rangedunits.size() << std::endl;
-			if (Attackers.size() == rangedunits.size())
-			{
-				timing_attack = false;
-			}
-		}
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
 		{
@@ -579,7 +584,12 @@ void MEMIBot::ManageRush() {
 			}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
-				ScoutWithUnit(unit, observation);
+				if (!timing_attack) { // 다 모여서 공격
+					ScoutWithUnit(unit, observation);
+				}
+				else { // 기모으기
+					RetreatSmart(unit, meeting_spot);
+				}
 			}
 			else if (unit->orders.empty())
 			{
@@ -597,7 +607,12 @@ void MEMIBot::ManageRush() {
 			}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
-				ScoutWithUnit(unit, observation);
+				if (!timing_attack) { // 다 모여서 공격
+					ScoutWithUnit(unit, observation);
+				}
+				else { // 기모으기
+					RetreatSmart(unit, meeting_spot);
+				}
 			}
 			else if (unit->orders.empty())
 			{
@@ -620,7 +635,12 @@ void MEMIBot::ManageRush() {
 			}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
-				ScoutWithUnit(unit, observation);
+				if (!timing_attack) { // 다 모여서 공격
+					ScoutWithUnit(unit, observation);
+				}
+				else { // 기모으기
+					RetreatSmart(unit, meeting_spot);
+				}
 			}
 			else if (unit->orders.empty())
 			{
@@ -701,7 +721,12 @@ void MEMIBot::ManageRush() {
 			}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
-				ScoutWithUnit(unit, observation);
+				if (!timing_attack) {	// 다 모여서 공격
+					ScoutWithUnit(unit, observation);
+				}
+				else {	// 기모으기
+					RetreatSmart(unit, meeting_spot);
+				}
 			}
 			else if (unit->orders.empty())
 			{
@@ -780,6 +805,7 @@ void MEMIBot::AdeptPhaseShift(const Unit* unit, Units ShadeNearEnemies , Units N
 	// nullpointer
 	const Unit * EnemyExpansionMineral = FindNearestMineralPatch(enemy_expansion);
 	const Unit * EnemyBaseMineral = FindNearestMineralPatch(game_info_.enemy_start_locations.front());
+	if (EnemyExpansionMineral == nullptr || EnemyBaseMineral == nullptr) return;
 
 	// **********************TEST 용 입니다 **************************
 	bool ControlTest = false;
@@ -889,25 +915,45 @@ void MEMIBot::StalkerBlinkForward(const Unit* unit, const Unit* enemyarmy)
 }
 
 
-bool MEMIBot::GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D& position) {
+bool MEMIBot::GetPosition(Units& units, Point2D& position) {
+	if (units.empty()) {
+		return false;
+	}
+
+	position = Point2D(0.0f, 0.0f);
+	size_t count = 0;
+
+	for (const auto& u : units) {
+		if (u->is_alive) {
+			count++;
+			position += u->pos;
+		}
+	}
+
+	if (!count) return false;
+
+	position /= static_cast<float>(count);
+
+	return true;
+}
+
+
+bool MEMIBot::GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliance, Point2D& position) {
 	const ObservationInterface* observation = Observation();
-	Units units = observation->GetUnits(alliace);
+	Units units = observation->GetUnits(alliance, IsUnit(unit_type));
 
 	if (units.empty()) {
 		return false;
 	}
 
 	position = Point2D(0.0f, 0.0f);
-	unsigned int count = 0;
+	size_t count = units.size();
 
 	for (const auto& u : units) {
-		if (u->unit_type == unit_type) {
-			position += u->pos;
-			++count;
-		}
+		position += u->pos;
 	}
 
-	position /= (float)count;
+	position /= static_cast<float>(count);
 
 	return true;
 }
