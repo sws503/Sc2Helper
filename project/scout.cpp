@@ -180,8 +180,10 @@ void MEMIBot::scout_all() {
 				flags.set("search_branch", 1);
 				flags.set("search_result", 2);
 			}
-			flags.set("search_branch", 1);  // search end
-			flags.set("search_result", 3);
+			else {
+				flags.set("search_branch", 1);  // search end
+				flags.set("search_result", 3);
+			}
 		}
 
 		// if probe_scout is stuck or cannot go for 10 seconds
@@ -289,4 +291,15 @@ void MEMIBot::determine_enemy_expansion() {
 			minimum_distance = current_distance;
 		}
 	}
+}
+
+void MEMIBot::manageobserver() {
+	const ObservationInterface* observation = Observation();
+	Units observers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER));
+	Units armies = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
+	for (const auto& observer : observers) {
+		// 본진에 프로브가 죽었지만, 적이 없는 경우
+		// attack 상황일 때 전진으로 가는 경우
+	}
+	return;
 }
