@@ -15,7 +15,18 @@ static const bool VsHuman = false;
 static const int stepsize = 3;
 static const bool Realtime = false;
 static const bool ControlTest = false;
-static const std::vector<std::string> map_names( {
+static const std::vector<std::string> map_names({
+	"BlackpinkLE",
+	"NeonVioletSquareLE",
+	"BackwaterLE",
+	"LostAndFoundLE",
+	"InterloperLE",
+	"ProximaStationLE",
+	"NewkirkPrecinctTE",
+	"BelShirVestigeLE"
+	});
+
+static const std::vector<std::string> map_names_2018s2({
 	"CatalystLE",
 	"AcidPlantLE",
 	"DarknessSanctuary",
@@ -65,8 +76,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Terran, Difficulty::HardVeryHard),
-
+			CreateComputer(Race::Random, Difficulty::HardVeryHard),
 			});
 	}
 
