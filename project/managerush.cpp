@@ -552,7 +552,7 @@ void MEMIBot::ManageRush() {
 		// attacker 세팅
 		if (Attackers.empty()) {
 			for (const auto& unit : rangedunits) {
-				if (Distance2D(startLocation_, unit->pos) < 1000)
+				if (Distance2D(startLocation_, unit->pos) < 50)
 				{
 					Attackers.push_back(unit);
 					std::cout << " 소집되었습니다 *^^*";
@@ -892,7 +892,7 @@ void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 	{
 		StalkerBlinkEscape(unit, target);
 	}
-	if (getunitsDpsGROUND(NearbyArmies) < 7.0f + NearMyArmies.size() * 1.0f)
+	if (getunitsDpsGROUND(NearbyArmies) < 6.0f + NearMyArmies.size() * 3.0f)
 	{
 		StalkerBlinkForward(unit, target);
 	}
