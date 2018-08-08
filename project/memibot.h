@@ -508,6 +508,12 @@ public:
 				BlinkResearched = true;
 				return;
 			}
+			case UPGRADE_ID::EXTENDEDTHERMALLANCE: {
+				std::cout << "COLOSSUS UPGRADE DONE!!";
+				ColossusRangeUp = true;
+				return;
+			}
+
 			/*case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
 				std::cout << "attack1";
 				timing_attack = true;
@@ -553,7 +559,15 @@ public:
 	// only allies. also geyser probes, passengers etc.
 	virtual void OnUnitCreated(const Unit* u) final override {
 		switch (u->unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_ADEPT:
+			num_adept++;
+			break;
+		case UNIT_TYPEID::PROTOSS_STALKER:
+			num_stalker++;
+			break;
+		
 		default:
+
 			break;
 		}
 	}
@@ -926,6 +940,8 @@ private:
 	void ManageWarpBlink(const Unit * unit, const Unit * shuttle);
 
 	const Unit * GetTarget(const Unit * rangedUnit, Units & targets);
+
+	const Unit * GetNearTarget(const Unit * rangedUnit, Units & targets);
 
 	const float getunitsDpsGROUND(Units targets) const;
 
@@ -2734,6 +2750,7 @@ private:
 	bool early_strategy;
 	bool warpgate_researched;
 	bool BlinkResearched;
+	bool ColossusRangeUp;
 	bool timing_attack = false;
 	const Unit* advance_pylon;
 	const Unit* probe_scout;
@@ -2753,6 +2770,8 @@ private:
 
 	uint16_t try_adept = 0;
     uint16_t try_stalker = 0;
+	uint16_t num_adept = 0;
+	uint16_t num_stalker = 0;
 
 	bool try_initialbalance = false;
 

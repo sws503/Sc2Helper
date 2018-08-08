@@ -543,8 +543,6 @@ void MEMIBot::ManageRush() {
 
 	//유닛이라면 기본적으로 해야할 행동 강령
 	for (const auto& unit : rangedunits) {
-		Units NearbyArmies = FindUnitsNear(unit, 10, Unit::Alliance::Enemy, IsArmy(observation));
-		Units NearbyWorkers = FindUnitsNear(unit, 7, Unit::Alliance::Enemy, IsWorker());
 		Units NearbyEnemies = FindUnitsNear(unit, 20, Unit::Alliance::Enemy);
 		//Units NearbyWorkers = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyWorker(observation, unit->pos, 7));
 		//Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 10));
@@ -609,11 +607,6 @@ void MEMIBot::ManageRush() {
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_STALKER)
 		{
-			if (try_stalker >= 45)
-			{
-				AdeptMustAttack = true;
-			}
-
 			//ManageWarpBlink(unit);
 			if (EvadeEffect(unit)) {}
 			else if (DefendDuty(unit)) {}
@@ -638,22 +631,15 @@ void MEMIBot::ManageRush() {
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_ADEPT)
 		{
-			if (try_adept >= 9)
+			Units NearbyArmies = FindUnitsNear(unit, 7, Unit::Alliance::Enemy, IsArmy(observation));
+			Units NearbyWorkers = FindUnitsNear(unit, 6, Unit::Alliance::Enemy, IsWorker());
+
+
+			if (num_adept >= 8)
 			{
 				AdeptMustAttack = true;
 			}
 
-			if (AdeptMustAttack) // 공격타이밍이면
-			{
-				if (target == nullptr)
-				{
-					ScoutWithUnit(unit, observation);
-				}
-			}
-			else if (!AdeptMustAttack && unit->orders.empty()) // 공격타이밍이 아닐때 한가하면
-			{
-				RetreatWithUnit(unit, advance_pylon_location);
-			}
 
 
 			bool ComeOn = false;
@@ -664,7 +650,7 @@ void MEMIBot::ManageRush() {
 			{
 				if (getunitsDpsGROUND(NearbyArmies) > 20.0f)
 				{
-					AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
+					//AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
 				}
 
 				const Unit * Armytarget = GetTarget(unit, NearbyArmies);
@@ -691,10 +677,21 @@ void MEMIBot::ManageRush() {
 					Kiting(unit, target);
 				}
 			}
+			else if (stage_number >= 30) //AdeptMustAttack) // target이 없음
+			{
+				ScoutWithUnit(unit, observation);
+			}
+			else if (unit->orders.empty())
+			{
+				SmartMove(unit, advance_pylon_location);
+				//Roam_randombase(unit);
+			}
 		}
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
 		{
+			const Unit * target = GetNearTarget(unit, NearbyEnemies);
+
 			if (EvadeEffect(unit)) {}
 			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
@@ -907,23 +904,6 @@ void MEMIBot::FleeKiting(const Unit* unit, const Unit* enemyarmy)
 	{
 		sc2::Point2D KitingLocation = unit->pos;
 		KitingLocation += CalcKitingPosition(unit->pos, enemyposition) * 3.0f;
-
-		/*if (!Observation()->IsPathable(KitingLocation)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
-		{
-		EmergencyKiting(unit, enemyarmy);
-		}
-		else if (float pathingdistance = Query()->PathingDistance(unit, KitingLocation) > 10) // 이동할 위치가 멀리 돌아가야하는 곳이라면
-		{
-		EmergencyKiting(unit, enemyarmy);
-		}
-		else if (pathingdistance == 0)
-		{
-		EmergencyKiting(unit, enemyarmy);
-		}
-		else
-		{
-		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-		}*/
 		SmartMove(unit, KitingLocation);
 	}
 }
@@ -1094,42 +1074,90 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 
 	//현재 공격중인데 WC가 0이면 냅둔다 or 현재 공격가능하면 공격하고 or 적이 멀리 떨어지면
 
-	if (Distance2D(unit->pos, enemyarmy->pos) < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
+	float Wait = 0.0f;
+	if (unit->unit_type == UNIT_TYPEID::PROTOSS_COLOSSUS)
 	{
-		//가만히 있도록 합시다
-	}
-	else if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
-	{
-		SmartAttackUnit(unit, enemyarmy);
-	}
-	else if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::MOVE) // 움직이고 있는 상황일 때도
-	{
+		Wait = 21.0f;
 
+		if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
+		{
+			//가만히 있도록 합시다
+		}
+		else if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown >= Wait) // 후딜을 기다려
+		{
+		}
+		else if (unitattackrange - 0.3f < DIST && DIST <= unitattackrange + 2.0f) // 최대사거리를 0.3 낮춤
+		{
+			SmartMove(unit, enemyarmy->pos);
+		}
+		else if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
+		{
+			std::cout << unitattackrange;
+			SmartAttackUnit(unit, enemyarmy);
+		}
+		else
+		{
+			sc2::Point2D KitingLocation = unit->pos;
+			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 10.0f;
+			sc2::Point2D FrontKitingLocation = unit->pos;
+			FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
+
+			if (IsStructure(Observation())(ENEMYARMY)) // 건물이면
+			{
+				SmartMove(unit, FrontKitingLocation);
+			}
+			else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
+			{
+				SmartMove(unit, FrontKitingLocation);
+			}
+			else // 적 사정거리가 나랑 같거나 짧으면
+			{
+				SmartMoveEfficient(unit, KitingLocation, enemyarmy);
+			}
+		}
 	}
 	else
 	{
-		sc2::Point2D KitingLocation = unit->pos;
-		KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 10.0f;
-		sc2::Point2D FrontKitingLocation = unit->pos;
-		FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
+		if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
+		{
+			//가만히 있도록 합시다
+		}
+		else if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
+		{
+			SmartAttackUnit(unit, enemyarmy);
+		}
+		else if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::MOVE) // 움직이고 있는 상황일 때도
+		{
 
-		if (IsStructure(Observation())(ENEMYARMY)) // 건물이면
-		{
-			SmartMove(unit, FrontKitingLocation);
 		}
-		else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
+		else
 		{
-			SmartMove(unit, FrontKitingLocation);
+			sc2::Point2D KitingLocation = unit->pos;
+			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 10.0f;
+			sc2::Point2D FrontKitingLocation = unit->pos;
+			FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
+
+			if (IsStructure(Observation())(ENEMYARMY)) // 건물이면
+			{
+				SmartMove(unit, FrontKitingLocation);
+			}
+			else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
+			{
+				SmartMove(unit, FrontKitingLocation);
+			}
+			//else if (getAttackRangeGROUND(enemyarmy) == unitattackrange && (myDps > (enemyDps + 50)) ) // 압도적이면 앞으로 가서 싸워라 TODO : enemy_army.size() * 5 로 가중치를 둘까요??
+			//{
+			//	KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
+			//}
+			else // 적 사정거리가 나랑 같거나 짧으면
+			{
+				SmartMoveEfficient(unit, KitingLocation, enemyarmy);
+			}
 		}
-		//else if (getAttackRangeGROUND(enemyarmy) == unitattackrange && (myDps > (enemyDps + 50)) ) // 압도적이면 앞으로 가서 싸워라 TODO : enemy_army.size() * 5 로 가중치를 둘까요??
-		//{
-		//	KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
-		//}
-		else // 적 사정거리가 나랑 같거나 짧으면
-		{
-			SmartMoveEfficient(unit, KitingLocation, enemyarmy);
-		}
+
 	}
+
+
 }
 
 void MEMIBot::SmartMoveEfficient(const Unit* unit, Point2D KitingLocation, const Unit * enemyarmy)
@@ -1138,17 +1166,14 @@ void MEMIBot::SmartMoveEfficient(const Unit* unit, Point2D KitingLocation, const
 
 	if ((pathingdistance = Query()->PathingDistance(unit, KitingLocation)) > 30) // 이동할 위치가 멀리 돌아가야하는 곳이라면
 	{
-		std::cout << " 2번 ";
 		EmergencyKiting(unit, enemyarmy);
 	}
 	else if (pathingdistance == 0)
 	{
-		std::cout << " 3번 ";
 		EmergencyKiting(unit, enemyarmy);
 	}
 	else
 	{
-		std::cout << " 4번 ";
 		SmartMove(unit, KitingLocation);
 	}
 }
@@ -1357,6 +1382,63 @@ int MEMIBot::getAttackPriority(const Unit * u)
 	return weakestTargetInsideRange && highPriorityNear>1 ? weakestTargetInsideRange : closestTargetOutsideRange;
 }
 
+ const Unit * MEMIBot::GetNearTarget(const Unit * rangedUnit, Units & targets)
+ {
+
+	 int highPriorityFar = 0;
+	 int highPriorityNear = 0;
+	 int highDpsNear = 0;
+	 double closestDist = std::numeric_limits<double>::max();
+	 double lowestHealth = std::numeric_limits<double>::max();
+	 const Unit * closestTargetOutsideRange = nullptr;
+	 const Unit * closestTargetInsideRange = nullptr;
+
+	 for (const auto & targetUnit : targets)
+	 {
+		 if (!targetUnit->is_alive)
+		 {
+			 continue;
+		 }
+		 const float range = getAttackRangeGROUND(rangedUnit); //rangedUnit->getAttackRange(targetUnit); 사도 사거리 4
+		 int priority = getAttackPriority(targetUnit);
+		 float target_dps = getDpsGROUND(targetUnit);
+
+		 const float distance = Distance2D(rangedUnit->pos, targetUnit->pos);
+		 float DIST = distance - rangedUnit->radius - targetUnit->radius;
+
+		 if (DIST > range) //적과 나 사이의 거리 > 나의 사정거리 // 거리가 멀어서 때릴 수 없는 경우
+		 {
+			 // If in sight we just add 20 to prio. This should make sure that a unit in sight has higher priority than any unit outside of range
+			 //
+			 float SightRange = Observation()->GetUnitTypeData()[rangedUnit->unit_type].sight_range;
+
+			 if (DIST <= SightRange)
+			 {
+				 priority += 20;
+			 }
+			 // 우선순위가 높거나 또는 거리가 가까우면 설정한다
+			 if (!closestTargetOutsideRange || (priority > highPriorityFar) || (priority == highPriorityFar && DIST < closestDist))
+			 {
+				 closestDist = DIST;
+				 highPriorityFar = priority;
+				 closestTargetOutsideRange = targetUnit;
+			 }
+		 }
+		 else
+		 {
+			 if (!closestTargetInsideRange || (priority > highPriorityNear) || (priority == highPriorityNear && DIST < closestDist)) // 건물을 때리고 싶을 때는
+			 {
+				 closestDist = DIST;
+				 highPriorityNear = priority;
+				 closestTargetInsideRange = targetUnit;
+
+			 }
+		 }
+	 }
+	 return closestTargetInsideRange && highPriorityNear>1 ? closestTargetInsideRange : closestTargetOutsideRange;
+ }
+
+
  const float MEMIBot::getunitsDpsGROUND(Units targets) const
  {
 
@@ -1413,6 +1495,10 @@ const float MEMIBot::getAttackRangeGROUND(const Unit* target) const
 		if (target->unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_BUNKER)
 		{
 			return 6.0f;
+		}
+		if (target->unit_type.ToType() == UNIT_TYPEID::PROTOSS_COLOSSUS && ColossusRangeUp == true)
+		{
+			return 9.0f;
 		}
 		if (Weapon.type == sc2::Weapon::TargetType::Air || Weapon.type == sc2::Weapon::TargetType::Any)
 		{
