@@ -10,6 +10,7 @@
 #include <typeinfo>
 #include <list>
 #include <unordered_map>
+#include <stack>
 #include "flag.h"
 //#include "balance_unit.h"
 
@@ -336,7 +337,7 @@ public:
 		ep.radiuses_.push_back(5.9f);
 		expansions_ = search::CalculateExpansionLocations(Observation(), Query(), ep);
 
-
+        Observation()->GetUnitTypeData();
 
 
 		//상대 종족
@@ -357,6 +358,7 @@ public:
 		early_strategy = false;
 		warpgate_researched = false;
 		BlinkResearched = false;
+		timing_attack = false;
 		advance_pylon = nullptr;
 		probe_scout = nullptr;
 		pylon_first = nullptr;
@@ -364,9 +366,8 @@ public:
 		base = nullptr;
 		find_enemy_location = false;
 		work_probe_forward = true;
-		
 
-		last_map_renewal = Observation()->GetGameLoop();
+		last_map_renewal = 0;
 		resources_to_nearest_base.clear();
 
 		flags.reset();
@@ -439,9 +440,9 @@ public:
 		ManageUpgrades();
 
 		// Control 시작
-		Defend();
+		//Defend();
 		//ManageArmy();
-		ManageRush();
+		//ManageRush();
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
@@ -565,7 +566,7 @@ public:
 		case UNIT_TYPEID::PROTOSS_STALKER:
 			num_stalker++;
 			break;
-		
+
 		default:
 
 			break;
@@ -637,6 +638,7 @@ public:
 
 	void SmartAttackUnit(const Unit * attacker, const Unit * target)
 	{
+		if (attacker == nullptr) return;
 		if (!attacker->orders.empty() && attacker->orders.front().target_unit_tag == target->tag)
 		{
 			return;
@@ -646,6 +648,7 @@ public:
 
 	void SmartMove(const Unit * attacker, Unit * target)
 	{
+		if (attacker == nullptr) return;
 		if (!attacker->orders.empty() && attacker->orders.front().ability_id == sc2::ABILITY_ID::MOVE && attacker->orders.front().target_unit_tag == target->tag)
 		{
 			return;
@@ -659,6 +662,7 @@ public:
 	}
 	void SmartMove(const Unit * attacker, const Point2D & targetPosition)
 	{
+		if (attacker == nullptr) return;
 		if (!attacker->orders.empty() && attacker->orders.front().ability_id == sc2::ABILITY_ID::MOVE && Distance2D(attacker->orders.front().target_pos, targetPosition) < 0.01f || Distance2D(attacker->pos, targetPosition) < 0.01f)
 		{
 			return;
@@ -722,7 +726,7 @@ public:
 			Actions()->UnitCommand(attacker, sc2::ABILITY_ID::MOVE, targetPosition);
 		}
 	}
-	
+
 
 	GameInfo game_info_;
 	std::vector<Point3D> expansions_;
@@ -1127,7 +1131,7 @@ private:
 			{
 				SmartMove(unit, retreat_position); // 움직여라
 			}
-			
+
 		}
 		return moving;
 	}
@@ -1220,19 +1224,27 @@ private:
 	}
 
 	Units FindUnitsNear(const Point2D& start, float distance, Filter f = {}) const {
-		const Units units = Observation()->GetUnits(f);
-		return FindUnitsNear(start, distance, units);
+		if (distance < 0) return Units();
+		float distance_squared = (distance == std::numeric_limits<float>::max()) ? distance : distance * distance;
+		Filter f2 = [start, distance_squared, f](const Unit& u) {
+			return ( !f || f(u) ) && DistanceSquared2D(u.pos, start) <= distance_squared;
+		};
+		return Observation()->GetUnits(f2);
 	}
 
 	Units FindUnitsNear(const Point2D& start, float distance, Unit::Alliance a, Filter f = {}) const {
-		const Units units = Observation()->GetUnits(a, f);
-		return FindUnitsNear(start, distance, units);
+		if (distance < 0) return Units();
+		float distance_squared = (distance == std::numeric_limits<float>::max()) ? distance : distance * distance;
+		Filter f2 = [start, distance_squared, f](const Unit& u) {
+			return ( !f || f(u) ) && DistanceSquared2D(u.pos, start) <= distance_squared;
+		};
+		return Observation()->GetUnits(a, f2);
 	}
 
 	Units FindUnitsNear(const Point2D& start, float distance, const Units& units) const {
 		Units target;
 		if (distance < 0) return target;
-		float distance_squared = distance * distance;
+		float distance_squared = (distance == std::numeric_limits<float>::max()) ? distance : distance * distance;
 		for (const auto& u : units) {
 			if (DistanceSquared2D(u->pos, start) <= distance_squared)
 				target.push_back(u);
@@ -1241,41 +1253,54 @@ private:
 	}
 
 	Units FindUnitsNear(const Unit* from_me, float distance, Filter f = {}) const {
-		const Units units = Observation()->GetUnits(f);
-		return FindUnitsNear(from_me, distance, units);
+		if (from_me == nullptr) return Units();
+		return FindUnitsNear(from_me->pos, distance, f);
 	}
 
 	Units FindUnitsNear(const Unit* from_me, float distance, Unit::Alliance a, Filter f = {}) const {
-		const Units units = Observation()->GetUnits(a, f);
-		return FindUnitsNear(from_me, distance, units);
+		if (from_me == nullptr) return Units();
+		return FindUnitsNear(from_me->pos, distance, a, f);
 	}
 
 	Units FindUnitsNear(const Unit* from_me, float distance, const Units& units) const {
-		Units target;
-		if (from_me == nullptr) return target;
-		if (distance < 0) return target;
-		float distance_squared = distance * distance;
-		for (const auto& u : units) {
-			if (DistanceSquared2D(u->pos, from_me->pos) <= distance_squared)
-				target.push_back(u);
-		}
-		return target;
+		if (from_me == nullptr) return Units();
+		return FindUnitsNear(from_me->pos, distance, units);
 	}
 
 	Units FindUnitsNear(const Units& from_us, float distance, Filter f = {}) const {
-		const Units units = Observation()->GetUnits(f);
-		return FindUnitsNear(from_us, distance, units);
+		if (distance < 0) return Units();
+		float distance_squared = (distance == std::numeric_limits<float>::max()) ? distance : distance * distance;
+		Filter f2 = [from_us, distance_squared, f](const Unit& u) {
+			if (f && !f(u)) return false;
+			for (const auto& me : from_us) {
+				if (DistanceSquared2D(u.pos, me->pos) <= distance_squared) {
+					return true;
+				}
+			}
+			return false;
+		};
+		return Observation()->GetUnits(f2);
 	}
 
 	Units FindUnitsNear(const Units& from_us, float distance, Unit::Alliance a, Filter f = {}) const {
-		const Units units = Observation()->GetUnits(a, f);
-		return FindUnitsNear(from_us, distance, units);
+		if (distance < 0) return Units();
+		float distance_squared = (distance == std::numeric_limits<float>::max()) ? distance : distance * distance;
+		Filter f2 = [from_us, distance_squared, f](const Unit& u) {
+			if (f && !f(u)) return false;
+			for (const auto& me : from_us) {
+				if (DistanceSquared2D(u.pos, me->pos) <= distance_squared) {
+					return true;
+				}
+			}
+			return false;
+		};
+		return Observation()->GetUnits(a, f2);
 	}
 
 	Units FindUnitsNear(const Units& from_us, float distance, const Units& units) const {
 		Units target;
 		if (distance < 0) return target;
-		float distance_squared = distance * distance;
+		float distance_squared = (distance == std::numeric_limits<float>::max()) ? distance : distance * distance;
 		for (const auto& u : units) {
 			for (const auto& me : from_us) {
 				if (DistanceSquared2D(u->pos, me->pos) <= distance_squared) {
@@ -1307,12 +1332,12 @@ private:
 	}
 
 	const Unit* FindNearestUnit(const Point2D& start, Filter f = {}, float max_d = std::numeric_limits<float>::max()) const {
-		const Units units = Observation()->GetUnits(f);
+		const Units units = FindUnitsNear(start, max_d, f);
 		return FindNearestUnit(start, units, max_d);
 	}
 
 	const Unit* FindNearestUnit(const Point2D& start, Unit::Alliance a, Filter f = {}, float max_d = std::numeric_limits<float>::max()) const {
-		const Units units = Observation()->GetUnits(a, f);
+		const Units units = FindUnitsNear(start, max_d, a, f);
 		return FindNearestUnit(start, units, max_d);
 	}
 
@@ -1374,6 +1399,41 @@ private:
 		return false;
 	}
 
+	bool TryBuildUnit(AbilityID ability_type_for_unit, UnitTypeID building_type, UnitTypeID unit_type, Filter priority_filter = {}) {
+		const ObservationInterface* observation = Observation();
+
+		//If we are at supply cap, don't build anymore units, unless its an overlord.
+		if (observation->GetFoodUsed()+observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
+			return false;
+		}
+
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
+            return false;
+		}
+
+		const Unit* unit = nullptr;
+		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(building_type));
+		for (const auto& candidate_unit : target_units) {
+			// is not completely built?
+			if (candidate_unit->build_progress != 1.0f) continue;
+			// is doing something?
+			if (!candidate_unit->orders.empty()) continue;
+			// is unpowered?
+			if (IsUnpowered()(*candidate_unit)) continue;
+			unit = candidate_unit;
+			// pick prioritized structures first
+			/*if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
+				break;
+			}*/
+			if (!unit->buffs.empty()) break;
+		}
+		if (unit == nullptr) {
+			return false;
+		}
+		Actions()->UnitCommand(unit, ability_type_for_unit);
+		return true;
+	}
+
 	bool TryBuildUnitChrono(AbilityID ability_type_for_unit, UnitTypeID building_type, UnitTypeID unit_type) {
 		const ObservationInterface* observation = Observation();
 
@@ -1400,16 +1460,13 @@ private:
 			/*if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
 				break;
 			}*/
-			if (unit->buffs.empty()) break;
+			if (!unit->buffs.empty()) break;
 		}
 		if (unit == nullptr) {
 			return false;
 		}
 		Actions()->UnitCommand(unit, ability_type_for_unit);
 		TryChronoboost(unit);
-
-		if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT || ability_type_for_unit == ABILITY_ID::TRAINWARP_ADEPT) try_adept++;
-		if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER || ability_type_for_unit == ABILITY_ID::TRAINWARP_STALKER) try_stalker++;
 		return true;
 	}
 
@@ -1456,43 +1513,6 @@ private:
             }
         }
     }
-
-	bool TryBuildUnit(AbilityID ability_type_for_unit, UnitTypeID building_type, UnitTypeID unit_type, Filter priority_filter = {}) {
-		const ObservationInterface* observation = Observation();
-
-		//If we are at supply cap, don't build anymore units, unless its an overlord.
-		if (observation->GetFoodUsed()+observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
-			return false;
-		}
-
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
-            return false;
-		}
-
-		const Unit* unit = nullptr;
-		Units target_units = observation->GetUnits(Unit::Alliance::Self, IsUnit(building_type));
-		for (const auto& candidate_unit : target_units) {
-			// is not completely built?
-			if (candidate_unit->build_progress != 1.0f) continue;
-			// is doing something?
-			if (!candidate_unit->orders.empty()) continue;
-			// is unpowered?
-			if (IsUnpowered()(*candidate_unit)) continue;
-			unit = candidate_unit;
-			// pick prioritized structures first
-			/*if (!HasBuff(BUFF_ID::TIMEWARPPRODUCTION)(*unit)) {
-				break;
-			}*/
-			if (unit->buffs.empty()) break;
-		}
-		if (unit == nullptr) {
-			return false;
-		}
-		Actions()->UnitCommand(unit, ability_type_for_unit);
-		if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT || ability_type_for_unit == ABILITY_ID::TRAINWARP_ADEPT) try_adept++;
-		if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER || ability_type_for_unit == ABILITY_ID::TRAINWARP_STALKER) try_stalker++;
-		return true;
-	}
 
 	bool TryBuildUpgrade(AbilityID ability_type_for_unit, UnitTypeID building_type, UpgradeID upgrade_type) {
         const ObservationInterface* observation = Observation();
@@ -1552,6 +1572,7 @@ private:
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
         build_location = Point2D(build_location.x + rx * radius, build_location.y + ry * radius);
+		if (!observation->IsPathable(build_location)) return false;
 
         for (const auto& warpgate : warpgates) {
             if (warpgate->build_progress == 1) {
@@ -1560,8 +1581,6 @@ private:
                     if (ability.ability_id == ability_type_for_unit) {
                         Actions()->UnitCommand(warpgate, ability_type_for_unit, build_location);
 
-                        if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT || ability_type_for_unit == ABILITY_ID::TRAINWARP_ADEPT) try_adept++;
-                        if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER || ability_type_for_unit == ABILITY_ID::TRAINWARP_STALKER) try_stalker++;
                         return true;
                     }
                 }
@@ -1987,7 +2006,7 @@ private:
 		Units geysers = observation->GetUnits(Unit::Alliance::Self, filter_geyser);
 		Units bases = observation->GetUnits(Unit::Alliance::Self, filter_bases);
 		Units minerals = observation->GetUnits(Unit::Alliance::Neutral, IsMineral());
-		
+
 		for (const auto& m : minerals) {
 			const Unit* b = FindNearestUnit(m->pos, bases, 11.5);
 			Tag b_tag = (b != nullptr) ? b->tag : NullTag;
@@ -2088,16 +2107,18 @@ private:
 		}
 
 		// Search for a base that does not have full of gas workers.
-		for (const auto& geyser : geysers) {
-			if (geyser->assigned_harvesters >= geyser->ideal_harvesters) continue;
-			Tag b = resources_to_nearest_base.count(geyser->tag) ? resources_to_nearest_base.at(geyser->tag) : NullTag;
-			if (b == NullTag) continue;
-			const Unit* base = observation->GetUnit(b);
-			if (base == nullptr) continue;
-			float current_distance = DistanceSquared2D(geyser->pos, worker->pos);
-			if (current_distance < min_distance) {
-				min_distance = current_distance;
-				target_resource = geyser;
+		if (has_space_for_gas && !EnemyRush) {
+			for (const auto& geyser : geysers) {
+				if (geyser->assigned_harvesters >= geyser->ideal_harvesters) continue;
+				Tag b = resources_to_nearest_base.count(geyser->tag) ? resources_to_nearest_base.at(geyser->tag) : NullTag;
+				if (b == NullTag) continue;
+				const Unit* base = observation->GetUnit(b);
+				if (base == nullptr) continue;
+				float current_distance = DistanceSquared2D(geyser->pos, worker->pos);
+				if (current_distance < min_distance) {
+					min_distance = current_distance;
+					target_resource = geyser;
+				}
 			}
 		}
 
@@ -2107,16 +2128,18 @@ private:
 		}
 
 		// Search for a base that does not have full of mineral workers.
-		for (const auto& mineral : minerals) {
-			Tag b = resources_to_nearest_base.count(mineral->tag) ? resources_to_nearest_base.at(mineral->tag) : NullTag;
-			if (b == NullTag) continue;
-			const Unit* base = observation->GetUnit(b);
-			if (base == nullptr) continue;
-			if (base->assigned_harvesters >= base->ideal_harvesters) continue;
-			float current_distance = DistanceSquared2D(mineral->pos, worker->pos);
-			if (current_distance < min_distance) {
-				min_distance = current_distance;
-				target_resource = mineral;
+		if (has_space_for_mineral && !EnemyRush) {
+			for (const auto& mineral : minerals) {
+				Tag b = resources_to_nearest_base.count(mineral->tag) ? resources_to_nearest_base.at(mineral->tag) : NullTag;
+				if (b == NullTag) continue;
+				const Unit* base = observation->GetUnit(b);
+				if (base == nullptr) continue;
+				if (base->assigned_harvesters >= base->ideal_harvesters) continue;
+				float current_distance = DistanceSquared2D(mineral->pos, worker->pos);
+				if (current_distance < min_distance) {
+					min_distance = current_distance;
+					target_resource = mineral;
+				}
 			}
 		}
 
@@ -2225,9 +2248,7 @@ private:
 			}
 		}
 
-		// if there is a space
 		if (has_space_for_mineral || has_space_for_gas) {
-			
 			for (const auto& worker : workers) {
 				if (worker == probe_scout) continue;
 				if (worker == probe_forward && !work_probe_forward) continue;
@@ -2250,15 +2271,16 @@ private:
 				if (target_resource == nullptr) continue;
 				if (nearest_base == nullptr) continue;
 
-				// reassign overflowing workers (minerals)
-				if (IsMineral()(*target_resource)) {
-					if (nearest_base->assigned_harvesters - nearest_base->ideal_harvesters <= 0) continue;
+				// reassign overflowing workers (geysers)
+				if (!IsMineral()(*target_resource)) {
+					if (target_resource->assigned_harvesters - target_resource->ideal_harvesters <= 0) continue;
 					MineIdleWorkers(worker);
 					return;
 				}
-				// reassign overflowing workers (geysers)
+				// if there is a space
+				// reassign overflowing workers (minerals)
 				else {
-					if (target_resource->assigned_harvesters - target_resource->ideal_harvesters <= 0) continue;
+					if (nearest_base->assigned_harvesters - nearest_base->ideal_harvesters <= 0) continue;
 					MineIdleWorkers(worker);
 					return;
 				}
@@ -2287,7 +2309,7 @@ private:
 		}
 
 		// mine gas.
-		if (has_space_for_gas) {
+		if (has_space_for_gas && !EnemyRush) {
 			// sort by distance
 			Point2D gas_base_pos = gas_base->pos;
 			std::function<bool(const Unit*, const Unit*)> f =
@@ -2461,115 +2483,50 @@ private:
 
 	void determine_enemy_expansion();
 
-	bool TryWarpAdept(){
-        const ObservationInterface* observation = Observation();
-        std::vector<PowerSource> power_sources = observation->GetPowerSources();
-        Units warpgates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE));
-
-        if (power_sources.empty()) {
-            return false;
-        }
-
-        const PowerSource& random_power_source = GetRandomEntry(power_sources);
-
-        float radius = random_power_source.radius;
-        float rx = GetRandomScalar();
-        float ry = GetRandomScalar();
-        Point2D build_location = Point2D(advance_pylon->pos.x + rx * radius, advance_pylon->pos.y + ry * radius);
-		if (!observation->IsPathable(build_location)) return false;
-
-        for (const auto& warpgate : warpgates) {
-            //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
-            if (warpgate->build_progress == 1) {
-                AvailableAbilities abilities = Query()->GetAbilitiesForUnit(warpgate);
-                for (const auto& ability : abilities.abilities) {
-                    if (ability.ability_id == ABILITY_ID::TRAINWARP_ADEPT) {
-                        Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
-                        try_adept++;
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-    bool TryWarpStalker(){
-        const ObservationInterface* observation = Observation();
-        std::vector<PowerSource> power_sources = observation->GetPowerSources();
-        Units warpgates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE));
-
-        if (power_sources.empty()) {
-            return false;
-        }
-
-        PowerSource& random_power_source = GetRandomEntry(power_sources);
-        for (const auto& p : power_sources) {
-            if (Distance2D(random_power_source.position, front_expansion)>Distance2D(p.position, front_expansion)) {
-                random_power_source = p;
-            }
-        }
-        /*const PowerSource& random_power_source = GetRandomEntry(power_sources);
-        const PowerSource& pylon = FindNearestUnit(front_expansion, power_sources);
-        if (Distance2D(random_power_source.position,front_expansion)>20) {
-            return false;
-        }*/
-
-        float radius = random_power_source.radius;
-        float rx = GetRandomScalar();
-        float ry = GetRandomScalar();
-        Point2D build_location = Point2D(random_power_source.position.x + rx * radius, random_power_source.position.y + ry * radius);
-		if (!observation->IsPathable(build_location)) return false;
-
-        for (const auto& warpgate : warpgates) {
-            //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
-            if (warpgate->build_progress == 1) {
-                AvailableAbilities abilities = Query()->GetAbilitiesForUnit(warpgate);
-                for (const auto& ability : abilities.abilities) {
-                    if (ability.ability_id == ABILITY_ID::TRAINWARP_STALKER) {
-                        Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_STALKER, build_location);
-                        try_stalker++;
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
+	bool TryWarpAdept() {
+		return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT);
+	}
+	bool TryWarpStalker() {
+		return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+	}
     bool TryWarpTemplar(){
-        const ObservationInterface* observation = Observation();
-        std::vector<PowerSource> power_sources = observation->GetPowerSources();
-        Units warpgates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE));
-
-        if (power_sources.empty()) {
-            return false;
-        }
-
-        const PowerSource& random_power_source = GetRandomEntry(power_sources);
-
-        float radius = random_power_source.radius;
-        float rx = GetRandomScalar();
-        float ry = GetRandomScalar();
-        Point2D build_location = Point2D(advance_pylon->pos.x + rx * radius, advance_pylon->pos.y + ry * radius);
-		if (!observation->IsPathable(build_location)) return false;
-
-        for (const auto& warpgate : warpgates) {
-            //Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_ADEPT, build_location);
-            if (warpgate->build_progress == 1) {
-                AvailableAbilities abilities = Query()->GetAbilitiesForUnit(warpgate);
-                for (const auto& ability : abilities.abilities) {
-                    if (ability.ability_id == ABILITY_ID::TRAINWARP_HIGHTEMPLAR) {
-                        Actions()->UnitCommand(warpgate, ABILITY_ID::TRAINWARP_HIGHTEMPLAR, build_location);
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
+		return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_HIGHTEMPLAR);
     }
-    bool TryWarpUnitPosition(AbilityID ability_type_for_unit, Point2D pos) {
+    bool TryWarpUnitPosition(AbilityID ability_type_for_unit, const Point2D& pos = Point2D(0,0)) {
         const ObservationInterface* observation = Observation();
         std::vector<PowerSource> power_sources = observation->GetPowerSources();
-        Units warpgates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE));
+
+		UnitTypeID unit_type;
+		switch (ability_type_for_unit.ToType()) {
+		case ABILITY_ID::TRAINWARP_ZEALOT:
+			unit_type = UNIT_TYPEID::PROTOSS_ZEALOT;
+			break;
+		case ABILITY_ID::TRAINWARP_ADEPT:
+			unit_type = UNIT_TYPEID::PROTOSS_ADEPT;
+			break;
+		case ABILITY_ID::TRAINWARP_SENTRY:
+			unit_type = UNIT_TYPEID::PROTOSS_SENTRY;
+			break;
+		case ABILITY_ID::TRAINWARP_STALKER:
+			unit_type = UNIT_TYPEID::PROTOSS_STALKER;
+			break;
+		case ABILITY_ID::TRAINWARP_DARKTEMPLAR:
+			unit_type = UNIT_TYPEID::PROTOSS_DARKTEMPLAR;
+			break;
+		case ABILITY_ID::TRAINWARP_HIGHTEMPLAR:
+			unit_type = UNIT_TYPEID::PROTOSS_HIGHTEMPLAR;
+			break;
+		default:
+			return false;
+		}
+
+		//If we are at supply cap, don't build anymore units, unless its an overlord.
+		if (observation->GetFoodUsed() + observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
+			return false;
+		}
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
+			return false;
+		}
         if (observation->GetFoodUsed() >= observation->GetFoodCap()) {
 			return false;
 		}
@@ -2577,12 +2534,24 @@ private:
             return false;
         }
 
+		Filter f = [](const Unit& u) {
+			return IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE)(u) && u.build_progress == 1.0f
+				&& !IsUnpowered()(u) && u.orders.empty();
+		};
+		Units warpgates = observation->GetUnits(Unit::Alliance::Self, f);
+		size_t warpgates_size = warpgates.size();
+
         PowerSource& power_source = GetRandomEntry(power_sources);
-        for (const auto& power__source : power_sources) {
-            if (Distance2D(pos,power_source.position)>Distance2D(pos,power__source.position)) {
-                power_source = power__source;
-            }
-        }
+		if (Point2D(0, 0) != pos) {
+			float min_dist = DistanceSquared2D(pos, power_source.position);
+			for (const auto& p : power_sources) {
+				float current_dist = DistanceSquared2D(pos, p.position);
+				if (current_dist < min_dist) {
+					power_source = p;
+					min_dist = current_dist;
+				}
+			}
+		}
 
         float radius = power_source.radius;
         float rx = GetRandomScalar();
@@ -2590,20 +2559,18 @@ private:
         Point2D build_location = Point2D(power_source.position.x + rx * radius, power_source.position.y + ry * radius);
 		if (!observation->IsPathable(build_location)) return false;
 
-        for (const auto& warpgate : warpgates) {
-            if (warpgate->build_progress == 1) {
-                AvailableAbilities abilities = Query()->GetAbilitiesForUnit(warpgate);
-                for (const auto& ability : abilities.abilities) {
-                    if (ability.ability_id == ability_type_for_unit) {
-                        Actions()->UnitCommand(warpgate, ability_type_for_unit, build_location);
+		std::vector<AvailableAbilities> abilities_vector = Query()->GetAbilitiesForUnits(warpgates);
 
-                        if (ability_type_for_unit == ABILITY_ID::TRAIN_ADEPT || ability_type_for_unit == ABILITY_ID::TRAINWARP_ADEPT) try_adept++;
-                        if (ability_type_for_unit == ABILITY_ID::TRAIN_STALKER || ability_type_for_unit == ABILITY_ID::TRAINWARP_STALKER) try_stalker++;
-                        return true;
-                    }
-                }
-            }
-        }
+		for (const auto& abilities : abilities_vector) {
+			const Unit* target_warpgate = observation->GetUnit(abilities.unit_tag);
+			if (target_warpgate == nullptr) continue;
+			for (const auto& ability : abilities.abilities) {
+				if (ability.ability_id == ability_type_for_unit) {
+					Actions()->UnitCommand(target_warpgate, ability_type_for_unit, build_location);
+					return true;
+				}
+			}
+		}
         return false;
     }
     bool TryBuildArmyBranch0(){
@@ -2751,12 +2718,12 @@ private:
 	bool warpgate_researched;
 	bool BlinkResearched;
 	bool ColossusRangeUp;
-	bool timing_attack = false;
+	bool timing_attack;
+
 	const Unit* advance_pylon;
 	const Unit* probe_scout;
 	const Unit* pylon_first;
 	const Unit* probe_forward;
-	int Timeto_warpzealot = false;
 
 	bool work_probe_forward;
 	bool find_enemy_location;
@@ -2768,11 +2735,10 @@ private:
 	uint16_t branch;
 	const size_t max_worker_count_ = 68;
 
-	uint16_t try_adept = 0;
-    uint16_t try_stalker = 0;
 	uint16_t num_adept = 0;
 	uint16_t num_stalker = 0;
 
 	bool try_initialbalance = false;
-
+	bool Timeto_warpzealot = false;
+uint16_t try_adept,try_stalker;
 };
