@@ -30,6 +30,9 @@
     <ClCompile Include="scout.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="control.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="memibot.h">

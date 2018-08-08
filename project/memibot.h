@@ -164,13 +164,12 @@ struct IsRanged {
 	bool operator()(const Unit& unit) {
 		auto Weapon = observation_->GetUnitTypeData().at(unit.unit_type).weapons;
 		for (const auto& weapon : Weapon) {
-			if (weapon.range < 2.0f) {
-				return false;
+			if (weapon.range > 2.0f) {
+				return true;
 			}
 		}
 		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT: return false;
-		default: return true;
+		default: return false;
 		}
 	}
 private:
@@ -440,9 +439,9 @@ public:
 		ManageUpgrades();
 
 		// Control 시작
-		//Defend();
+		Defend();
 		//ManageArmy();
-		//ManageRush();
+		ManageRush();
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
@@ -514,12 +513,11 @@ public:
 				ColossusRangeUp = true;
 				return;
 			}
-
-			/*case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
+			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
 				std::cout << "attack1";
 				timing_attack = true;
 				return;
-			}*/
+			}
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2: {
 				std::cout << "attack2";
 				timing_attack = true;
@@ -828,11 +826,13 @@ private:
 			if (isBadEffect(effect.effect_id))
 			{
 				const EffectData& ed = Observation()->GetEffectData().at(effect.effect_id);
-				const float radius = ed.radius;
+				const float radius = ed.radius + 1.0f;
+				/*
 				if (EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHED)
 				{
 					const float radius = ed.radius + 1.0f;
 				}
+				*/
 				for (const auto & pos : effect.positions)
 				{
 					const float dist = Distance2D(unit->pos, pos);
@@ -910,6 +910,8 @@ private:
 
 	void FrontKiting(const Unit * unit, const Unit * enemyarmy);
 
+	bool CanHitMe(const Unit * unit);
+
 	void ComeOnKiting(const Unit * unit, const Unit * enemyarmy);
 
 	void Kiting(const Unit * unit, const Unit * enemyarmy);
@@ -918,6 +920,8 @@ private:
 
 
 	void EmergencyKiting(const Unit * unit, const Unit * enemyarmy);
+
+	bool GetPosition(Units & units, Point2D & position);
 
 	void KiteEnemy(const Unit * unit, Units enemy_army, Units enemy_units, Point2D KitingLocation, bool enemiesnear, const ObservationInterface * observation);
 
@@ -1075,9 +1079,9 @@ private:
 
 	void ScoutWithUnit(const Unit* unit, const ObservationInterface* observation) {
 		Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy, IsAttackable());
-		if (!unit->orders.empty()) {
+		/*if (!unit->orders.empty()) {
 			return;
-		}
+		}*/
 		Point2D target_pos;
 
 		if (FindEnemyPosition(target_pos)) { //적 기지를 알고있는 상황이면
@@ -2482,6 +2486,8 @@ private:
 	void scoutprobe();
 
 	void determine_enemy_expansion();
+
+	void manageobserver();
 
 	bool TryWarpAdept() {
 		return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT, advance_pylon_location);

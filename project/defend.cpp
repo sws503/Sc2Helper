@@ -1,8 +1,5 @@
 #include "memibot.h"
 
-Units two_stalkers;
-bool selected = false;
-
 struct IsNearbyArmies {
 	IsNearbyArmies(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
 		observation_(obs), mp(MyPosition), radius(Radius) {}
@@ -40,18 +37,6 @@ private:
 	int radius;
 };
 
-bool MEMIBot::DefendDuty(const Unit * unit)
-{
-	const Unit * target = GetTarget(unit, enemyUnitsInRegion);
-
-	if (target != nullptr && Distance2D(unit->pos, target->pos) < 20)
-	{
-		Kiting(unit, target);
-		return true;
-	}
-
-	return false;
-}
 
 
 void MEMIBot::Defend() {
