@@ -960,7 +960,7 @@ void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 	{
 		StalkerBlinkEscape(unit, target);
 	}
-	if (getunitsDpsGROUND(NearbyArmies) < 7.0f + NearMyArmies.size() * 1.0f)
+	if (getunitsDpsGROUND(NearbyArmies) < 6.0f + NearMyArmies.size() * 3.0f)
 	{
 		StalkerBlinkForward(unit, target);
 	}

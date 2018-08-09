@@ -42,20 +42,7 @@ bool MEMIBot::DefendDuty(const Unit * unit)
 	const Unit * target = GetTarget(unit, enemyUnitsInRegion);
 	Units bases = Observation()->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 
-	/*if (Distance2D(unit->pos, startLocation_) > )
-	{
-		if (target == nullptr)
-		{
-			Actions()->UnitCommand(unit, ABILITY_ID::STOP);
-		}
-		else
-		{
-			FleeKiting(unit, target);
-		}
-		return true;
-	}
-	else */
-	if (target != nullptr && Distance2D(unit->pos, target->pos) < 20)
+	if(target != nullptr && IsUnitInUnits(target, enemyUnitsInRegion) && Distance2D(unit->pos, target->pos) < 20)
 	{
 		Kiting(unit, target);
 		return true;
