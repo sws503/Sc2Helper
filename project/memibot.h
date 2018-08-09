@@ -429,15 +429,7 @@ public:
 			EarlyStrategy();
 		}
 		
-		if (observation->GetFoodUsed() <= 190)
-		{
-			Recruited == false;
-		}
-		else if (observation->GetFoodUsed() > 190 && Recruited == false)
-		{
-			timing_attack = true;
-			Recruited = true;
-		}
+		ManageTimingAttack();
 
 		scout_all();
 
@@ -526,6 +518,8 @@ public:
 				ColossusRangeUp = true;
 				return;
 			}
+												   if (branch == 5)
+												   {
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
 				std::cout << "attack1";
 				timing_attack = true;
@@ -550,6 +544,8 @@ public:
 				Attackers.clear();
 				return;
 			}
+												   }
+			
             case UPGRADE_ID::WARPGATERESEARCH: {
                 warpgate_researched = true;
                 return;
@@ -578,7 +574,9 @@ public:
 		case UNIT_TYPEID::PROTOSS_STALKER:
 			num_stalker++;
 			break;
-
+		case UNIT_TYPEID::PROTOSS_COLOSSUS:
+			num_colossus++;
+			break;
 		default:
 
 			break;
@@ -905,6 +903,8 @@ private:
 	void DoGuerrillaWarp(const Unit * unit);
 
 	void Merge(const Unit * unit, Point2D mergelocation);
+
+	void ManageTimingAttack();
 
 	void ManageRush();
 
@@ -2792,6 +2792,7 @@ private:
 
 	uint16_t num_adept = 0;
 	uint16_t num_stalker = 0;
+	uint16_t num_colossus = 0;
 
 	bool try_initialbalance = false;
 	bool Timeto_warpzealot = false;

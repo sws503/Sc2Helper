@@ -404,9 +404,29 @@ bool MEMIBot::IsUnitInUnits(const Unit* unit, Units& units) {
 		AdeptPhaseToLocation(unit, HarassLocation, Timer, ComeOn);
 	}
 }*/
-void MEMIBot::Merge(const Unit* unit, Point2D mergelocation)
+void MEMIBot::ManageTimingAttack()
 {
+	const ObservationInterface* observation = Observation();
 
+	/*if (num_colossus < 4)
+	{
+		Recruited == false;
+	}
+	else */if(num_colossus >= 4)
+	{
+		timing_attack = true;
+	}
+
+	if (observation->GetFoodUsed() <= 190)
+	{
+		Recruited == false;
+	}
+	else if (observation->GetFoodUsed() > 190 && Recruited == false)
+	{
+		timing_attack = true;
+		Recruited = true;
+		Attackers.clear();
+	}
 }
 
 
@@ -675,9 +695,9 @@ void MEMIBot::ManageRush() {
 			bool ComeOn = false;
 
 			if (EvadeEffect(unit)) {}
-			else if (target != nullptr)
+			else if (29 <= stage_number && stage_number <= 35)
 			{
-				if (stage_number < 40)
+				if (target != nullptr)
 				{
 					if (getunitsDpsGROUND(NearbyArmies) > 20.0f)
 					{
@@ -708,85 +728,43 @@ void MEMIBot::ManageRush() {
 					{
 						Kiting(unit, target);
 					}
-
 				}
-				else
+				else if (DefendDuty(unit)) {}
+				else if (32 <= stage_number) //AdeptMustAttack) // target이 없음
 				{
-					Kiting(unit, target);
-				}
-
-			}
-			else if (DefendDuty(unit)) {}
-			else if (32 <= stage_number && stage_number < 40) //AdeptMustAttack) // target이 없음
-			{
-				ScoutWithUnit(unit, observation);
-			}
-			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
-			{
-				if (timing_attack == 1) { // 모이자~
-					RetreatSmart(unit, meeting_spot);
-				}
-				else if (timing_attack == 0) { // 처들어가자~
 					ScoutWithUnit(unit, observation);
 				}
-			}
-			else if (unit->orders.empty())
-			{
-				RetreatSmart(unit, advance_pylon_location);
-				//Roam_randombase(unit);
-			}
-			else if (unit->orders.empty())
-			{
-				Roam_randombase(unit);
-			}
-			
-			
-
-			if (EvadeEffect(unit)) {}
-			else if(target != nullptr)
-			{
-				if (getunitsDpsGROUND(NearbyArmies) > 20.0f)
+				else if (unit->orders.empty())
 				{
-					AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
+					RetreatSmart(unit, advance_pylon_location);
+					//Roam_randombase(unit);
 				}
-
-				const Unit * Armytarget = GetTarget(unit, NearbyArmies);
-
-				if (NearbyWorkers.size() > 0) // 근처에 적 일꾼이 있는데
+			}
+			else
+			{
+				if (target != nullptr) // 카이팅은 항상하자
 				{
-					const Unit * Workertarget = GetTarget(unit, NearbyWorkers);
-
-					if (!NearbyArmies.empty()) // 수비유닛도 같이 있으면
+					if (BlinkResearched)
 					{
-						const Unit * Armytarget = GetTarget(unit, NearbyArmies);
-						DistanceKiting(unit, Workertarget, Armytarget);
+						ManageBlink(unit, target);
 					}
-					else //일꾼만 있으면
-					{
-						FrontKiting(unit, Workertarget);
-					}
-				}
-				else if (ComeOn && Armytarget != nullptr) //분신이 있으며 근처에 적 유닛이 있는 경우
-				{
-					ComeOnKiting(unit, Armytarget);
-				}
-				else //적의 DPS가 높지 않을 때
-				{
 					Kiting(unit, target);
 				}
+				else if (DefendDuty(unit)) {}
+				else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+				{
+					if (timing_attack == 1) { // 모이자~
+						RetreatSmart(unit, meeting_spot);
+					}
+					else if (timing_attack == 0) { // 처들어가자~
+						ScoutWithUnit(unit, observation);
+					}
+				}
+				else if (unit->orders.empty())
+				{
+					Roam_randombase(unit);
+				}
 			}
-			else if (DefendDuty(unit)) {}
-			else if (32 <= stage_number && stage_number < 40) //AdeptMustAttack) // target이 없음
-			{
-				ScoutWithUnit(unit, observation);
-			}
-			else if (unit->orders.empty())
-			{
-				RetreatSmart(unit, advance_pylon_location);
-				//Roam_randombase(unit);
-			}
-
-
 		}
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
