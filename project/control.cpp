@@ -1,17 +1,6 @@
 #include "memibot.h"
 
-bool MEMIBot::DefendDuty(const Unit * unit)
-{
-	const Unit * target = GetTarget(unit, enemyUnitsInRegion);
 
-	if (target != nullptr && Distance2D(unit->pos, target->pos) < 20)
-	{
-		Kiting(unit, target);
-		return true;
-	}
-
-	return false;
-}
 
 Point2D MEMIBot::CalcKitingPosition(Point2D Mypos, Point2D EnemyPos) {
 	Vector2D diff = Mypos - EnemyPos; // 7.3 적 유닛과의 반대 방향으로 도망

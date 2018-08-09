@@ -552,7 +552,7 @@ void MEMIBot::ManageRush() {
 		// attacker 세팅
 		if (Attackers.empty()) {
 			for (const auto& unit : rangedunits) {
-				if (Distance2D(startLocation_, unit->pos) < 1000)
+				if (Distance2D(startLocation_, unit->pos) < 50)
 				{
 					Attackers.push_back(unit);
 					std::cout << " 소집되었습니다 *^^*";
@@ -586,11 +586,11 @@ void MEMIBot::ManageRush() {
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_IMMORTAL)
 		{
 			if (EvadeEffect(unit)) {}
-			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				Kiting(unit, target);
 			}
+			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
 				if (timing_attack == 1) { // 모이자~
@@ -609,11 +609,11 @@ void MEMIBot::ManageRush() {
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
 		{
 			if (EvadeEffect(unit)) {}
-			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				Kiting(unit, target);
 			}
+			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
 				if (timing_attack == 1) { // 모이자~
@@ -634,7 +634,6 @@ void MEMIBot::ManageRush() {
 			//ManageWarpBlink(unit);
 
 			if (EvadeEffect(unit)) {}
-			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				if (BlinkResearched)
@@ -643,6 +642,7 @@ void MEMIBot::ManageRush() {
 				}
 				Kiting(unit, target);
 			}
+			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
 				if (timing_attack == 1) { // 모이자~
@@ -675,7 +675,6 @@ void MEMIBot::ManageRush() {
 			bool ComeOn = false;
 
 			if (EvadeEffect(unit)) {}
-			else if (DefendDuty(unit)) {}
 			else if(target != nullptr)
 			{
 				if (getunitsDpsGROUND(NearbyArmies) > 20.0f)
@@ -708,6 +707,7 @@ void MEMIBot::ManageRush() {
 					Kiting(unit, target);
 				}
 			}
+			else if (DefendDuty(unit)) {}
 			else if (32 <= stage_number && stage_number < 40) //AdeptMustAttack) // target이 없음
 			{
 				ScoutWithUnit(unit, observation);
@@ -726,11 +726,11 @@ void MEMIBot::ManageRush() {
 			const Unit * target = GetNearTarget(unit, NearbyEnemies);
 
 			if (EvadeEffect(unit)) {}
-			else if (DefendDuty(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				ColossusKiting(unit, target);
 			}
+			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
 				if (timing_attack == 1) { // 모이자~
@@ -892,7 +892,7 @@ void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 	{
 		StalkerBlinkEscape(unit, target);
 	}
-	if (getunitsDpsGROUND(NearbyArmies) < 7.0f + NearMyArmies.size() * 1.0f)
+	if (getunitsDpsGROUND(NearbyArmies) < 6.0f + NearMyArmies.size() * 3.0f)
 	{
 		StalkerBlinkForward(unit, target);
 	}
@@ -1043,7 +1043,7 @@ int MEMIBot::getAttackPriority(const Unit * u)
 	}
 	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 	{
-		return 10;
+		return 11;
 	}
 	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_SPINECRAWLER)
 	{

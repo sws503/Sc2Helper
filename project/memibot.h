@@ -2756,7 +2756,7 @@ private:
 	bool ManyEnemyRush;
 	bool PhotonRush;
 	Point2D pylonlocation;
-	Units Killers;
+	std::list<const Unit*> Killers;
 
 	bool early_strategy;
 	bool warpgate_researched;

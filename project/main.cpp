@@ -15,7 +15,7 @@ static const bool VsHuman = false;
 static const int stepsize = 2;
 static const bool Realtime = false;
 static const bool ControlTest = false;
-static const std::vector<std::string> map_names( {
+static const std::vector<std::string> map_names({
 	"BlackpinkLE",
 	"NeonVioletSquareLE",
 	"BackwaterLE",
@@ -24,8 +24,20 @@ static const std::vector<std::string> map_names( {
 	"ProximaStationLE",
 	"NewkirkPrecinctTE",
 	"BelShirVestigeLE"
+	});
+
+static const std::vector<std::string> map_names_2018s2({
+	"CatalystLE",
+	"AcidPlantLE",
+	"DarknessSanctuary",
+	"DreamcatcherLE",
+	"LostAndFoundLE",
+	"InterloperLE",
+	"ProximaStationLE",
+	"NewkirkPrecinctTE",
+	"BelShirVestigeLE"
 	} );
-static const std::string ControlMap = "1pTest.SC2Map"; // 1pTest 2pTest
+static const std::string ControlMap = "BackwaterLE.SC2Map"; // 1pTest 2pTest
 
 class Human : public sc2::Agent {
 public:
@@ -66,8 +78,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Zerg, Difficulty::HardVeryHard),
-
+			CreateComputer(Race::Random, Difficulty::HardVeryHard),
 			});
 	}
 
