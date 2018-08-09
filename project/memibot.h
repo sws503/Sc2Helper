@@ -518,34 +518,60 @@ public:
 				ColossusRangeUp = true;
 				return;
 			}
-												   if (branch == 5)
-												   {
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
-				std::cout << "attack1";
-				timing_attack = true;
-				Attackers.clear();
+				if (branch == 5)
+				{
+					std::cout << "attack1";
+					timing_attack = true;
+					Attackers.clear();
+				}
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2: {
-				std::cout << "attack2";
-				timing_attack = true;
-				Attackers.clear();
+				if (branch == 5)
+				{
+					std::cout << "attack2";
+					timing_attack = true;
+					Attackers.clear();
+				}
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL3: {
-				std::cout << "attack3";
-				timing_attack = true;
-				Attackers.clear();
+				if (branch == 5)
+				{
+					std::cout << "attack3";
+					timing_attack = true;
+					Attackers.clear();
+				}
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL1: {
-				std::cout << "attack3";
-				timing_attack = true;
-				Attackers.clear();
+				if (branch == 5)
+				{
+					std::cout << "attack4";
+					timing_attack = true;
+					Attackers.clear();
+				}
 				return;
 			}
-												   }
-			
+			case UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL2: {
+				if (branch == 5)
+				{
+					std::cout << "attack4";
+					timing_attack = true;
+					Attackers.clear();
+				}
+				return;
+			}
+			case UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL3: {
+				if (branch == 5)
+				{
+					std::cout << "attack4";
+					timing_attack = true;
+					Attackers.clear();
+				}
+				return;
+			}
             case UPGRADE_ID::WARPGATERESEARCH: {
                 warpgate_researched = true;
                 return;
@@ -754,6 +780,7 @@ public:
 	Point2D KitingLocation;
 	Units enemyUnitsInRegion;
 	Units Attackers;
+	Units AttackersRecruiting;
 private:
 	void ChatVersion() {
 		Actions()->SendChat(botname + " " + version);
@@ -1152,6 +1179,7 @@ private:
 			else //너가 아무것도 안하고 있었다면
 			{
 				SmartMove(unit, retreat_position); // 움직여라
+				moving = true;
 			}
 
 		}
@@ -2773,7 +2801,9 @@ private:
 	bool BlinkResearched;
 	bool ColossusRangeUp;
 	bool timing_attack;
-	bool Recruited;
+	bool should_merge;
+	bool now_merging;
+	bool Recruited = false;
 
 	const Unit* advance_pylon;
 	const Unit* probe_scout;

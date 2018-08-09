@@ -408,24 +408,11 @@ void MEMIBot::ManageTimingAttack()
 {
 	const ObservationInterface* observation = Observation();
 
-	/*if (num_colossus < 4)
-	{
-		Recruited == false;
-	}
-	else */if(num_colossus >= 4)
-	{
-		timing_attack = true;
-	}
 
-	if (observation->GetFoodUsed() <= 190)
-	{
-		Recruited == false;
-	}
-	else if (observation->GetFoodUsed() > 190 && Recruited == false)
+	if(num_colossus >= 4)
 	{
 		timing_attack = true;
-		Recruited = true;
-		Attackers.clear();
+		num_colossus--;
 	}
 }
 
@@ -567,36 +554,49 @@ void MEMIBot::ManageRush() {
 	}
 
 	Point2D meeting_spot = advance_pylon_location;
-	if (timing_attack && !EnemyRush)
+	float MeetingDistance = Distance2D(startLocation_, meeting_spot);
+
+	if (timing_attack)
 	{
-		// attacker 세팅
-		if (Attackers.empty()) {
-			for (const auto& unit : rangedunits) {
-				if (Distance2D(startLocation_, unit->pos) < 50)
+		if (AttackersRecruiting.empty()) {
+			for (const auto& unit : rangedunits) 
+			{
+				if (Distance2D(startLocation_, unit->pos) < MeetingDistance + 10)
 				{
-					Attackers.push_back(unit);
+					AttackersRecruiting.push_back(unit);
 					std::cout << " 소집되었습니다 *^^*";
 				}
 			}
 		}
-		// 다 모였는지 체크
-		else {
-			Point2D attackers_avg_pos = Point2D(0,0);
-			GetPosition(Attackers, attackers_avg_pos);
-			
+		if (AttackersRecruiting.size() > 0)
+		{
+			Point2D attackers_avg_pos = Point2D(0, 0);
+			GetPosition(AttackersRecruiting, attackers_avg_pos);
+
 			const Unit * closestTarget = nullptr;
-			closestTarget = FindNearestUnit(attackers_avg_pos, Attackers);
-			Units MergedUnits = FindUnitsNear(closestTarget, 10, Attackers);
-			if (MergedUnits.size() >= Attackers.size() * 0.7f)
+			closestTarget = FindNearestUnit(attackers_avg_pos, AttackersRecruiting);
+
+			Units MergedUnits = FindUnitsNear(closestTarget, 8, AttackersRecruiting);
+			if (MergedUnits.size() < AttackersRecruiting.size() * 0.7f)
 			{
-				timing_attack = false;
+				std::cout << " 아직 덜 뭉쳤다~~~ 이 말이야!~!! ";
+				Recruited = true;
 			}
 			else
 			{
-				std::cout << " 소집중입니다 !! 0.0 ";
+				std::cout << " 이제 다 뭉쳤다~~~ 이 말이야!~!! ";
+				for (const auto& unit : AttackersRecruiting)
+				{
+					Attackers.push_back(unit);
+				}
+				AttackersRecruiting.clear();
+				Recruited = false;
+				timing_attack = false;
 			}
 		}
 	}
+	
+
 
 	//유닛이라면 기본적으로 해야할 행동 강령
 	for (const auto& unit : rangedunits) {
@@ -621,12 +621,11 @@ void MEMIBot::ManageRush() {
 			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
-				if (timing_attack == 1) { // 모이자~
-					RetreatSmart(unit, meeting_spot);
-				}
-				else if(timing_attack == 0) { // 처들어가자~
-					ScoutWithUnit(unit, observation);
-				}
+				ScoutWithUnit(unit, observation);
+			}
+			else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
+			{
+				RetreatSmart(unit, meeting_spot);
 			}
 			else if (unit->orders.empty())
 			{
@@ -644,12 +643,11 @@ void MEMIBot::ManageRush() {
 			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
-				if (timing_attack == 1) { // 모이자~
-					RetreatSmart(unit, meeting_spot);
-				}
-				else if (timing_attack == 0) { // 처들어가자~
-					ScoutWithUnit(unit, observation);
-				}
+				ScoutWithUnit(unit, observation);
+			}
+			else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
+			{
+				RetreatSmart(unit, meeting_spot);
 			}
 			else if (unit->orders.empty())
 			{
@@ -673,12 +671,11 @@ void MEMIBot::ManageRush() {
 			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
-				if (timing_attack == 1) { // 모이자~
-					RetreatSmart(unit, meeting_spot);
-				}
-				else if (timing_attack == 0) { // 처들어가자~
-					ScoutWithUnit(unit, observation);
-				}
+				ScoutWithUnit(unit, observation);
+			}
+			else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
+			{
+				RetreatSmart(unit, meeting_spot);
 			}
 			else if (unit->orders.empty())
 			{
@@ -695,11 +692,11 @@ void MEMIBot::ManageRush() {
 			bool ComeOn = false;
 
 			if (EvadeEffect(unit)) {}
-			else if (29 <= stage_number && stage_number <= 35)
+			else if (26 <= stage_number && stage_number <= 35)
 			{
 				if (target != nullptr)
 				{
-					if (getunitsDpsGROUND(NearbyArmies) > 20.0f)
+					if (getunitsDpsGROUND(NearbyArmies) > 10.0f)
 					{
 						AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
 					}
@@ -753,12 +750,11 @@ void MEMIBot::ManageRush() {
 				else if (DefendDuty(unit)) {}
 				else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 				{
-					if (timing_attack == 1) { // 모이자~
-						RetreatSmart(unit, meeting_spot);
-					}
-					else if (timing_attack == 0) { // 처들어가자~
-						ScoutWithUnit(unit, observation);
-					}
+					ScoutWithUnit(unit, observation);
+				}
+				else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
+				{
+					RetreatSmart(unit, meeting_spot);
 				}
 				else if (unit->orders.empty())
 				{
@@ -779,12 +775,11 @@ void MEMIBot::ManageRush() {
 			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
 			{
-				if (timing_attack == 1) { // 모이자~
-					RetreatSmart(unit, meeting_spot);
-				}
-				else if (timing_attack == 0) { // 처들어가자~
-					ScoutWithUnit(unit, observation);
-				}
+				ScoutWithUnit(unit, observation);
+			}
+			else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
+			{
+				RetreatSmart(unit, meeting_spot);
 			}
 			else if (unit->orders.empty())
 			{
