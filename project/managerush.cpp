@@ -552,7 +552,7 @@ void MEMIBot::ManageRush() {
 		// attacker 세팅
 		if (Attackers.empty()) {
 			for (const auto& unit : rangedunits) {
-				if (Distance2D(startLocation_, unit->pos) < 1000)
+				if (Distance2D(startLocation_, unit->pos) < 50)
 				{
 					Attackers.push_back(unit);
 					std::cout << " 소집되었습니다 *^^*";
@@ -563,10 +563,18 @@ void MEMIBot::ManageRush() {
 		else {
 			Point2D attackers_avg_pos = Point2D(0,0);
 			GetPosition(Attackers, attackers_avg_pos);
-			if (Distance2D(attackers_avg_pos, meeting_spot) < 20) {
+			
+			const Unit * closestTarget = nullptr;
+			closestTarget = FindNearestUnit(attackers_avg_pos, Attackers);
+			Units MergedUnits = FindUnitsNear(closestTarget, 10, Attackers);
+			if (MergedUnits.size() >= Attackers.size() * 0.7f)
+			{
 				timing_attack = false;
 			}
-			
+			else
+			{
+				std::cout << " 소집중입니다 !! 0.0 ";
+			}
 		}
 	}
 
@@ -664,15 +672,75 @@ void MEMIBot::ManageRush() {
 			Units NearbyArmies = FindUnitsNear(unit, 7, Unit::Alliance::Enemy, IsArmy(observation));
 			Units NearbyWorkers = FindUnitsNear(unit, 6, Unit::Alliance::Enemy, IsWorker());
 
-
-			if (num_adept >= 8)
-			{
-				AdeptMustAttack = true;
-			}
-
-
-
 			bool ComeOn = false;
+
+			if (EvadeEffect(unit)) {}
+			else if (target != nullptr)
+			{
+				if (stage_number < 40)
+				{
+					if (getunitsDpsGROUND(NearbyArmies) > 20.0f)
+					{
+						AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
+					}
+
+					const Unit * Armytarget = GetTarget(unit, NearbyArmies);
+
+					if (NearbyWorkers.size() > 0) // 근처에 적 일꾼이 있는데
+					{
+						const Unit * Workertarget = GetTarget(unit, NearbyWorkers);
+
+						if (!NearbyArmies.empty()) // 수비유닛도 같이 있으면
+						{
+							const Unit * Armytarget = GetTarget(unit, NearbyArmies);
+							DistanceKiting(unit, Workertarget, Armytarget);
+						}
+						else //일꾼만 있으면
+						{
+							FrontKiting(unit, Workertarget);
+						}
+					}
+					else if (ComeOn && Armytarget != nullptr) //분신이 있으며 근처에 적 유닛이 있는 경우
+					{
+						ComeOnKiting(unit, Armytarget);
+					}
+					else //적의 DPS가 높지 않을 때
+					{
+						Kiting(unit, target);
+					}
+
+				}
+				else
+				{
+					Kiting(unit, target);
+				}
+
+			}
+			else if (DefendDuty(unit)) {}
+			else if (32 <= stage_number && stage_number < 40) //AdeptMustAttack) // target이 없음
+			{
+				ScoutWithUnit(unit, observation);
+			}
+			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+			{
+				if (timing_attack == 1) { // 모이자~
+					RetreatSmart(unit, meeting_spot);
+				}
+				else if (timing_attack == 0) { // 처들어가자~
+					ScoutWithUnit(unit, observation);
+				}
+			}
+			else if (unit->orders.empty())
+			{
+				RetreatSmart(unit, advance_pylon_location);
+				//Roam_randombase(unit);
+			}
+			else if (unit->orders.empty())
+			{
+				Roam_randombase(unit);
+			}
+			
+			
 
 			if (EvadeEffect(unit)) {}
 			else if(target != nullptr)
@@ -1055,7 +1123,7 @@ int MEMIBot::getAttackPriority(const Unit * u)
 	}
 	if (unit.build_progress != 1.0)
 	{
-		return 5;
+		return 10;
 	}
 	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_PYLON || unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_SPORECRAWLER || unit.unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_MISSILETURRET)
 	{
@@ -1065,7 +1133,6 @@ int MEMIBot::getAttackPriority(const Unit * u)
 	{
 		return 4;
 	}
-	
 	return 2;
 }
 

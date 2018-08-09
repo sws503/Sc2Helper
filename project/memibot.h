@@ -428,6 +428,16 @@ public:
 		if (!early_strategy && observation->GetGameLoop()%5==0) {
 			EarlyStrategy();
 		}
+		
+		if (observation->GetFoodUsed() <= 190)
+		{
+			Recruited == false;
+		}
+		else if (observation->GetFoodUsed() > 190 && Recruited == false)
+		{
+			timing_attack = true;
+			Recruited = true;
+		}
 
 		scout_all();
 
@@ -2738,6 +2748,7 @@ private:
 	bool BlinkResearched;
 	bool ColossusRangeUp;
 	bool timing_attack;
+	bool Recruited;
 
 	const Unit* advance_pylon;
 	const Unit* probe_scout;

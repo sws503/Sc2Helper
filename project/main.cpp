@@ -13,7 +13,7 @@ static const std::string current_version = "v0.5";
 #ifdef DEBUG
 static const bool VsHuman = true;
 static const int stepsize = 3;
-static const bool Realtime = false;
+static const bool Realtime = true;
 static const bool ControlTest = false;
 static const std::vector<std::string> map_names({
 	"BlackpinkLE",
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
 
 	if (VsHuman) {
 		coordinator.SetParticipants({
-			CreateParticipant(sc2::Race::Protoss, &human_bot),
+			CreateParticipant(sc2::Race::Zerg, &human_bot),
 			CreateParticipant(sc2::Race::Protoss, &bot),
 			});
 	}
