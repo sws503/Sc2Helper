@@ -210,7 +210,7 @@ struct IsArmy {
 		case UNIT_TYPEID::TERRAN_NUKE: return false;
 		case UNIT_TYPEID::PROTOSS_WARPPRISM: return false;
 		case UNIT_TYPEID::PROTOSS_WARPPRISMPHASING: return false;
-		
+
 		default: return true;
 		}
 	}
@@ -382,7 +382,7 @@ public:
 
 		float minimum_distance = std::numeric_limits<float>::max();
 		for (const auto& expansion : expansions_) {
-			float current_distance = Distance2D(startLocation_, expansion);
+			float current_distance = Query()->PathingDistance(GetRandomEntry(Observation()->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PROBE)))->pos, expansion);
 			if (current_distance < 5.0f) {
 				continue;
 			}
@@ -437,7 +437,9 @@ public:
 		//PrintCursor();
 #endif
 
-		ManageUpgrades();
+		if (observation->GetGameLoop()%10==0) {
+            ManageUpgrades();
+		}
 
 		// Control ½ÃÀÛ
 		Defend();
@@ -2369,19 +2371,28 @@ private:
 
 	void ManageUpgrades() {
 		const ObservationInterface* observation = Observation();
-		size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
+		Units forges = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FORGE));
 		auto upgrades = observation->GetUpgrades();
 		if (branch == 0 || branch == 1) {
-		TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES,UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL,UPGRADE_ID::ADEPTPIERCINGATTACK);
-		TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::EXTENDEDTHERMALLANCE);
+            TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES,UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL,UPGRADE_ID::ADEPTPIERCINGATTACK);
+            TryBuildUpgrade(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::EXTENDEDTHERMALLANCE);
 		}
 		//TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
 		if (1) {
-            if (forge_count ==0) {
+		    for (const auto& forge : forges) {
+                if (!forge->orders.empty()) {
+                    TryChronoboost(forge);
+                }
+		    }
+            if (forges.size() ==0) {
                 return;
             }
-            TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1);
-            TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL1);
+            if (TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1)) {
+                return;
+            }
+            if (TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL1)) {
+                return;
+            }
 
             for (const auto& upgrade : upgrades) {
                 if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1) {
@@ -2598,20 +2609,34 @@ private:
     bool TryBuildArmyBranch0(){
         const ObservationInterface* observation = Observation();
         Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
+        size_t stalker_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER);
+        int robotics_empty=0;
+        int robotics_observer=0;
         for (const auto& r : robotics) {
             if (r->orders.empty()) {
-                if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_OBSERVER) < 2) {
-                    TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
-                }
-                else{
-                    TryBuildUnit(ABILITY_ID::TRAIN_COLOSSUS, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_COLOSSUS);
-                }
+                robotics_empty++;
             }
             else {
-                TryWarpStalker();
+                if (r->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
+                    robotics_observer++;
+                }
             }
         }
-        return false;
+
+        if (robotics_empty==0) {
+            if (stalker_count<12) {
+                return TryWarpStalker();
+            }
+            else {
+                return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT, front_expansion);
+            }
+        }
+        else if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_OBSERVER)+robotics_observer<2) {
+            return TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
+        }
+        else {
+            return TryBuildUnit(ABILITY_ID::TRAIN_COLOSSUS, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_COLOSSUS);
+        }
     }
 
     bool TryBuildArmyBranch5(){

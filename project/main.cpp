@@ -12,17 +12,18 @@ static const std::string current_version = "v0.5";
 
 #ifdef DEBUG
 static const bool VsHuman = false;
-static const int stepsize = 3;
+static const int stepsize = 2;
 static const bool Realtime = false;
 static const bool ControlTest = false;
 static const std::vector<std::string> map_names( {
-	"CatalystLE",
-	"AcidPlantLE",
-	"DarknessSanctuary",
-	"DreamcatcherLE",
+	"BlackpinkLE",
+	"NeonVioletSquareLE",
+	"BackwaterLE",
 	"LostAndFoundLE",
-	"Redshift",
-	"16BitLE"
+	"InterloperLE",
+	"ProximaStationLE",
+	"NewkirkPrecinctTE",
+	"BelShirVestigeLE"
 	} );
 static const std::string ControlMap = "1pTest.SC2Map"; // 1pTest 2pTest
 
@@ -65,7 +66,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Terran, Difficulty::HardVeryHard),
+			CreateComputer(Race::Zerg, Difficulty::HardVeryHard),
 
 			});
 	}

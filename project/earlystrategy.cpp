@@ -73,7 +73,7 @@ bool MEMIBot::EarlyStrategy() {
 	}
 	else{
         for (const auto& b : bases) {
-            if (b->build_progress < 1.0) {
+            if (b->build_progress < 1.0f) {
                 if(observation->GetFoodWorkers() < max_worker_count_) {
                     TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
                 }
@@ -87,9 +87,9 @@ bool MEMIBot::EarlyStrategy() {
 
 
 	if (branch<2 && stage_number>30 && stage_number<100) {
-        TryBuildPylonIfNeeded(2);
+        TryBuildPylonIfNeeded(3);
 	}
-	if (branch<2 && stage_number>38 && stage_number<100) {
+	if (branch<2 && stage_number>39 && stage_number<100) {
         if (bases.size()*2>assimilator_count) {
             TryBuildAssimilator();
         }
@@ -102,7 +102,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         else if (observation->GetFoodUsed()>120 && GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() ) {
             for (const auto& b : bases) {
-                if (b->build_progress < 1.0) {
+                if (b->build_progress < 1.0f) {
                     return TryBuildArmyBranch0();
                 }
             }
@@ -114,7 +114,7 @@ bool MEMIBot::EarlyStrategy() {
 	}
 
 	if (branch == 2 && stage_number > 109) {
-        TryBuildPylonIfNeeded(2);
+        TryBuildPylonIfNeeded(3);
 	}
 
 	if (branch == 5) {
@@ -368,7 +368,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=22;
             return false;
         }
-        return TryBuildPylon(startLocation_,20.0);
+        return TryBuildPylon(startLocation_,15.0);
     case 22:
 		work_probe_forward = false;
 		SmartMove(probe_forward, advance_pylon_location);
@@ -490,7 +490,7 @@ bool MEMIBot::EarlyStrategy() {
         TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
         return false;
     case 36:
-        if (gateway_count>=7) {
+        if (gateway_count>=6) {
 			stage_number=37;
 			return false;
 		}
@@ -516,6 +516,13 @@ bool MEMIBot::EarlyStrategy() {
         }
         TryBuildUpgrade(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::BLINKTECH);
         return false;
+    case 39:
+        if (robotics_facility_count>=2) {
+            stage_number=40;
+            return false;
+        }
+        return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+
 
     //branch 3
     case 50:
@@ -600,7 +607,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=102;
             return false;
         }
-        return TryBuildPylon(startLocation_,20.0);
+        return TryBuildPylon(startLocation_,15.0);
     case 102:
         if (robotics_facility_count>=1) {
             stage_number=103;
@@ -662,7 +669,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=108;
             return false;
         }
-        return TryBuildPylon(startLocation_,20.0);
+        return TryBuildPylon(startLocation_,15.0);
 	case 108:
 	    if (CountUnitType(UNIT_TYPEID::PROTOSS_WARPPRISM)<1) {
             stage_number=109;
@@ -732,7 +739,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=206;
             return false;
         }
-        return TryBuildPylon(startLocation_,20.0);
+        return TryBuildPylon(startLocation_,15.0);
     case 206:
 		if (assimilator_count>=2) {
 			stage_number=207;
@@ -793,7 +800,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=213;
             return false;
         }
-        return TryBuildPylon(startLocation_,20.0);
+        return TryBuildPylon(startLocation_,15.0);
     case 213:
         if (!gateways.front()->orders.empty()) {
             if (gateways.front()->orders.front().progress<0.5f) {
@@ -835,7 +842,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=219;
             return false;
         }
-        return TryBuildPylon(startLocation_,20.0);
+        return TryBuildPylon(startLocation_,15.0);
     case 219:
         if (TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL)) {
             stage_number=220;
