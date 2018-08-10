@@ -203,7 +203,6 @@ struct IsArmy {
 		case UNIT_TYPEID::PROTOSS_PROBE: return false;
 		case UNIT_TYPEID::ZERG_DRONE: return false;
 		case UNIT_TYPEID::TERRAN_SCV: return false;
-		case UNIT_TYPEID::ZERG_QUEEN: return false;
 		case UNIT_TYPEID::ZERG_LARVA: return false;
 		case UNIT_TYPEID::ZERG_EGG: return false;
 		case UNIT_TYPEID::TERRAN_MULE: return false;
@@ -411,7 +410,8 @@ public:
 		staging_location_ = Point3D(((staging_location_.x + front_expansion.x) / 2), ((staging_location_.y + front_expansion.y) / 2),
 			((staging_location_.z + front_expansion.z) / 2));
 
-        change_building_location();
+		//Test하려고 임시로 송우석이 뺏습니다!!!!!!!!!
+        //change_building_location();
 	}
 
 	virtual void OnStep() final override {
@@ -442,13 +442,13 @@ public:
 #endif
 
 		if (observation->GetGameLoop()%10==0) {
-            //ManageUpgrades();
+            ManageUpgrades();
 		}
 
 		// Control 시작
-		//Defend();
+		Defend();
 		//ManageArmy();
-		//ManageRush();
+		ManageRush();
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
@@ -961,6 +961,8 @@ private:
 
 	void ColossusKiting(const Unit * unit, const Unit * enemyarmy);
 
+	void SentryKiting(const Unit * unit, const Unit * enemyarmy);
+
 	void Kiting(const Unit * unit, const Unit * enemyarmy);
 
 	void SmartMoveEfficient(const Unit * unit, Point2D KitingLocation, const Unit * enemyarmy);
@@ -983,6 +985,8 @@ private:
 	bool GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D & position);
 
 	int getAttackPriority(const Unit * u);
+
+	bool IsBonusType(const Unit * rangedUnit, const Unit * target);
 
 	bool LoadUnit(const Unit * unit, const Unit * passenger);
 

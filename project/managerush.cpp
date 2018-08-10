@@ -765,12 +765,36 @@ void MEMIBot::ManageRush() {
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_COLOSSUS)
 		{
-			const Unit * target = GetNearTarget(unit, NearbyEnemies);
+			const Unit * target = GetTarget(unit, NearbyEnemies);
 
 			if (EvadeEffect(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
 				ColossusKiting(unit, target);
+			}
+			else if (DefendDuty(unit)) {}
+			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+			{
+				ScoutWithUnit(unit, observation);
+			}
+			else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
+			{
+				RetreatSmart(unit, meeting_spot);
+			}
+			else if (unit->orders.empty())
+			{
+				Roam_randombase(unit);
+			}
+		}
+
+		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_SENTRY)
+		{
+			const Unit * target = GetTarget(unit, NearbyEnemies);
+
+			if (EvadeEffect(unit)) {}
+			else if (target != nullptr) // 카이팅은 항상하자
+			{
+				SentryKiting(unit, target);
 			}
 			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
@@ -1068,50 +1092,64 @@ int MEMIBot::getAttackPriority(const Unit * u)
 	const Unit& unit = *u;
 	if (IsArmy(Observation())(unit))
 	{
-		if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_BANELING)
-		{
-			return 12;
-		}
-		if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_LURKERMPBURROWED)
-		{
-			return 11;
-		}
 		if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR)
 		{
 			return 0;
 		}
-		return 10;
+		return 100;
 	}
 	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_MEDIVAC)
 	{
-		return 11;
+		return 110;
 	}
 	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON || unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_SPINECRAWLER)
 	{
-		return 10;
+		return 90;
 	}
 	if (IsWorker()(unit))
 	{
-		return 10;
+		return 100;
 	}
 	if (unit.build_progress != 1.0)
 	{
-		return 10;
+		return 90;
 	}
 	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_PYLON || unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_SPORECRAWLER || unit.unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_MISSILETURRET)
 	{
-		return 5;
+		return 50;
 	}
 	if (IsTownHall()(unit))
 	{
-		return 4;
+		return 40;
 	}
 	return 2;
 }
 
+bool MEMIBot::IsBonusType(const Unit * rangedUnit, const Unit * target)
+{
+	Attribute my_bonus = Attribute::Invalid;
+	bool match = false;
+	for (const auto & Weapon : Observation()->GetUnitTypeData()[rangedUnit->unit_type].weapons)
+	{
+		for (const auto& bonus : Weapon.damage_bonus)
+		{
+			my_bonus = bonus.attribute;
+		}
+	}
+
+	for (const auto & Attribute : Observation()->GetUnitTypeData()[target->unit_type].attributes)
+	{
+		if (Attribute == my_bonus)
+		{
+			match = true;
+		}
+	}
+	return match;
+}
+
+
  const Unit * MEMIBot::GetTarget(const Unit * rangedUnit, Units & targets)
 {
-	
 	int highPriorityFar = 0;
 	int highPriorityNear = 0;
 	int highDpsNear = 0;
@@ -1130,8 +1168,15 @@ int MEMIBot::getAttackPriority(const Unit * u)
 		{
 			continue;
 		}
+		
+		
 		const float range = getAttackRangeGROUND(rangedUnit); //rangedUnit->getAttackRange(targetUnit); 사도 사거리 4
 		int priority = getAttackPriority(targetUnit);
+		if (IsBonusType(rangedUnit, targetUnit) == true)
+		{
+			priority += 3;
+		}
+
 		float target_dps = getDpsGROUND(targetUnit);
 
 		const float distance = Distance2D(rangedUnit->pos, targetUnit->pos);

@@ -90,8 +90,36 @@ void MEMIBot::Defend() {
 			}
 		}
 	}
+	EnemyRush = !enemyUnitsInRegion.empty();
+	ManyEnemyRush = (enemyUnitsInRegion.size() > 3);
+
+	for (const auto & enemyunit : enemyUnitsInRegion)
+	{
+		if (enemyunit->unit_type == UNIT_TYPEID::PROTOSS_PYLON || enemyunit->unit_type == UNIT_TYPEID::PROTOSS_PHOTONCANNON)
+		{
+			Units fighters = FindUnitsNear(enemyunit->pos, 15.0f, Workers);
+			for (const auto & fighter : fighters)
+			{
+				SmartAttackUnit(fighter, enemyunit);
+			}
+		}
+		else
+		{
+			Units fighters = FindUnitsNear(enemyunit->pos, 15.0f, Workers);
+			for (const auto & fighter : fighters)
+			{
+				SmartAttackUnit(fighter, enemyunit);
+			}
+
+
+			//const Unit * fighter = FindNearestUnit(enemyunit->pos, Workers);
+			//SmartAttackUnit(fighter, enemyunit);
+		}
+		
+		
+	}
 	
-	if (!enemyUnitsInRegion.empty() && my_armies.empty())
+	/*if (!enemyUnitsInRegion.empty() && my_armies.empty())
 	{
 		for (const auto & worker : Workers)
 		{
@@ -102,29 +130,32 @@ void MEMIBot::Defend() {
 				Killers.push_back(worker);
 			}
 		}
-		std::cout << enemyUnitsInRegion.size();
+		std::cout << enemyUnitsInRegion.size() << "만큼 상대하기 위해 " << Killers.size() << "를 소집했습니다." << std::endl;
 		for (auto& it = Killers.begin(); it != Killers.end();)
 		{
 			const Unit* killer = *it;
 			if (Distance2D(killer->pos, startLocation_) > 10 || !killer->is_alive)
 			{
-				std::cout << " 방금 뺀건 ";
-				Killers.erase(it++);
+				std::cout << " 방금 소집된 일꾼 하나를 소집해제했습니다. " << std::endl;
+				Killers.erase(it);
 				Actions()->UnitCommand(killer, ABILITY_ID::STOP);
 				continue;
 			}
-			it++;
-			const Unit* target = GetTarget(killer, enemyUnitsInRegion);
-			SmartAttackUnit(killer, target);
+			else
+			{
+				std::cout << " 공격명령을 내리고 다른 killer로 넘어가겠습니다. " << std::endl;
+				const Unit* target = GetTarget(killer, enemyUnitsInRegion);
+				SmartAttackUnit(killer, target);
+				it++;
+			}
 		}
 	}
 	else
 	{
+		std::cout << " 아군병력이 나왔으니 이제 일꾼은 그만싸우겠습니다. " << std::endl;
 		Killers.clear();
-	}
+	}*/
 
-	EnemyRush = !enemyUnitsInRegion.empty();
-	ManyEnemyRush = (enemyUnitsInRegion.size() > 3);
 
 	/*Units defenders = FindUnitsNear(startLocation_, 50, Unit::Alliance::Self, IsArmy(Observation()));
 	for (const auto & defender : defenders)

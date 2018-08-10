@@ -318,6 +318,46 @@ void MEMIBot::ColossusKiting(const Unit* unit, const Unit* enemyarmy)
 	}
 }
 
+void MEMIBot::SentryKiting(const Unit* unit, const Unit* enemyarmy)
+{
+	//Distance to target
+	float dist = Distance2D(unit->pos, enemyarmy->pos);
+	float DIST = dist - unit->radius - enemyarmy->radius;
+
+	//Our range
+	float unitattackrange = getAttackRangeGROUND(unit);
+
+	const Unit& ENEMYARMY = *enemyarmy;
+
+	//Units my_army = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), unit->pos, 10));
+	//Units enemy_army = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), enemyarmy->pos, 10));
+	Units NearbyArmies = FindUnitsNear(unit, 10, Unit::Alliance::Enemy, IsArmy(Observation()));
+
+	//float myDps = getunitsDpsGROUND(my_army);
+	//float enemyDps = getunitsDpsGROUND(enemy_army);
+
+
+	//현재 공격중인데 WC가 0이면 냅둔다 or 현재 공격가능하면 공격하고 or 적이 멀리 떨어지면
+
+	if (NearbyArmies.size() > 5)
+	{
+		Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_GUARDIANSHIELD);
+	}
+	
+	if (unitattackrange + 1.0f < DIST) // 최대사거리를 0.3 낮춤
+	{
+		SmartAttackUnit(unit, enemyarmy);
+	}
+	else
+	{
+		sc2::Point2D KitingLocation = unit->pos;
+		KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 10.0f;
+
+		SmartMoveEfficient(unit, KitingLocation, enemyarmy);
+
+	}
+}
+
 
 void MEMIBot::SmartMoveEfficient(const Unit* unit, Point2D KitingLocation, const Unit * enemyarmy)
 {
