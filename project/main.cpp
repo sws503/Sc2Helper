@@ -32,12 +32,10 @@ static const std::vector<std::string> map_names_2018s2({
 	"DarknessSanctuary",
 	"DreamcatcherLE",
 	"LostAndFoundLE",
-	"InterloperLE",
-	"ProximaStationLE",
-	"NewkirkPrecinctTE",
-	"BelShirVestigeLE"
+	"Redshift",
+	"16BitLE"
 	} );
-static const std::string ControlMap = "BackwaterLE.SC2Map"; // 1pTest 2pTest
+static const std::string ControlMap = "2ptest.SC2Map"; // 1pTest 2pTest
 
 class Human : public sc2::Agent {
 public:
@@ -71,7 +69,7 @@ int main(int argc, char* argv[])
 
 	if (VsHuman) {
 		coordinator.SetParticipants({
-			CreateParticipant(sc2::Race::Zerg, &human_bot),
+			CreateParticipant(sc2::Race::Protoss, &human_bot),
 			CreateParticipant(sc2::Race::Protoss, &bot),
 			});
 	}
