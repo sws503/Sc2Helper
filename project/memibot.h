@@ -10,6 +10,7 @@
 #include <typeinfo>
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
 #include <stack>
 
 #include "flag.h"
@@ -340,6 +341,8 @@ public:
 
         Observation()->GetUnitTypeData();
 
+		// Test용입니다.
+		//game_info_.enemy_start_locations.push_back(Point2D(0, 0));
         initial_location_building(game_info_.map_name);
 		//상대 종족
 		branch = 2;
@@ -624,6 +627,20 @@ public:
 	virtual void OnUnitDestroyed(const Unit* u) final override {
 		std::cout << UnitTypeToName(u->unit_type.ToType()) << std::endl;
 		if (u->alliance == Unit::Alliance::Self) {
+			// Attackers에서 죽은 유닛 제거
+			if (IsUnitInUnits(u, Attackers)) {
+				std::unordered_set<const Unit*> TempAttackers;
+				for (const auto& u : Attackers) {
+					if (u->is_alive && !TempAttackers.count(u)) {
+						TempAttackers.insert(u);
+					}
+				}
+				Attackers.clear();
+				for (const auto& u : TempAttackers) {
+					Attackers.push_back(u);
+				}
+			}
+
 			switch (u->unit_type.ToType()) {
 			case UNIT_TYPEID::PROTOSS_PROBE:
 				last_dead_probe_pos.push_back(u->pos);
