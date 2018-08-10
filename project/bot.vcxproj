@@ -141,12 +141,14 @@
     <ClCompile Include="earlystrategy.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="managerush.cpp" />
+    <ClCompile Include="manageworkers.cpp" />
     <ClCompile Include="scout.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="flag.h" />
     <ClInclude Include="LadderInterface.h" />
     <ClInclude Include="memibot.h" />
+    <ClInclude Include="util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

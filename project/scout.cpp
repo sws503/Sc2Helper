@@ -147,6 +147,7 @@ void MEMIBot::scout_all() {
 		}
 	}
 
+	// todo : 브랜치에 따라 정찰 유무 결정.
 	// 몰래멀티 주기적으로 검사
 	if (flags.status("search_branch") != 0 && find_enemy_location == true &&
 		observation->GetUnits(Unit::Alliance::Self, IsUnits({ UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_WARPGATE })).size() > 0
