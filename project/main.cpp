@@ -32,10 +32,8 @@ static const std::vector<std::string> map_names_2018s2({
 	"DarknessSanctuary",
 	"DreamcatcherLE",
 	"LostAndFoundLE",
-	"InterloperLE",
-	"ProximaStationLE",
-	"NewkirkPrecinctTE",
-	"BelShirVestigeLE"
+	"Redshift",
+	"16BitLE"
 	} );
 static const std::string ControlMap = "1pSkillTest.SC2Map"; // 1pTest 2pTest
 

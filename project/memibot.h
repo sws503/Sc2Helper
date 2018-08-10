@@ -10,7 +10,9 @@
 #include <typeinfo>
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
 #include <stack>
+
 #include "flag.h"
 //#include "balance_unit.h"
 
@@ -338,6 +340,7 @@ public:
 
         Observation()->GetUnitTypeData();
 
+        initial_location_building(game_info_.map_name);
 
 		//상대 종족
 		branch = 0;
@@ -359,6 +362,8 @@ public:
 		Enemy_front_expansion = Point3D(0, 0, 0);
 		recent_probe_scout_location = Point2D(0, 0);
 		recent_probe_scout_loop = 0;
+		last_dead_probe_pos.clear();
+		attacker_s_observer_tag = 0;
 
 		early_strategy = false;
 		warpgate_researched = false;
@@ -372,6 +377,10 @@ public:
 		find_enemy_location = false;
 		work_probe_forward = true;
 
+		num_adept = 0;
+		num_stalker = 0;
+		num_colossus = 0;
+
 		last_map_renewal = 0;
 		resources_to_nearest_base.clear();
 
@@ -380,6 +389,7 @@ public:
 		enemy_units_scouter_seen.clear();
 		enemy_townhalls_scouter_seen.clear();
 		adept_map.clear();
+		observer_nexus_match.clear();
 
 		//Temporary, we can replace this with observation->GetStartLocation() once implemented
 		startLocation_ = Observation()->GetStartLocation();
@@ -427,8 +437,6 @@ public:
 	}
 
 	virtual void OnStep() final override {
-
-
 		const ObservationInterface* observation = Observation();
 		ActionInterface* action = Actions();
 
@@ -470,6 +478,7 @@ public:
 		//ManageArmy();
 		ManageRush();
 
+		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
@@ -518,6 +527,10 @@ public:
 			break;
 		}
 		case UNIT_TYPEID::PROTOSS_CARRIER: {
+
+			break;
+		}
+		case UNIT_TYPEID::PROTOSS_OBSERVER: {
 
 			break;
 		}
@@ -602,10 +615,27 @@ public:
 	virtual void OnUnitDestroyed(const Unit* u) final override {
 		std::cout << UnitTypeToName(u->unit_type.ToType()) << std::endl;
 		if (u->alliance == Unit::Alliance::Self) {
-			/*switch (u->unit_type.ToType()) {
+			// Attackers에서 죽은 유닛 제거
+			if (IsUnitInUnits(u, Attackers)) {
+				std::unordered_set<const Unit*> TempAttackers;
+				for (const auto& u : Attackers) {
+					if (u->is_alive && !TempAttackers.count(u)) {
+						TempAttackers.insert(u);
+					}
+				}
+				Attackers.clear();
+				for (const auto& u : TempAttackers) {
+					Attackers.push_back(u);
+				}
+			}
+
+			switch (u->unit_type.ToType()) {
+			case UNIT_TYPEID::PROTOSS_PROBE:
+				last_dead_probe_pos.push_back(u->pos);
+				break;
 			default:
 				break;
-			}*/
+			}
 		}
 		if (u->alliance == Unit::Alliance::Enemy) {
 			for (auto& it = enemy_units_scouter_seen.begin(); it != enemy_units_scouter_seen.end(); ++it) {
@@ -847,9 +877,8 @@ private:
 
 	bool EvadeEffect(const Unit* unit)
 	{
-
-
 		bool moving = false;
+		Vector2D mul_diff(0, 0);
 		for (const auto & effect : Observation()->GetEffects())
 		{
 			if (isBadEffect(effect.effect_id))
@@ -867,18 +896,14 @@ private:
 					const float dist = Distance2D(unit->pos, pos);
 					if (dist < radius + unit->radius)
 					{
-						sc2::Point2D fleeingPos;
 						if (dist > 0)
 						{
 							Vector2D diff = unit->pos - pos; // 7.3 적 유닛과의 반대 방향으로 도망
 							Normalize2D(diff);
-							fleeingPos = unit->pos + diff * 1.0f;
+							mul_diff += diff * (1.0f /*+ radius + unit->radius - dist*/);
 							//fleeingPos = pos + normalizeVector(rangedUnit->getPos() - pos, radius + 2.0f);
 						}
-						else
-						{
-							fleeingPos = Point2D(staging_location_);
-						}
+						else{}
 
 						if (EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHED || EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHING)
 						{
@@ -892,18 +917,23 @@ private:
 								}
 							}
 						}
-						else
-						{
-							SmartMove(unit, fleeingPos);
-						}
-						Chat("Enemy Skill Run~");
 						std::cout << "skill : " << ed.friendly_name << std::endl;
 						moving = true;
 						break;
 					}
 				}
 			}
+			if (moving) break;
 		}
+		if (moving) {
+			Point2D fleeingPos(staging_location_);
+			if (mul_diff != Point2D(0, 0)) {
+				fleeingPos = unit->pos + mul_diff;
+			}
+			SmartMove(unit, fleeingPos);
+			Chat("Enemy Skill Run~");
+		}
+
 		return moving;
 	}
 
@@ -1416,6 +1446,60 @@ private:
 		}
 		//If we never found one return nullptr
 		return target;
+	}
+
+	const Unit* FindSecondNearestUnit(const Point2D& start, const Units& units) const {
+		float nearest_distance = std::numeric_limits<float>::max();
+		float nearest_distance2 = std::numeric_limits<float>::max();
+		const Unit* nearest_unit = nullptr;
+		const Unit* nearest_unit2 = nullptr;
+		for (const auto& u : units) {
+			float current_distance = DistanceSquared2D(u->pos, start);
+			if (current_distance < nearest_distance2) {
+				nearest_distance2 = current_distance;
+				nearest_unit2 = u;
+			}
+			if (nearest_distance2 < nearest_distance) {
+				float tmp_distance;
+				const Unit* tmp_unit;
+				tmp_distance = nearest_distance;
+				nearest_distance = nearest_distance2;
+				nearest_distance2 = tmp_distance;
+				tmp_unit = nearest_unit;
+				nearest_unit = nearest_unit2;
+				nearest_unit2 = tmp_unit;
+			}
+		}
+
+		//If we never found one return nullptr
+		return nearest_unit2;
+	}
+
+	const Unit* FindSecondNearestUnit(const Point2D& start, const std::list<const Unit *>& units) const {
+		float nearest_distance = std::numeric_limits<float>::max();
+		float nearest_distance2 = std::numeric_limits<float>::max();
+		const Unit* nearest_unit = nullptr;
+		const Unit* nearest_unit2 = nullptr;
+		for (const auto& u : units) {
+			float current_distance = DistanceSquared2D(u->pos, start);
+			if (current_distance < nearest_distance2) {
+				nearest_distance2 = current_distance;
+				nearest_unit2 = u;
+			}
+			if (nearest_distance2 < nearest_distance) {
+				float tmp_distance;
+				const Unit* tmp_unit;
+				tmp_distance = nearest_distance;
+				nearest_distance = nearest_distance2;
+				nearest_distance2 = tmp_distance;
+				tmp_unit = nearest_unit;
+				nearest_unit = nearest_unit2;
+				nearest_unit2 = tmp_unit;
+			}
+		}
+
+		//If we never found one return nullptr
+		return nearest_unit2;
 	}
 
 	void TryChronoboost(Filter f = {}) {
@@ -2676,6 +2760,8 @@ private:
 
 	void manageobserver();
 
+	void roamobserver(const Unit * u);
+
 	bool TryWarpAdept() {
 		return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT, advance_pylon_location);
 	}
@@ -2778,6 +2864,7 @@ private:
                 robotics_empty++;
             }
             else {
+                TryChronoboost(r);
                 if (r->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
                     robotics_observer++;
                 }
@@ -3265,12 +3352,16 @@ private:
 
 	void scoutenemylocation();
 
+	std::unordered_map<Tag, Tag> observer_nexus_match;
+	Tag attacker_s_observer_tag;
+
 	uint32_t last_map_renewal;
 	std::unordered_map<Tag, Tag> resources_to_nearest_base;
 	std::list<const Unit *> enemy_units_scouter_seen;
 	std::list<const Unit *> enemy_townhalls_scouter_seen;
 	Point2D recent_probe_scout_location;
 	uint32_t recent_probe_scout_loop;
+	std::list<Point2D> last_dead_probe_pos;
 
 	Point2D advance_pylon_location;
 
@@ -3307,12 +3398,11 @@ private:
 	uint16_t branch;
 	const size_t max_worker_count_ = 68;
 
-	uint16_t num_adept = 0;
-	uint16_t num_stalker = 0;
-	uint16_t num_colossus = 0;
+	uint16_t num_adept;
+	uint16_t num_stalker;
+	uint16_t num_colossus;
 
 	bool try_initialbalance = false;
-	bool Timeto_warpzealot = false;
 
 	uint16_t try_adept,try_stalker;
 
