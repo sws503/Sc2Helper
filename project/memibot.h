@@ -10,7 +10,10 @@
 #include <typeinfo>
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
 #include <stack>
+
+#include "util.h"
 #include "flag.h"
 //#include "balance_unit.h"
 
@@ -29,293 +32,6 @@ static inline float building_abs(float location, float expansion, bool IsLocEven
 }
 
 using namespace sc2;
-
-// Control 시작
-// 7.3 안좋은 효과들 목록
-enum class EFFECT_ID
-{
-	INVALID = 0,
-	PSISTORM = 1,
-	GUARDIANSHIELD = 2,
-	TEMPORALFIELDGROWING = 3,
-	TEMPORALFIELD = 4,
-	THERMALLANCES = 5, // 거신
-	SCANNERSWEEP = 6,
-	NUKEDOT = 7,
-	LIBERATORMORPHING = 8,
-	LIBERATORMORPHED = 9,
-	BLINDINGCLOUD = 10,
-	CORROSIVEBILE = 11,
-	LURKERATTACK = 12
-};
-typedef SC2Type<EFFECT_ID>  EffectID;
-// Control 끝
-
-struct Rusher {
-	Rusher(Point2D startLocation_) : sl(startLocation_) {
-	}
-	bool operator()(const Unit& unit) {
-		return (unit.unit_type.ToType() == UNIT_TYPEID::PROTOSS_PHOTONCANNON ||
-			unit.unit_type.ToType() == UNIT_TYPEID::PROTOSS_PYLON ||
-			unit.unit_type.ToType() == UNIT_TYPEID::ZERG_HATCHERY ||
-			unit.unit_type.ToType() == UNIT_TYPEID::TERRAN_BUNKER ||
-			unit.unit_type.ToType() == UNIT_TYPEID::TERRAN_BARRACKS)
-			&& Distance2D(sl, unit.pos) < 20;
-	}
-private:
-	Point2D sl;
-};
-
-struct AirAttacker { // 공중 공격 가능한 적들 (폭풍함이 우선 공격하는 적) //시간이 남으면 weapon.type == sc2::Weapon::TargetType::Air 으로 할수있지만 시간이 없음
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-
-		case UNIT_TYPEID::PROTOSS_STALKER: return true;
-		case UNIT_TYPEID::PROTOSS_PHOTONCANNON: return true;
-
-		case UNIT_TYPEID::TERRAN_MARINE: return true;
-		case UNIT_TYPEID::TERRAN_MISSILETURRET: return true;
-		case UNIT_TYPEID::TERRAN_BUNKER: return true;
-
-		case UNIT_TYPEID::ZERG_SPORECRAWLER: return true;
-		case UNIT_TYPEID::ZERG_QUEEN: return true;
-
-		case UNIT_TYPEID::TERRAN_BATTLECRUISER:
-		case UNIT_TYPEID::TERRAN_CYCLONE:
-		case UNIT_TYPEID::TERRAN_GHOST:
-		case UNIT_TYPEID::TERRAN_LIBERATOR:
-		case UNIT_TYPEID::TERRAN_THOR:
-		case UNIT_TYPEID::TERRAN_VIKINGASSAULT:
-		case UNIT_TYPEID::TERRAN_VIKINGFIGHTER:
-		case UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED:
-		case UNIT_TYPEID::TERRAN_WIDOWMINE:
-
-		case UNIT_TYPEID::ZERG_HYDRALISK:
-		case UNIT_TYPEID::ZERG_MUTALISK:
-		case UNIT_TYPEID::ZERG_INFESTORTERRAN:
-		case UNIT_TYPEID::ZERG_CORRUPTOR:
-
-
-		case UNIT_TYPEID::PROTOSS_TEMPEST:
-		case UNIT_TYPEID::PROTOSS_VOIDRAY:
-		case UNIT_TYPEID::PROTOSS_PHOENIX:
-		case UNIT_TYPEID::PROTOSS_CARRIER:
-		case UNIT_TYPEID::PROTOSS_SENTRY:
-		case UNIT_TYPEID::PROTOSS_ARCHON: return true;
-
-		default: return false;
-		}
-	}
-};
-
-struct AirAttacker2 { // 공중 공격 가능한 적들: 예언자가 기피해야하는 적. 완성이 아직 안 된 건물들은 안 피하도록
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_PHOTONCANNON:
-		case UNIT_TYPEID::TERRAN_MISSILETURRET:
-		case UNIT_TYPEID::TERRAN_BUNKER:
-		case UNIT_TYPEID::ZERG_SPORECRAWLER:
-			return (unit.build_progress >= 0.95);
-
-		case UNIT_TYPEID::PROTOSS_STALKER:
-		case UNIT_TYPEID::TERRAN_MARINE:
-		case UNIT_TYPEID::ZERG_QUEEN:
-		case UNIT_TYPEID::TERRAN_BATTLECRUISER:
-		case UNIT_TYPEID::TERRAN_CYCLONE:
-		case UNIT_TYPEID::TERRAN_GHOST:
-		case UNIT_TYPEID::TERRAN_LIBERATOR:
-		case UNIT_TYPEID::TERRAN_THOR:
-		case UNIT_TYPEID::TERRAN_VIKINGASSAULT:
-		case UNIT_TYPEID::TERRAN_VIKINGFIGHTER:
-		case UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED:
-		case UNIT_TYPEID::TERRAN_WIDOWMINE:
-
-		case UNIT_TYPEID::ZERG_HYDRALISK:
-		case UNIT_TYPEID::ZERG_MUTALISK:
-		case UNIT_TYPEID::ZERG_INFESTORTERRAN:
-		case UNIT_TYPEID::ZERG_CORRUPTOR:
-
-		case UNIT_TYPEID::PROTOSS_TEMPEST:
-		case UNIT_TYPEID::PROTOSS_VOIDRAY:
-		case UNIT_TYPEID::PROTOSS_PHOENIX:
-		case UNIT_TYPEID::PROTOSS_CARRIER:
-		case UNIT_TYPEID::PROTOSS_SENTRY:
-		case UNIT_TYPEID::PROTOSS_ARCHON: return true;
-
-		default: return false;
-		}
-	}
-};
-
-struct IsAttackable {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::ZERG_OVERLORD: return false;
-		case UNIT_TYPEID::ZERG_OVERSEER: return false;
-		case UNIT_TYPEID::PROTOSS_OBSERVER: return false;
-		default: return true;
-		}
-	}
-};
-
-struct IsRanged {
-	IsRanged(const ObservationInterface* obs) : observation_(obs) {}
-
-	bool operator()(const Unit& unit) {
-		auto Weapon = observation_->GetUnitTypeData().at(unit.unit_type).weapons;
-		for (const auto& weapon : Weapon) {
-			if (weapon.range > 2.0f) {
-				return true;
-			}
-		}
-		/*switch (unit.unit_type.ToType()) {
-		default: return false;
-		}*/
-	}
-private:
-	const ObservationInterface* observation_;
-};
-
-struct IsWorker {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_PROBE: return true;
-		case UNIT_TYPEID::ZERG_DRONE: return true;
-		case UNIT_TYPEID::ZERG_DRONEBURROWED: return true;
-		case UNIT_TYPEID::TERRAN_SCV: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsArmy {
-	IsArmy(const ObservationInterface* obs) : observation_(obs) {}
-
-	bool operator()(const Unit& unit) {
-		auto attributes = observation_->GetUnitTypeData().at(unit.unit_type).attributes;
-		for (const auto& attribute : attributes) {
-			if (attribute == Attribute::Structure) {
-				return false;
-			}
-		}
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::ZERG_OVERLORD: return false;
-		case UNIT_TYPEID::PROTOSS_PROBE: return false;
-		case UNIT_TYPEID::ZERG_DRONE: return false;
-		case UNIT_TYPEID::TERRAN_SCV: return false;
-		case UNIT_TYPEID::ZERG_QUEEN: return false;
-		case UNIT_TYPEID::ZERG_LARVA: return false;
-		case UNIT_TYPEID::ZERG_EGG: return false;
-		case UNIT_TYPEID::TERRAN_MULE: return false;
-		case UNIT_TYPEID::TERRAN_NUKE: return false;
-		case UNIT_TYPEID::PROTOSS_WARPPRISM: return false;
-		case UNIT_TYPEID::PROTOSS_WARPPRISMPHASING: return false;
-
-		default: return true;
-		}
-	}
-private:
-	const ObservationInterface* observation_;
-};
-
-struct IsTownHall {
-	bool operator()(const Unit& unit) {
-
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::ZERG_HATCHERY: return true;
-		case UNIT_TYPEID::ZERG_LAIR: return true;
-		case UNIT_TYPEID::ZERG_HIVE: return true;
-		case UNIT_TYPEID::TERRAN_COMMANDCENTER: return true;
-		case UNIT_TYPEID::TERRAN_COMMANDCENTERFLYING: return true;
-		case UNIT_TYPEID::TERRAN_ORBITALCOMMAND: return true;
-		case UNIT_TYPEID::TERRAN_ORBITALCOMMANDFLYING: return true;
-		case UNIT_TYPEID::TERRAN_PLANETARYFORTRESS: return true;
-		case UNIT_TYPEID::PROTOSS_NEXUS: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsStructure {
-	IsStructure(const ObservationInterface* obs) : observation_(obs) {};
-
-	bool operator()(const Unit& unit) {
-		auto& attributes = observation_->GetUnitTypeData().at(unit.unit_type).attributes;
-		bool is_structure = false;
-		for (const auto& attribute : attributes) {
-			if (attribute == Attribute::Structure) {
-				is_structure = true;
-			}
-		}
-		return is_structure;
-	}
-private:
-	const ObservationInterface* observation_;
-};
-
-struct IsVespeneGeyser {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::NEUTRAL_VESPENEGEYSER: return true;
-		case UNIT_TYPEID::NEUTRAL_SPACEPLATFORMGEYSER: return true;
-		case UNIT_TYPEID::NEUTRAL_PROTOSSVESPENEGEYSER: return true;
-		case UNIT_TYPEID::NEUTRAL_PURIFIERVESPENEGEYSER:    return true;
-		case UNIT_TYPEID::NEUTRAL_RICHVESPENEGEYSER:    return true;
-		case UNIT_TYPEID::NEUTRAL_SHAKURASVESPENEGEYSER:    return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsMineral {
-	bool operator()(const Unit& unit) {
-		return unit.unit_type == UNIT_TYPEID::NEUTRAL_MINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_MINERALFIELD750 ||
-			unit.unit_type == UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_RICHMINERALFIELD750 ||
-			unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERMINERALFIELD750 ||
-			unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_PURIFIERRICHMINERALFIELD750 ||
-			unit.unit_type == UNIT_TYPEID::NEUTRAL_LABMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_LABMINERALFIELD750 ||
-			unit.unit_type == UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD || unit.unit_type == UNIT_TYPEID::NEUTRAL_BATTLESTATIONMINERALFIELD750;
-	}
-};
-
-struct HasBuff {
-	HasBuff(BuffID buff): buff_(buff) {};
-
-	bool operator()(const Unit& unit) {
-		// is buffed?
-		for (const auto& buff : unit.buffs) {
-			if (buff == buff_) return true;
-		}
-		return false;
-	}
-
-private:
-	const BuffID buff_;
-};
-
-struct IsUnpowered {
-
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_GATEWAY:
-		case UNIT_TYPEID::PROTOSS_PHOTONCANNON:
-		case UNIT_TYPEID::PROTOSS_SHIELDBATTERY:
-		case UNIT_TYPEID::PROTOSS_FORGE:
-		case UNIT_TYPEID::PROTOSS_CYBERNETICSCORE:
-		case UNIT_TYPEID::PROTOSS_STARGATE:
-		case UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY:
-		case UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL:
-		case UNIT_TYPEID::PROTOSS_FLEETBEACON:
-		case UNIT_TYPEID::PROTOSS_DARKSHRINE:
-		case UNIT_TYPEID::PROTOSS_ROBOTICSBAY:
-		case UNIT_TYPEID::PROTOSS_TEMPLARARCHIVE:
-		case UNIT_TYPEID::PROTOSS_WARPGATE:
-			return !(unit.is_powered);
-		default:
-			return false;
-		}
-	}
-};
 
 class MEMIBot : public Agent {
 public:
@@ -339,6 +55,7 @@ public:
 
         Observation()->GetUnitTypeData();
 
+        initial_location_building(game_info_.map_name);
 
 		//상대 종족
 		branch = 0;
@@ -360,6 +77,8 @@ public:
 		Enemy_front_expansion = Point3D(0, 0, 0);
 		recent_probe_scout_location = Point2D(0, 0);
 		recent_probe_scout_loop = 0;
+		last_dead_probe_pos.clear();
+		attacker_s_observer_tag = NullTag;
 
 		early_strategy = false;
 		warpgate_researched = false;
@@ -373,6 +92,10 @@ public:
 		find_enemy_location = false;
 		work_probe_forward = true;
 
+		num_adept = 0;
+		num_stalker = 0;
+		num_colossus = 0;
+
 		last_map_renewal = 0;
 		resources_to_nearest_base.clear();
 
@@ -381,6 +104,9 @@ public:
 		enemy_units_scouter_seen.clear();
 		enemy_townhalls_scouter_seen.clear();
 		adept_map.clear();
+		observer_nexus_match.clear();
+
+		try_initialbalance = false;
 
 		//Temporary, we can replace this with observation->GetStartLocation() once implemented
 		startLocation_ = Observation()->GetStartLocation();
@@ -423,21 +149,20 @@ public:
 		staging_location_ = Point3D(((staging_location_.x + front_expansion.x) / 2), ((staging_location_.y + front_expansion.y) / 2),
 			((staging_location_.z + front_expansion.z) / 2));
 
+		//Test하려고 임시로 송우석이 뺏습니다!!!!!!!!!
         change_building_location();
 	}
 
 	virtual void OnStep() final override {
-
-
 		const ObservationInterface* observation = Observation();
-		ActionInterface* action = Actions();
 
-		Units units = observation->GetUnits(Unit::Self, IsArmy(observation));
 		if (warpgate_researched) {
             ConvertGateWayToWarpGate();
 		}
 
-		ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE);
+		if (observation->GetGameLoop() % 3 == 0) {
+			ManageWorkers();
+		}
 
 		if (!early_strategy && observation->GetGameLoop()%5==0) {
 			EarlyStrategy();
@@ -466,10 +191,11 @@ public:
 		}
 
 		// Control 시작
-		//Defend();
+		Defend();
 		//ManageArmy();
-		//ManageRush();
+		ManageRush();
 
+		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
@@ -518,6 +244,10 @@ public:
 			break;
 		}
 		case UNIT_TYPEID::PROTOSS_CARRIER: {
+
+			break;
+		}
+		case UNIT_TYPEID::PROTOSS_OBSERVER: {
 
 			break;
 		}
@@ -592,7 +322,9 @@ public:
 		case UNIT_TYPEID::PROTOSS_STALKER:
 			num_stalker++;
 			break;
-
+		case UNIT_TYPEID::PROTOSS_COLOSSUS:
+			num_colossus++;
+			break;
 		default:
 
 			break;
@@ -602,22 +334,56 @@ public:
 	virtual void OnUnitDestroyed(const Unit* u) final override {
 		std::cout << UnitTypeToName(u->unit_type.ToType()) << std::endl;
 		if (u->alliance == Unit::Alliance::Self) {
-			/*switch (u->unit_type.ToType()) {
-			default:
-				break;
-			}*/
-		}
-		if (u->alliance == Unit::Alliance::Enemy) {
-			for (auto& it = enemy_units_scouter_seen.begin(); it != enemy_units_scouter_seen.end(); ++it) {
-				if ((*it)->tag == u->tag) {
-					enemy_units_scouter_seen.erase(it);
-					break;
+			// Attackers에서 죽은 유닛 제거
+			if (IsUnitInUnits(u, Attackers)) {
+				std::unordered_set<const Unit*> TempAttackers;
+				for (const auto& u : Attackers) {
+					if (u->is_alive && !TempAttackers.count(u)) {
+						TempAttackers.insert(u);
+					}
+				}
+				Attackers.clear();
+				for (const auto& u : TempAttackers) {
+					Attackers.push_back(u);
 				}
 			}
-			for (auto& it = enemy_townhalls_scouter_seen.begin(); it != enemy_townhalls_scouter_seen.end(); ++it) {
+			else if (IsUnitInUnits(u, AttackersRecruiting)) {
+				std::unordered_set<const Unit*> TempAttackers;
+				for (const auto& u : AttackersRecruiting) {
+					if (u->is_alive && !TempAttackers.count(u)) {
+						TempAttackers.insert(u);
+					}
+				}
+				AttackersRecruiting.clear();
+				for (const auto& u : TempAttackers) {
+					AttackersRecruiting.push_back(u);
+				}
+			}
+			switch (u->unit_type.ToType()) {
+			case UNIT_TYPEID::PROTOSS_PROBE:
+				last_dead_probe_pos.push_back(u->pos);
+				break;
+			default:
+				break;
+			}
+		}
+		if (u->alliance == Unit::Alliance::Enemy) {
+			for (auto& it = enemy_units_scouter_seen.begin(); it != enemy_units_scouter_seen.end();) {
 				if ((*it)->tag == u->tag) {
-					enemy_townhalls_scouter_seen.erase(it);
+					it = enemy_units_scouter_seen.erase(it);
 					break;
+				}
+				else {
+					++it;
+				}
+			}
+			for (auto& it = enemy_townhalls_scouter_seen.begin(); it != enemy_townhalls_scouter_seen.end();) {
+				if ((*it)->tag == u->tag) {
+					it = enemy_townhalls_scouter_seen.erase(it);
+					break;
+				}
+				else {
+					++it;
 				}
 			}
 		}
@@ -771,6 +537,8 @@ public:
 	Units enemyUnitsInRegion;
 	Units Attackers;
 	Units AttackersRecruiting;
+
+	const Unit * the_pylon = nullptr;
 private:
 	void ChatVersion() {
 		Actions()->SendChat(botname + " " + version);
@@ -845,11 +613,11 @@ private:
 		return moving;
 	}
 
+	// Todo: baneling, disrupterphased etc 피하기
 	bool EvadeEffect(const Unit* unit)
 	{
-
-
 		bool moving = false;
+		Vector2D mul_diff(0, 0);
 		for (const auto & effect : Observation()->GetEffects())
 		{
 			if (isBadEffect(effect.effect_id))
@@ -867,18 +635,14 @@ private:
 					const float dist = Distance2D(unit->pos, pos);
 					if (dist < radius + unit->radius)
 					{
-						sc2::Point2D fleeingPos;
 						if (dist > 0)
 						{
 							Vector2D diff = unit->pos - pos; // 7.3 적 유닛과의 반대 방향으로 도망
 							Normalize2D(diff);
-							fleeingPos = unit->pos + diff * 1.0f;
+							mul_diff += diff * (1.0f /*+ radius + unit->radius - dist*/);
 							//fleeingPos = pos + normalizeVector(rangedUnit->getPos() - pos, radius + 2.0f);
 						}
-						else
-						{
-							fleeingPos = Point2D(staging_location_);
-						}
+						else{}
 
 						if (EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHED || EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHING)
 						{
@@ -892,18 +656,23 @@ private:
 								}
 							}
 						}
-						else
-						{
-							SmartMove(unit, fleeingPos);
-						}
-						Chat("Enemy Skill Run~");
 						std::cout << "skill : " << ed.friendly_name << std::endl;
 						moving = true;
 						break;
 					}
 				}
 			}
+			if (moving) break;
 		}
+		if (moving) {
+			Point2D fleeingPos(staging_location_);
+			if (mul_diff != Point2D(0, 0)) {
+				fleeingPos = unit->pos + mul_diff;
+			}
+			SmartMove(unit, fleeingPos);
+			Chat("Enemy Skill Run~");
+		}
+
 		return moving;
 	}
 
@@ -925,6 +694,10 @@ private:
 
 	void ManageRush();
 
+	void ManageOracleBeam(const Unit * unit, const Unit * target);
+
+	void Roam_enemybase(const Unit * unit);
+
 	void Roam_randombase(const Unit * unit);
 
 	void AdeptPhaseShift(const Unit * unit, Units ShadeNearEnemies, Units NearbyEnemies, bool & ComeOn);
@@ -939,6 +712,8 @@ private:
 
 	void FleeKiting(const Unit * unit, const Unit * enemyarmy);
 
+	void OracleBackKiting(const Unit * unit, const Unit * Workertarget, const Unit * Armytarget);
+
 	void DistanceKiting(const Unit * unit, const Unit * enemyarmy, const Unit * army);
 
 	void FrontKiting(const Unit * unit, const Unit * enemyarmy);
@@ -947,9 +722,21 @@ private:
 
 	void ComeOnKiting(const Unit * unit, const Unit * enemyarmy);
 
+	void CarrierKiting(const Unit * unit, const Unit * enemyarmy);
+
+	bool ChargeShield(const Unit * unit);
+
+	void VoidRayKiting(const Unit * unit, const Unit * enemyarmy);
+
+	void OracleKiting(const Unit * unit, const Unit * enemyarmy);
+
 	void ColossusKiting(const Unit * unit, const Unit * enemyarmy);
 
+	void SentryKiting(const Unit * unit, const Unit * enemyarmy);
+
 	void Kiting(const Unit * unit, const Unit * enemyarmy);
+
+	void EvadeKiting(const Unit * unit, const Unit * enemyarmy);
 
 	void SmartMoveEfficient(const Unit * unit, Point2D KitingLocation, const Unit * enemyarmy);
 
@@ -972,6 +759,10 @@ private:
 
 	int getAttackPriority(const Unit * u);
 
+	bool IsBonusType(const Unit * rangedUnit, const Unit * target);
+
+	const Unit * GetOracleTarget(const Unit * rangedUnit, Units & targets);
+
 	bool LoadUnit(const Unit * unit, const Unit * passenger);
 
 	bool LoadUnitWeaponCooldown(const Unit * unit, const Unit * passenger);
@@ -989,6 +780,8 @@ private:
 	const float getunitsDpsGROUND(Units targets) const;
 
 	const float getDpsGROUND(const Unit * target) const;
+
+	const float getAttackRangeAIR(const Unit * target) const;
 
 	const float getAttackRangeGROUND(const Unit * target) const;
 
@@ -1394,6 +1187,60 @@ private:
 		return target;
 	}
 
+	const Unit* FindSecondNearestUnit(const Point2D& start, const Units& units) const {
+		float nearest_distance = std::numeric_limits<float>::max();
+		float nearest_distance2 = std::numeric_limits<float>::max();
+		const Unit* nearest_unit = nullptr;
+		const Unit* nearest_unit2 = nullptr;
+		for (const auto& u : units) {
+			float current_distance = DistanceSquared2D(u->pos, start);
+			if (current_distance < nearest_distance2) {
+				nearest_distance2 = current_distance;
+				nearest_unit2 = u;
+			}
+			if (nearest_distance2 < nearest_distance) {
+				float tmp_distance;
+				const Unit* tmp_unit;
+				tmp_distance = nearest_distance;
+				nearest_distance = nearest_distance2;
+				nearest_distance2 = tmp_distance;
+				tmp_unit = nearest_unit;
+				nearest_unit = nearest_unit2;
+				nearest_unit2 = tmp_unit;
+			}
+		}
+
+		//If we never found one return nullptr
+		return nearest_unit2;
+	}
+
+	const Unit* FindSecondNearestUnit(const Point2D& start, const std::list<const Unit *>& units) const {
+		float nearest_distance = std::numeric_limits<float>::max();
+		float nearest_distance2 = std::numeric_limits<float>::max();
+		const Unit* nearest_unit = nullptr;
+		const Unit* nearest_unit2 = nullptr;
+		for (const auto& u : units) {
+			float current_distance = DistanceSquared2D(u->pos, start);
+			if (current_distance < nearest_distance2) {
+				nearest_distance2 = current_distance;
+				nearest_unit2 = u;
+			}
+			if (nearest_distance2 < nearest_distance) {
+				float tmp_distance;
+				const Unit* tmp_unit;
+				tmp_distance = nearest_distance;
+				nearest_distance = nearest_distance2;
+				nearest_distance2 = tmp_distance;
+				tmp_unit = nearest_unit;
+				nearest_unit = nearest_unit2;
+				nearest_unit2 = tmp_unit;
+			}
+		}
+
+		//If we never found one return nullptr
+		return nearest_unit2;
+	}
+
 	void TryChronoboost(Filter f = {}) {
 		const ObservationInterface* observation = Observation();
 		Units structures = observation->GetUnits(Unit::Alliance::Self, f);
@@ -1446,7 +1293,8 @@ private:
 			return false;
 		}
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost 
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
             return false;
 		}
 
@@ -1480,7 +1328,8 @@ private:
 		if (observation->GetFoodUsed()+observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
 			return false;
 		}
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost 
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
             return false;
 		}
 
@@ -1512,7 +1361,8 @@ private:
 	bool TryBuildUpgradeChrono(AbilityID ability_type_for_unit, UnitTypeID building_type, UpgradeID upgrade_type) {
 		const ObservationInterface* observation = Observation();
 
-		if (observation->GetMinerals() < observation->GetUpgradeData().at(upgrade_type).mineral_cost || observation->GetVespene() < observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
+		if ((uint32_t)observation->GetMinerals() < observation->GetUpgradeData().at(upgrade_type).mineral_cost
+			|| (uint32_t)observation->GetVespene() < observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
             return false;
 		}
 
@@ -1556,7 +1406,8 @@ private:
 	bool TryBuildUpgrade(AbilityID ability_type_for_unit, UnitTypeID building_type, UpgradeID upgrade_type) {
         const ObservationInterface* observation = Observation();
 
-        if (observation->GetMinerals()<observation->GetUpgradeData().at(upgrade_type).mineral_cost || observation->GetVespene()<observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
+        if ((uint32_t)observation->GetMinerals() < observation->GetUpgradeData().at(upgrade_type).mineral_cost 
+			|| (uint32_t)observation->GetVespene() < observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
             return false;
 		}
 
@@ -1635,7 +1486,8 @@ private:
 		const ObservationInterface* observation = Observation();
 		Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost 
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
             return false;
 		}
 
@@ -1658,7 +1510,7 @@ private:
 			ability_type_for_structure == ABILITY_ID::BUILD_SPINECRAWLER ||
 			ability_type_for_structure == ABILITY_ID::BUILD_SPORECRAWLER;
 
-		// keep expansion site clean. todo: wrong expansions than expectation.
+		// keep expansion site clean.
 		if (!isExpansion && !expansion_building) {
 			bool nearExpansion = false;
 			for (const auto& expansion : expansions_) {
@@ -2104,383 +1956,15 @@ private:
         return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, UNIT_TYPEID::PROTOSS_PROBE,build_location);
 	}
 
-	void MakeBaseResourceMap() {
-		const ObservationInterface* observation = Observation();
+	void MakeBaseResourceMap();
 
-		if (last_map_renewal == observation->GetGameLoop() + 1) {
-			return;
-		}
+	void MineIdleWorkers(const Unit* worker);
 
-		last_map_renewal = observation->GetGameLoop() + 1;
+	int GetExpectedWorkers(UNIT_TYPEID vespene_building_type);
 
-		resources_to_nearest_base.clear();
-		resources_to_nearest_base.emplace(NullTag, NullTag);
+	void ManageWorkers();
 
-		Filter filter_geyser = [](const Unit& u) {
-			return u.build_progress == 1.0f &&
-				IsUnits({ UNIT_TYPEID::PROTOSS_ASSIMILATOR,
-					UNIT_TYPEID::TERRAN_REFINERY,
-					UNIT_TYPEID::ZERG_EXTRACTOR })(u);
-		};
-
-		Filter filter_bases = [](const Unit& u) {
-			return u.build_progress == 1.0f &&
-				IsTownHall()(u);
-		};
-
-		Units geysers = observation->GetUnits(Unit::Alliance::Self, filter_geyser);
-		Units bases = observation->GetUnits(Unit::Alliance::Self, filter_bases);
-		Units minerals = observation->GetUnits(Unit::Alliance::Neutral, IsMineral());
-
-		for (const auto& m : minerals) {
-			const Unit* b = FindNearestUnit(m->pos, bases, 11.5);
-			Tag b_tag = (b != nullptr) ? b->tag : NullTag;
-			resources_to_nearest_base.emplace(m->tag, b_tag);
-		}
-
-		for (const auto& g : geysers) {
-			const Unit* b = FindNearestUnit(g->pos, bases, 11.5);
-			Tag b_tag = (b != nullptr) ? b->tag : NullTag;
-			resources_to_nearest_base.emplace(g->tag, b_tag);
-		}
-	}
-
-	void MineIdleWorkers(const Unit* worker, bool reassigning = false) {
-		const ObservationInterface* observation = Observation();
-
-		Filter filter_geyser = [](const Unit& u) {
-			return u.build_progress == 1.0f &&
-				IsUnits({ UNIT_TYPEID::PROTOSS_ASSIMILATOR,
-					UNIT_TYPEID::TERRAN_REFINERY,
-					UNIT_TYPEID::ZERG_EXTRACTOR })(u);
-		};
-
-		Filter filter_bases = [](const Unit& u) {
-			return u.build_progress == 1.0f &&
-				IsTownHall()(u) &&
-				u.ideal_harvesters != 0;
-		};
-
-		Units geysers = observation->GetUnits(Unit::Alliance::Self, filter_geyser);
-		Units bases = observation->GetUnits(Unit::Alliance::Self, filter_bases);
-		Units minerals = observation->GetUnits(Unit::Alliance::Neutral, IsMineral());
-		size_t geysers_size = geysers.size();
-		size_t bases_size = bases.size();
-		size_t minerals_size = minerals.size();
-
-		if (bases.empty()) {
-			return;
-		}
-
-		MakeBaseResourceMap();
-
-		bool has_space_for_half_mineral = true;
-		bool has_space_for_gas = false;
-		bool has_space_for_mineral = false;
-		const Unit* gas_base = nullptr;
-		const Unit* mineral_base = nullptr;
-		const Unit* valid_mineral_patch = nullptr;
-
-		// If there are very few workers gathering minerals.
-		for (const auto& base : bases) {
-			if (base->assigned_harvesters >= base->ideal_harvesters / 2 && base->assigned_harvesters >= 4) {
-				has_space_for_half_mineral = false;
-				break;
-			}
-		}
-		// Search for a base that is missing workers.
-		for (const auto& base : bases) {
-			if (base->assigned_harvesters < base->ideal_harvesters) {
-				has_space_for_mineral = true;
-				mineral_base = base;
-				break;
-			}
-		}
-		// Search for a base that is missing workers.
-		for (const auto& geyser : geysers) {
-			Tag base_tag = resources_to_nearest_base.count(geyser->tag) ? resources_to_nearest_base.at(geyser->tag) : NullTag;
-			if (base_tag == NullTag) continue;
-			if (geyser->assigned_harvesters < geyser->ideal_harvesters) {
-				has_space_for_gas = true;
-				gas_base = observation->GetUnit(base_tag);
-				break;
-			}
-		}
-
-		float min_distance = std::numeric_limits<float>::max();
-		const Unit* target_resource = nullptr;
-
-		// Search for a base that is missing mineral workers.
-		if (has_space_for_half_mineral && !EnemyRush) {
-			for (const auto& mineral : minerals) {
-				Tag b = resources_to_nearest_base.count(mineral->tag) ? resources_to_nearest_base.at(mineral->tag) : NullTag;
-				if (b == NullTag) continue;
-				const Unit* base = observation->GetUnit(b);
-				if (base == nullptr) continue;
-				if (base->assigned_harvesters >= base->ideal_harvesters / 2) continue;
-				float current_distance = DistanceSquared2D(mineral->pos, worker->pos);
-				if (current_distance < min_distance) {
-					min_distance = current_distance;
-					target_resource = mineral;
-				}
-			}
-		}
-
-		if (target_resource != nullptr) {
-			Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
-			return;
-		}
-
-		// Search for a base that does not have full of gas workers.
-		if (has_space_for_gas && !EnemyRush) {
-			for (const auto& geyser : geysers) {
-				if (geyser->assigned_harvesters >= geyser->ideal_harvesters) continue;
-				Tag b = resources_to_nearest_base.count(geyser->tag) ? resources_to_nearest_base.at(geyser->tag) : NullTag;
-				if (b == NullTag) continue;
-				const Unit* base = observation->GetUnit(b);
-				if (base == nullptr) continue;
-				float current_distance = DistanceSquared2D(geyser->pos, worker->pos);
-				if (current_distance < min_distance) {
-					min_distance = current_distance;
-					target_resource = geyser;
-				}
-			}
-		}
-
-		if (target_resource != nullptr) {
-			Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
-			return;
-		}
-
-		// Search for a base that does not have full of mineral workers.
-		if (has_space_for_mineral && !EnemyRush) {
-			for (const auto& mineral : minerals) {
-				Tag b = resources_to_nearest_base.count(mineral->tag) ? resources_to_nearest_base.at(mineral->tag) : NullTag;
-				if (b == NullTag) continue;
-				const Unit* base = observation->GetUnit(b);
-				if (base == nullptr) continue;
-				if (base->assigned_harvesters >= base->ideal_harvesters) continue;
-				float current_distance = DistanceSquared2D(mineral->pos, worker->pos);
-				if (current_distance < min_distance) {
-					min_distance = current_distance;
-					target_resource = mineral;
-				}
-			}
-		}
-
-		if (target_resource != nullptr) {
-			Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
-			return;
-		}
-
-		if (!worker->orders.empty()) {
-			return;
-		}
-
-		//If all workers are spots are filled just go to any base.
-		const Unit* random_base = GetRandomEntry(bases);
-		valid_mineral_patch = FindNearestMineralPatch(random_base->pos);
-		if (valid_mineral_patch == nullptr) return;
-		if (reassigning) return;
-		Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, valid_mineral_patch);
-	}
-
-	int GetExpectedWorkers(UNIT_TYPEID vespene_building_type) {
-		const ObservationInterface* observation = Observation();
-		Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
-		Units geysers = observation->GetUnits(Unit::Alliance::Self, IsUnit(vespene_building_type));
-		int expected_workers = 0;
-		for (const auto& base : bases) {
-			if (base->build_progress != 1) {
-				continue;
-			}
-			expected_workers += base->ideal_harvesters;
-		}
-
-		for (const auto& geyser : geysers) {
-			if (geyser->vespene_contents > 0) {
-				if (geyser->build_progress != 1) {
-					continue;
-				}
-				expected_workers += geyser->ideal_harvesters;
-			}
-		}
-
-		return expected_workers;
-	}
-
-	void ManageWorkers(UNIT_TYPEID worker_type) {
-		const ObservationInterface* observation = Observation();
-
-		Filter filter_geyser = [](const Unit& u) {
-			return u.build_progress == 1.0f &&
-				IsUnits({ UNIT_TYPEID::PROTOSS_ASSIMILATOR,
-					UNIT_TYPEID::TERRAN_REFINERY,
-					UNIT_TYPEID::ZERG_EXTRACTOR })(u);
-		};
-
-		Filter filter_bases = [](const Unit& u) {
-			return u.build_progress == 1.0f &&
-				IsTownHall()(u) &&
-				u.ideal_harvesters != 0;
-		};
-
-
-		Units geysers = observation->GetUnits(Unit::Alliance::Self, filter_geyser);
-		Units bases = observation->GetUnits(Unit::Alliance::Self, filter_bases);
-		Units minerals = observation->GetUnits(Unit::Alliance::Neutral, IsMineral());
-		Units workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
-		size_t geysers_size = geysers.size();
-		size_t bases_size = bases.size();
-		size_t minerals_size = minerals.size();
-
-		if (bases.empty()) {
-			return;
-		}
-
-		MakeBaseResourceMap();
-
-		bool has_space_for_half_mineral = true;
-		bool has_space_for_gas = false;
-		bool has_space_for_mineral = false;
-		const Unit* gas_base = nullptr;
-		const Unit* mineral_base = nullptr;
-		const Unit* valid_mineral_patch = nullptr;
-
-		// If there are very few workers gathering minerals.
-		for (const auto& base : bases) {
-			if (base->assigned_harvesters >= base->ideal_harvesters / 2 && base->assigned_harvesters >= 4) {
-				has_space_for_half_mineral = false;
-				break;
-			}
-		}
-		// Search for a base that is missing workers.
-		for (const auto& base : bases) {
-			if (base->assigned_harvesters < base->ideal_harvesters) {
-				has_space_for_mineral = true;
-				mineral_base = base;
-				break;
-			}
-		}
-		// Search for a base that is missing workers.
-		for (const auto& geyser : geysers) {
-			Tag base_tag = resources_to_nearest_base.count(geyser->tag) ? resources_to_nearest_base.at(geyser->tag) : NullTag;
-			if (base_tag == NullTag) continue;
-			if (geyser->assigned_harvesters < geyser->ideal_harvesters) {
-				has_space_for_gas = true;
-				gas_base = observation->GetUnit(base_tag);
-				break;
-			}
-		}
-
-		if (has_space_for_mineral || has_space_for_gas) {
-			for (const auto& worker : workers) {
-				if (worker == probe_scout) continue;
-				if (worker == probe_forward && !work_probe_forward) continue;
-				if (worker->orders.empty()) continue;
-				const UnitOrder& o = worker->orders.front();
-				if (o.ability_id != ABILITY_ID::HARVEST_GATHER) continue;
-
-				Tag target_tag = o.target_unit_tag;
-				Tag nearest_base_tag = resources_to_nearest_base.count(target_tag) ? resources_to_nearest_base.at(target_tag) : NullTag;
-
-				// reassign workers that mines resources far from nexuses. (get all)
-				if (nearest_base_tag == NullTag) {
-					MineIdleWorkers(worker);
-					Print("reassigning no nexus workers");
-					return;
-				}
-
-				const Unit* nearest_base = observation->GetUnit(nearest_base_tag);
-				const Unit* target_resource = observation->GetUnit(target_tag);
-				if (target_resource == nullptr) continue;
-				if (nearest_base == nullptr) continue;
-
-				// reassign overflowing workers (geysers)
-				if (!IsMineral()(*target_resource)) {
-					if (target_resource->assigned_harvesters - target_resource->ideal_harvesters <= 0) continue;
-					MineIdleWorkers(worker);
-					return;
-				}
-				// if there is a space
-				// reassign overflowing workers (minerals)
-				else {
-					if (nearest_base->assigned_harvesters - nearest_base->ideal_harvesters <= 0) continue;
-					MineIdleWorkers(worker);
-					return;
-				}
-			}
-		}
-
-		// if few workers are mining minerals, then mine mineral rather than gas
-		if (has_space_for_half_mineral && !EnemyRush) {
-			for (const auto& geyser : geysers) {
-				if (geyser->assigned_harvesters == 0) continue;
-
-				for (const auto& worker : workers) {
-					if (worker == probe_scout) continue;
-					if (worker == probe_forward && !work_probe_forward) continue;
-					// pick gas mining workers
-					if (worker->orders.empty()) continue;
-					const UnitOrder& o = worker->orders.front();
-					if (o.ability_id != ABILITY_ID::HARVEST_GATHER) continue;
-					if (o.target_unit_tag != geyser->tag) continue;
-
-					MineIdleWorkers(worker);
-					Print("reassigning for mineral workers");
-					return;
-				}
-			}
-		}
-
-		// mine gas.
-		if (has_space_for_gas && !EnemyRush) {
-			// sort by distance
-			Point2D gas_base_pos = gas_base->pos;
-			std::function<bool(const Unit*, const Unit*)> f =
-				[gas_base_pos](const Unit* b1, const Unit* b2) {
-				return DistanceSquared2D(gas_base_pos, b1->pos) < DistanceSquared2D(gas_base_pos, b2->pos);
-			};
-
-			std::sort(bases.begin(), bases.end(), f);
-
-			for (const auto& base : bases) {
-				if (base->assigned_harvesters - 1 < (base->ideal_harvesters / 2)) continue;
-
-				const Unit* target_worker = nullptr;
-				float min_distance = std::numeric_limits<float>::max();
-
-				for (const auto& worker : workers) {
-					if (worker == probe_scout) continue;
-					if (worker == probe_forward && !work_probe_forward) continue;
-					// pick mineral mining workers first.
-					if (worker->orders.empty()) continue;
-					const UnitOrder& o = worker->orders.front();
-					if (o.ability_id != ABILITY_ID::HARVEST_GATHER) continue;
-					const Unit* target_resource = observation->GetUnit(o.target_unit_tag);
-					Tag target_tag = o.target_unit_tag;
-					if (target_resource == nullptr) continue;
-					if (target_tag == NullTag) continue;
-					if (!IsMineral()(*target_resource)) continue;
-
-					Tag nearest_base = resources_to_nearest_base.count(target_tag) ? resources_to_nearest_base.at(target_tag) : NullTag;
-					if (base->tag != nearest_base) continue;
-
-					float current_distance = DistanceSquared2D(gas_base->pos, worker->pos);
-					if (current_distance < min_distance) {
-						target_worker = worker;
-						min_distance = current_distance;
-					}
-				}
-
-				if (target_worker != nullptr) {
-					MineIdleWorkers(target_worker);
-					Print("reassigning for gas workers");
-					return;
-				}
-			}
-		}
-	}
+	void FleeWorkers();
 
 	void ManageUpgrades() {
 		const ObservationInterface* observation = Observation();
@@ -2656,6 +2140,8 @@ private:
 	void determine_enemy_expansion();
 
 	void manageobserver();
+
+	void roamobserver(const Unit * u);
 
 	bool TryWarpAdept() {
 		return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT, advance_pylon_location);
@@ -3247,12 +2733,16 @@ private:
 
 	void scoutenemylocation();
 
+	std::unordered_map<Tag, Tag> observer_nexus_match;
+	Tag attacker_s_observer_tag;
+
 	uint32_t last_map_renewal;
 	std::unordered_map<Tag, Tag> resources_to_nearest_base;
 	std::list<const Unit *> enemy_units_scouter_seen;
 	std::list<const Unit *> enemy_townhalls_scouter_seen;
 	Point2D recent_probe_scout_location;
 	uint32_t recent_probe_scout_loop;
+	std::list<Point2D> last_dead_probe_pos;
 
 	Point2D advance_pylon_location;
 
@@ -3289,12 +2779,11 @@ private:
 	uint16_t branch;
 	const size_t max_worker_count_ = 68;
 
-	uint16_t num_adept = 0;
-	uint16_t num_stalker = 0;
-	uint16_t num_colossus = 0;
+	uint16_t num_adept;
+	uint16_t num_stalker;
+	uint16_t num_colossus;
 
-	bool try_initialbalance = false;
-	bool Timeto_warpzealot = false;
+	bool try_initialbalance;
 
 	uint16_t try_adept,try_stalker;
 

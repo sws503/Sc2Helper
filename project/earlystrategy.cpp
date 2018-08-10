@@ -1,6 +1,5 @@
 #include "memibot.h"
 
-// Todo: trybuildunit() ?∏Ï∂ú?òÍ∏∞ ?ÑÏóê ?êÏõê, ?∏Íµ¨?òÍ? ?àÎäîÏßÄ Ï≤¥ÌÅ¨?òÍ∏∞
 bool MEMIBot::EarlyStrategy() {
 	const ObservationInterface* observation = Observation();
 	Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PROBE));
@@ -638,7 +637,6 @@ bool MEMIBot::EarlyStrategy() {
 	    }
         return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
     case 211:
-		// todo: ?¨Í∏∞???©Ìòº?òÌöå ?∞Ï?Î©?Í≤åÏûÑ???∞Ïßê
 		if (twilight_council_count==0) {
             stage_number=209;
             return false;
