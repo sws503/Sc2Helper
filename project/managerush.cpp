@@ -633,12 +633,12 @@ void MEMIBot::ManageRush() {
 			}
 		}
 
-		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
+		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_CARRIER)
 		{
 			if (EvadeEffect(unit)) {}
 			else if (target != nullptr) // 카이팅은 항상하자
 			{
-				Kiting(unit, target);
+				CarrierKiting(unit, target);
 			}
 			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
@@ -649,11 +649,112 @@ void MEMIBot::ManageRush() {
 			{
 				RetreatSmart(unit, meeting_spot);
 			}
-			else if (unit->orders.empty())
+			else if (unit->orders.empty() || unit->orders.front().ability_id == ABILITY_ID::BUILD_INTERCEPTORS)
 			{
 				Roam_randombase(unit);
 			}
 		}
+		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
+		{
+			if (branch == 6)
+			{
+				if (EvadeEffect(unit)) {}
+				else if (ChargeShield(unit)) {}
+				else if (target != nullptr) // 카이팅은 항상하자
+				{
+					VoidRayKiting(unit, target);
+				}
+				else if (unit->orders.empty() || unit->orders.front().ability_id == ABILITY_ID::EFFECT_VOIDRAYPRISMATICALIGNMENT)
+				{
+					ScoutWithUnit(unit, observation);
+				}
+			}
+			if (branch == 7)
+			{
+				if (EvadeEffect(unit)) {}
+				else if (target != nullptr) // 카이팅은 항상하자
+				{
+					VoidRayKiting(unit, target);
+				}
+				else if (DefendDuty(unit)) {}
+				else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+				{
+					ScoutWithUnit(unit, observation);
+				}
+				else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
+				{
+					RetreatSmart(unit, meeting_spot);
+				}
+				else if (unit->orders.empty() || unit->orders.front().ability_id == ABILITY_ID::EFFECT_VOIDRAYPRISMATICALIGNMENT)
+				{
+					Roam_randombase(unit);
+				}
+			}
+		}
+
+		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
+		{
+			Units NearbyAirAttackers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, AirAttacker());
+			Units NearbyWorkers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, IsWorker());
+
+			const Unit * Workertarget = GetOracleTarget(unit, NearbyWorkers);
+			const Unit * Armytarget = GetTarget(unit, NearbyAirAttackers);
+
+			bool OracleCanAttack = false;
+
+			AvailableAbilities abilities = Query()->GetAbilitiesForUnit(unit);
+			for (const auto& ability : abilities.abilities) {
+				if (ability.ability_id == ABILITY_ID::BEHAVIOR_PULSARBEAMOFF) {
+					std::cout << "BEAM~ ";
+					OracleCanAttack = true;
+				}
+			}
+
+			if (Workertarget != nullptr)
+			{
+				ManageOracleBeam(unit, Workertarget);
+			}
+			else
+			{
+				Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);
+			}
+
+			if (EvadeEffect(unit)) {}
+			else if (!CanHitMe(unit)) //적 공중공격 유닛이 없을 경우
+			{
+				if (Workertarget != nullptr) // 일꾼이 있으면
+				{
+					OracleKiting(unit, Workertarget);
+				}
+				else // 없으면
+				{
+					//ScoutWithUnit(unit, Observation());
+					if (unit->orders.empty())
+					{
+						Roam_enemybase(unit);
+					}
+				}
+			}
+			else if (CanHitMe(unit)) //적 공중공격 유닛이 있을 경우
+			{
+				if (Workertarget != nullptr) // 적 일꾼이 있으면
+				{
+					if (OracleCanAttack == 1) // 내가 공격을 할 수 있다
+					{
+						OracleBackKiting(unit, Workertarget, Armytarget);
+					}
+					else // 펄서광선이 비 활성된 상태이다
+					{
+						EvadeKiting(unit, Armytarget);
+					}
+				}
+				else // 적 일꾼이 없으면
+				{
+					EvadeKiting(unit, Armytarget);
+				}
+			}
+		}
+
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_STALKER)
 		{
@@ -844,6 +945,54 @@ void MEMIBot::ManageRush() {
 		}*/
 	}
 }
+
+void MEMIBot::ManageOracleBeam(const Unit* unit, const Unit* target)
+{
+	Units NearbyWorkers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, IsWorker());
+	int NumWorker = NearbyWorkers.size();
+	int EnergyNeeded = NumWorker * 1 + 30;
+	if (EnergyNeeded > 45)
+	{
+		EnergyNeeded = 45;
+	}
+
+
+	if (target != nullptr)
+	{
+		float dist = Distance2D(unit->pos, target->pos);
+		float DIST = dist - unit->radius - target->radius;
+
+		if (DIST <= 4 && unit->energy >= EnergyNeeded) {
+			Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMON);
+		}
+		else if (DIST > 12) {
+			Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);
+		}
+	}
+}
+
+void  MEMIBot::Roam_enemybase(const Unit* unit)
+{
+	const Unit * EnemyExpansionMineral = FindNearestMineralPatch(enemy_expansion);
+	const Unit * EnemyBaseMineral = FindNearestMineralPatch(game_info_.enemy_start_locations.front());
+
+	for (const auto & enemy_bases : enemy_townhalls_scouter_seen)
+	{
+		//두번째로 가까운 base로 간다
+		//FindUnitsNear
+	}
+	
+
+	if (Distance2D(unit->pos, EnemyBaseMineral->pos) < 15)
+	{
+		SmartMove(unit, EnemyExpansionMineral->pos);
+	}
+	else
+	{
+		SmartMove(unit, EnemyBaseMineral->pos);
+	}
+}
+
 
 void  MEMIBot::Roam_randombase(const Unit* unit)
 {
@@ -1147,6 +1296,65 @@ bool MEMIBot::IsBonusType(const Unit * rangedUnit, const Unit * target)
 	return match;
 }
 
+const Unit * MEMIBot::GetOracleTarget(const Unit * rangedUnit, Units & targets)
+{
+	int highPriorityFar = 0;
+	int highPriorityNear = 0;
+	int highDpsNear = 0;
+	double lowestHealthOutside = std::numeric_limits<double>::max();
+	double lowestHealthInside = std::numeric_limits<double>::max();
+	const Unit * weakestTargetOutsideRange = nullptr;
+	const Unit * weakestTargetInsideRange = nullptr;
+
+	for (const auto & targetUnit : targets)
+	{
+		if (!targetUnit->is_alive)
+		{
+			continue;
+		}
+		const float range = getAttackRangeGROUND(rangedUnit);
+		int priority = 10;
+
+		const float distance = Distance2D(rangedUnit->pos, targetUnit->pos);
+
+		if (distance > range) //적과 나 사이의 거리 > 나의 사정거리 // 거리가 멀어서 때릴 수 없는 경우
+		{
+			// If in sight we just add 20 to prio. This should make sure that a unit in sight has higher priority than any unit outside of range
+			//
+			float SightRange = Observation()->GetUnitTypeData()[rangedUnit->unit_type].sight_range;
+
+			if (distance <= SightRange)
+			{
+				priority += 10;
+			}
+			// 우선순위가 높거나 또는 거리가 가까우면 설정한다
+			if (!weakestTargetOutsideRange || (priority > highPriorityFar) || (priority == highPriorityFar && targetUnit->health < lowestHealthOutside))
+			{
+				lowestHealthOutside = targetUnit->health + targetUnit->shield;
+				highPriorityFar = priority;
+				weakestTargetOutsideRange = targetUnit;
+			}
+		}
+		else
+		{
+			if (!weakestTargetInsideRange || targetUnit->health < lowestHealthInside) // 건물을 때리고 싶을 때는
+			{
+				lowestHealthInside = targetUnit->health + targetUnit->shield;
+				highPriorityNear = priority;
+				weakestTargetInsideRange = targetUnit;
+
+			}
+		}
+	}
+	if (highPriorityFar == 20 && lowestHealthOutside < lowestHealthInside)
+	{
+		return weakestTargetOutsideRange;
+	}
+	else
+	{
+		return weakestTargetInsideRange;
+	}
+}
 
  const Unit * MEMIBot::GetTarget(const Unit * rangedUnit, Units & targets)
 {
@@ -1314,6 +1522,41 @@ const float MEMIBot::getDpsGROUND(const Unit* target) const
 	}
 	return dps;
 }
+
+const float MEMIBot::getAttackRangeAIR(const Unit* target) const
+{
+	const ObservationInterface* observation = Observation();
+	sc2::Weapon groundWeapons;
+	sc2::Weapon AirWeapons;
+
+	if (target->unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_BUNKER)
+	{
+		return 6.0f;
+	}
+	if (target->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_CARRIER)
+	{
+		return 8.0f;
+	}
+
+	for (const auto & Weapon : Observation()->GetUnitTypeData()[target->unit_type].weapons)
+	{
+		if (Weapon.type == sc2::Weapon::TargetType::Air || Weapon.type == sc2::Weapon::TargetType::Any)
+		{
+			AirWeapons = Weapon;
+		}
+		if (Weapon.type == sc2::Weapon::TargetType::Ground || Weapon.type == sc2::Weapon::TargetType::Any)//Siege tanks
+		{
+			groundWeapons = Weapon;
+			if (groundWeapons.range < 0.11f)//melee. Not exactly 0.1
+			{
+				groundWeapons.range += target->radius;
+			}
+		}
+	}
+	return AirWeapons.range; // 7.5 이건 오로지 공중유닛을 위한 함수!!
+							 //return groundWeapons.range; // 7.5 지상유닛을 위한 함수
+}
+
 
 const float MEMIBot::getAttackRangeGROUND(const Unit* target) const
 {

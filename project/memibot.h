@@ -423,7 +423,7 @@ public:
 			((staging_location_.z + front_expansion.z) / 2));
 
 		//Test하려고 임시로 송우석이 뺏습니다!!!!!!!!!
-        //change_building_location();
+        change_building_location();
 	}
 
 	virtual void OnStep() final override {
@@ -925,6 +925,10 @@ private:
 
 	void ManageRush();
 
+	void ManageOracleBeam(const Unit * unit, const Unit * target);
+
+	void Roam_enemybase(const Unit * unit);
+
 	void Roam_randombase(const Unit * unit);
 
 	void AdeptPhaseShift(const Unit * unit, Units ShadeNearEnemies, Units NearbyEnemies, bool & ComeOn);
@@ -939,6 +943,8 @@ private:
 
 	void FleeKiting(const Unit * unit, const Unit * enemyarmy);
 
+	void OracleBackKiting(const Unit * unit, const Unit * Workertarget, const Unit * Armytarget);
+
 	void DistanceKiting(const Unit * unit, const Unit * enemyarmy, const Unit * army);
 
 	void FrontKiting(const Unit * unit, const Unit * enemyarmy);
@@ -947,11 +953,21 @@ private:
 
 	void ComeOnKiting(const Unit * unit, const Unit * enemyarmy);
 
+	void CarrierKiting(const Unit * unit, const Unit * enemyarmy);
+
+	bool ChargeShield(const Unit * unit);
+
+	void VoidRayKiting(const Unit * unit, const Unit * enemyarmy);
+
+	void OracleKiting(const Unit * unit, const Unit * enemyarmy);
+
 	void ColossusKiting(const Unit * unit, const Unit * enemyarmy);
 
 	void SentryKiting(const Unit * unit, const Unit * enemyarmy);
 
 	void Kiting(const Unit * unit, const Unit * enemyarmy);
+
+	void EvadeKiting(const Unit * unit, const Unit * enemyarmy);
 
 	void SmartMoveEfficient(const Unit * unit, Point2D KitingLocation, const Unit * enemyarmy);
 
@@ -976,6 +992,8 @@ private:
 
 	bool IsBonusType(const Unit * rangedUnit, const Unit * target);
 
+	const Unit * GetOracleTarget(const Unit * rangedUnit, Units & targets);
+
 	bool LoadUnit(const Unit * unit, const Unit * passenger);
 
 	bool LoadUnitWeaponCooldown(const Unit * unit, const Unit * passenger);
@@ -993,6 +1011,8 @@ private:
 	const float getunitsDpsGROUND(Units targets) const;
 
 	const float getDpsGROUND(const Unit * target) const;
+
+	const float getAttackRangeAIR(const Unit * target) const;
 
 	const float getAttackRangeGROUND(const Unit * target) const;
 

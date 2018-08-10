@@ -58,7 +58,23 @@ void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 	}
 }
 
+void MEMIBot::EvadeKiting(const Unit* unit, const Unit* enemyarmy)
+{
+	const ObservationInterface* observation = Observation();
+	Units NearbyArmies = FindUnitsNear(unit, 10, Unit::Alliance::Enemy, IsArmy(Observation()));
+	Point2D enemyposition;
+	GetPosition(NearbyArmies, Unit::Alliance::Enemy, enemyposition);
 
+	//Distance to target
+	float dist = Distance2D(unit->pos, enemyposition);
+	float DIST = dist - unit->radius - enemyarmy->radius;
+
+	const Unit& ENEMYARMY = *enemyarmy;
+
+	sc2::Point2D KitingLocation = unit->pos;
+	KitingLocation += CalcKitingPosition(unit->pos, enemyposition) * 3.0f;
+	SmartMove(unit, KitingLocation);
+}
 
 void MEMIBot::FleeKiting(const Unit* unit, const Unit* enemyarmy)
 {
@@ -80,6 +96,72 @@ void MEMIBot::FleeKiting(const Unit* unit, const Unit* enemyarmy)
 		SmartMove(unit, KitingLocation);
 	}
 }
+
+void MEMIBot::OracleBackKiting(const Unit* unit, const Unit* Workertarget, const Unit* Armytarget) // ÀÏ²Û ¼öºñº´·ÂÀÌ ÀÖ´Â °æ¿ì
+{
+	float unitHP = unit->health + unit->shield; //Ã¼·Â ºñ·ÊÇØ¼­ ¾µ±î?
+
+	float dist = Distance2D(unit->pos, Armytarget->pos);
+	float DIST = dist - unit->radius - Armytarget->radius; //Àû°úÀÇ °Å¸®
+
+	float Wdist = Distance2D(unit->pos, Workertarget->pos);
+	float WDIST = dist - unit->radius - Workertarget->radius; // ÀÏ²Û°úÀÇ °Å¸®
+
+	float enemyattackrange = getAttackRangeAIR(Armytarget); //ÀûÀÇ »ç°Å¸®
+	float myattackrange = getAttackRangeGROUND(unit); // ³ªÀÇ »ç°Å¸®
+
+	if (Armytarget->unit_type == UNIT_TYPEID::PROTOSS_PHOTONCANNON || Armytarget->unit_type == UNIT_TYPEID::TERRAN_MISSILETURRET || Armytarget->unit_type == UNIT_TYPEID::ZERG_SPORECRAWLER || Armytarget->unit_type == UNIT_TYPEID::TERRAN_BUNKER)
+	{
+		if (WDIST < myattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // ÇöÀç °ø°ÝÀÌ ¼±µô»óÈ²ÀÓ
+		{
+			//°¡¸¸È÷ ÀÖµµ·Ï ÇÕ½Ã´Ù
+		}
+		if (DIST <= enemyattackrange + 0.5f)
+		{
+			sc2::Point2D KitingLocation = unit->pos;
+			KitingLocation += CalcKitingPosition(unit->pos, Armytarget->pos) * 6.0f;
+			SmartMove(unit, KitingLocation);
+		}
+		else if (unit->weapon_cooldown == 0.0f && WDIST <= 4)
+		{
+			SmartAttackUnit(unit, Workertarget);
+		}
+		else
+		{
+			Point2D KitingLocation1 = unit->pos;
+			Point2D Vector = CalcKitingPosition(unit->pos, Armytarget->pos);
+			KitingLocation1 += Point2D(-Vector.y, +Vector.x) * 5;
+
+			SmartMove(unit, KitingLocation1);
+		}
+	}
+	else
+	{
+		if (WDIST < myattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // ÇöÀç °ø°ÝÀÌ ¼±µô»óÈ²ÀÓ
+		{
+			//°¡¸¸È÷ ÀÖµµ·Ï ÇÕ½Ã´Ù
+		}
+		else if (DIST <= enemyattackrange * 1.2 + 1.0f) // ³Ê¹« °¡±î¿ò 1.25? 1.35?
+		{
+			sc2::Point2D KitingLocation = unit->pos;
+			KitingLocation += CalcKitingPosition(unit->pos, Armytarget->pos) * 6.0f;
+			SmartMove(unit, KitingLocation);
+		}
+		else if (unit->weapon_cooldown == 0.0f && WDIST <= 5)
+		{
+			SmartAttackUnit(unit, Workertarget);
+		}
+		else
+		{
+			Point2D KitingLocation1 = unit->pos;
+			Point2D Vector = CalcKitingPosition(unit->pos, Armytarget->pos);
+			KitingLocation1 += Point2D(-Vector.y, +Vector.x) * 5;
+
+			SmartMove(unit, KitingLocation1);
+		}
+	}
+}
+
 
 void MEMIBot::DistanceKiting(const Unit* unit, const Unit* enemyarmy, const Unit* army) // ÀÏ²Û ¼öºñº´·ÂÀÌ ÀÖ´Â °æ¿ì
 {
@@ -197,7 +279,7 @@ void MEMIBot::FrontKiting(const Unit* unit, const Unit* enemyarmy) // ÀÏ²Û °ø°ÝÇ
 
 bool MEMIBot::CanHitMe(const Unit* unit)
 {
-	Units NearbyArmies = FindUnitsNear(unit, 15 , Unit::Alliance::Enemy, IsArmy(Observation()));
+	Units NearbyArmies = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, AirAttacker());
 
 	bool hitme = false;
 	for (const auto & target : NearbyArmies)
@@ -205,12 +287,23 @@ bool MEMIBot::CanHitMe(const Unit* unit)
 		float dist = Distance2D(unit->pos, target->pos);
 		float DIST = dist - unit->radius - target->radius;
 
-		float targetattackrange = getAttackRangeGROUND(target);
+		float targetattackrange = getAttackRangeAIR(target);
 
-		if (DIST < targetattackrange + 3.0f)
+		if (target->unit_type == UNIT_TYPEID::PROTOSS_PHOTONCANNON || target->unit_type == UNIT_TYPEID::TERRAN_MISSILETURRET || target->unit_type == UNIT_TYPEID::ZERG_SPORECRAWLER || target->unit_type == UNIT_TYPEID::TERRAN_BUNKER)
 		{
-			hitme = true;
+			if (DIST <= targetattackrange + 1.2f)
+			{
+				hitme = true;
+			}
 		}
+		else
+		{
+			if (DIST <= targetattackrange * 1.5 + 1.0f)
+			{
+				hitme = true;
+			}
+		}
+
 	}
 	return hitme;
 }
@@ -257,6 +350,138 @@ void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
 		}*/
 	}
 }
+
+void MEMIBot::CarrierKiting(const Unit* unit, const Unit* enemyarmy)
+{
+
+	float dist = Distance2D(unit->pos, enemyarmy->pos);
+	float DIST = dist - unit->radius - enemyarmy->radius;
+
+	float unitattackrange = getAttackRangeAIR(unit);
+	float enemyattackrange = getAttackRangeAIR(enemyarmy);
+	const Unit& ENEMYARMY = *enemyarmy;
+
+	bool enemiesnear = false;
+
+	if (unit->shield < 1)
+	{ 
+		if (DIST <= 9.5) 
+		{
+			enemiesnear = true; 
+		} 
+	}
+	else 
+	{ 
+		if (DIST <= 7.5)
+		{
+			enemiesnear = true; 
+		} 
+	}
+
+
+	if (!enemiesnear || unit->weapon_cooldown == 0.0f)
+	{
+		SmartAttackUnit(unit, enemyarmy);
+	}
+	else if (IsStructure(Observation())(ENEMYARMY))
+	{
+		sc2::Point2D FrontKitingLocation = unit->pos;
+		FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 7.0f;
+
+		SmartMove(unit, FrontKitingLocation);
+	}
+	else
+	{
+		sc2::Point2D KitingLocation = unit->pos;
+		KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 7.0f;
+
+		SmartMove(unit, KitingLocation);
+	}
+}
+
+bool MEMIBot::ChargeShield(const Unit* unit)
+{
+	const Unit * NearestBattery = FindNearestUnit(unit->pos, [](const Unit& unit) {return (IsUnit(UNIT_TYPEID::PROTOSS_SHIELDBATTERY)(unit) && unit.energy > 10 && unit.is_powered == 1); });
+
+	bool need = false;
+
+	if (unit->shield < 5 && NearestBattery != nullptr)
+	{
+		Actions()->UnitCommand(unit, 3707);
+		SmartMove(unit, NearestBattery->pos);
+		need = true;
+	}
+	return need;
+}
+
+
+void MEMIBot::VoidRayKiting(const Unit* unit, const Unit* enemyarmy)
+{
+	//Distance to target
+	float dist = Distance2D(unit->pos, enemyarmy->pos);
+	float DIST = dist - unit->radius - enemyarmy->radius;
+
+	//Our range
+	float unitattackrange = getAttackRangeGROUND(unit);
+
+	if (DIST < unitattackrange)
+	{
+		for (const auto & Attribute : Observation()->GetUnitTypeData()[enemyarmy->unit_type].attributes)
+		{
+			if (Attribute == Attribute::Armored)
+			{
+				Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_VOIDRAYPRISMATICALIGNMENT);
+			}
+		}
+	}
+	
+	else if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f)
+	{
+		//°¡¸¸È÷ ÀÖµµ·Ï ÇÕ½Ã´Ù
+	}
+	else if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
+	{
+		SmartAttackUnit(unit, enemyarmy);
+	}
+	else
+	{
+		sc2::Point2D FrontKitingLocation = unit->pos;
+		FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
+
+		//SmartMove(unit, FrontKitingLocation);
+	}
+}
+
+void MEMIBot::OracleKiting(const Unit* unit, const Unit* enemyarmy)
+{
+	Units NearbyAirAttackers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, AirAttacker());
+	Units NearbyWorkers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, IsWorker());
+
+	const Unit * Workertarget = GetOracleTarget(unit, NearbyWorkers);
+	const Unit * Armytarget = GetTarget(unit, NearbyAirAttackers);
+
+	float dist = Distance2D(unit->pos, Workertarget->pos);
+	float DIST = dist - unit->radius - Workertarget->radius;
+
+	float myattackrange = getAttackRangeGROUND(unit);
+
+	if (DIST < myattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // ÇöÀç °ø°ÝÀÌ ¼±µô»óÈ²ÀÓ
+	{
+		//°¡¸¸È÷ ÀÖµµ·Ï ÇÕ½Ã´Ù
+	}
+	else if (unit->weapon_cooldown == 0.0f)
+	{
+		SmartAttackUnit(unit, Workertarget);
+	}
+	else
+	{
+		sc2::Point2D FrontKitingLocation = unit->pos;
+		FrontKitingLocation -= CalcKitingPosition(unit->pos, Workertarget->pos) * 4.0f;
+		SmartMove(unit, FrontKitingLocation);
+	}
+}
+
+
 
 void MEMIBot::ColossusKiting(const Unit* unit, const Unit* enemyarmy)
 {
