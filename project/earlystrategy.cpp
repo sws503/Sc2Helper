@@ -181,7 +181,7 @@ bool MEMIBot::EarlyStrategy() {
                 TryBuildBatteryNexus(b);
             }
             TryBuildUnit(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_CARRIER);
-            if (observation->GetMinerals()>600 && !stargates.front()->orders.empty()) {
+            if (observation->GetMinerals()>600) {
                 TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
             }
             if (bases.size()*2>assimilator_count) {
@@ -803,6 +803,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon2);
 	case 605:
+	    Actions()->UnitCommand(gateways.front(),ABILITY_ID::RALLY_UNITS, startLocation_);
 		// ?•ì°° : ë¶„ê¸° 1, 2 ?•ì°° ?œì‘
 		if (cybernetics_count>0) {
 			stage_number=606;
@@ -934,6 +935,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_NEXUS, front_expansion);
     case 705:
+        Actions()->UnitCommand(gateways.front(),ABILITY_ID::RALLY_UNITS, Star1);
         if (cybernetics_count>0) {
 			stage_number=706;
 			return false;
