@@ -783,7 +783,6 @@ void MEMIBot::ManageRush() {
 			{
 				if (Workertarget != nullptr) // ¿œ≤€¿Ã ¿÷¿∏∏È
 				{
-					std::cout << " ¿˙¥¬ 1ø° ∞§«˚æÓø‰ §Ã§Ã§Ã " << std::endl;
 					OracleKiting(unit, Workertarget);
 				}
 				else // æ¯¿∏∏È
@@ -791,7 +790,6 @@ void MEMIBot::ManageRush() {
 					//ScoutWithUnit(unit, Observation());
 					if (unit->orders.empty())
 					{
-						std::cout << " ¿˙¥¬ 2ø° ∞§«˚æÓø‰ §Ã§Ã§Ã " << std::endl;
 						Roam_enemybase(unit);
 					}
 				}
@@ -800,7 +798,6 @@ void MEMIBot::ManageRush() {
 			{
 				if (Workertarget != nullptr) // ¿˚ ¿œ≤€¿Ã ¿÷¿∏∏È
 				{
-					std::cout << " ¿˙¥¬ 6ø° ∞§«˚æÓø‰ §Ã§Ã§Ã " << std::endl;
 
 					if (OracleCanAttack == 1) // ≥ª∞° ∞¯∞›¿ª «“ ºˆ ¿÷¥Ÿ
 					{
@@ -813,13 +810,8 @@ void MEMIBot::ManageRush() {
 				}
 				else // ¿˚ ¿œ≤€¿Ã æ¯¿∏∏È
 				{
-					std::cout << " ¿˙¥¬ 7ø° ∞§«˚æÓø‰ §Ã§Ã§Ã " << std::endl;
 					EvadeKiting(unit, Armytarget);
 				}
-			}
-			else
-			{
-				std::cout << " ¿˙¥¬ 3ø° ∞§«˚æÓø‰ §Ã§Ã§Ã " << std::endl;
 			}
 		}
 
@@ -1046,7 +1038,6 @@ void  MEMIBot::Roam_enemybase(const Unit* unit)
 
 	if (enemy_townhalls_scouter_seen.size() <= 1)
 	{
-		std::cout << " ¿˙¥¬ 4ø° ∞§«˚æÓø‰ §Ã§Ã§Ã " << std::endl;
 		//const Unit * EnemyExpansionMineral = FindNearestMineralPatch(enemy_expansion);
 		const Unit * EnemyBaseMineral = FindNearestMineralPatch(game_info_.enemy_start_locations.front());
 
@@ -1061,7 +1052,6 @@ void  MEMIBot::Roam_enemybase(const Unit* unit)
 	}
 	else
 	{
-		std::cout << " ¿˙¥¬ 5ø° ∞§«˚æÓø‰ §Ã§Ã§Ã " << std::endl;
 		const Unit * second_nearbase = FindSecondNearestUnit(unit->pos, enemy_townhalls_scouter_seen);
 
 		SmartMove(unit, second_nearbase->pos);
