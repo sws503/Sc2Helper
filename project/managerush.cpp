@@ -77,7 +77,14 @@
 		}
 		TotalDPS += dps;
 	}*/
-
+struct IsBattery {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_SHIELDBATTERY: return true;
+		default: return false;
+		}
+	}
+};
 struct IsObserver {
 	bool operator()(const Unit& unit) {
 		switch (unit.unit_type.ToType()) {
@@ -428,6 +435,7 @@ void MEMIBot::ManageRush() {
 
 	Units Adepts = observation->GetUnits(Unit::Alliance::Self, IsAdept());
 	
+	Units Batteries = observation->GetUnits(Unit::Alliance::Self, IsBattery());
 	Units Observers = observation->GetUnits(Unit::Alliance::Self, IsObserver());
 	Units AdeptShades = observation->GetUnits(Unit::Alliance::Self, IsAdeptShade());
 	Units WarpPrisms = observation->GetUnits(Unit::Alliance::Self, IsWarpPrism());
@@ -450,6 +458,22 @@ void MEMIBot::ManageRush() {
 
 	
 	////////////////////////////////////////////
+
+	for (const auto& battery : Batteries)
+	{
+		Units NearStructure = FindUnitsNear(battery, 6, Unit::Alliance::Self, IsStructure(observation));
+
+		if (battery->orders.empty())
+		{
+			for (const auto& unit : NearStructure)
+			{
+				if (unit->shield < unit->shield_max)
+				{
+					Actions()->UnitCommand(battery, ABILITY_ID::EFFECT_RESTORE, unit);
+				}
+			}
+		}
+	}
 
 	for (const auto& unit : Observers)
 	{
