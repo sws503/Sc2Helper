@@ -465,3 +465,4 @@ void MEMIBot::roamobserver(const Unit* observer) {
 	Point2D RoamPosition = Point2D(mp.x + rx * roam_radius, mp.y + ry * roam_radius);
 	SmartMove(observer, RoamPosition);
 }
+
