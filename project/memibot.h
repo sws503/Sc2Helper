@@ -332,7 +332,7 @@ public:
 	}
 
 	virtual void OnUnitDestroyed(const Unit* u) final override {
-		std::cout << UnitTypeToName(u->unit_type.ToType()) << std::endl;
+		Print(UnitTypeToName(u->unit_type.ToType()));
 		if (u->alliance == Unit::Alliance::Self) {
 			// Attackers¿¡¼­ Á×Àº À¯´Ö Á¦°Å
 			if (IsUnitInUnits(u, Attackers)) {
@@ -358,6 +358,9 @@ public:
 				for (const auto& u : TempAttackers) {
 					AttackersRecruiting.push_back(u);
 				}
+			}
+			if (IsWorker()(*u)) {
+				FleeWorkers(u);
 			}
 			switch (u->unit_type.ToType()) {
 			case UNIT_TYPEID::PROTOSS_PROBE:
@@ -1187,6 +1190,16 @@ private:
 		return target;
 	}
 
+	const Unit* FindSecondNearestUnit(const Point2D& start, Filter f = {}) const {
+		const Units units = Observation()->GetUnits(f);
+		return FindSecondNearestUnit(start, units);
+	}
+
+	const Unit* FindSecondNearestUnit(const Point2D& start, Unit::Alliance a, Filter f = {}) const {
+		const Units units = Observation()->GetUnits(a, f);
+		return FindSecondNearestUnit(start, units);
+	}
+
 	const Unit* FindSecondNearestUnit(const Point2D& start, const Units& units) const {
 		float nearest_distance = std::numeric_limits<float>::max();
 		float nearest_distance2 = std::numeric_limits<float>::max();
@@ -1964,7 +1977,7 @@ private:
 
 	void ManageWorkers();
 
-	void FleeWorkers();
+	void FleeWorkers(const Unit * unit);
 
 	void ManageUpgrades() {
 		const ObservationInterface* observation = Observation();
