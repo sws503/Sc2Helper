@@ -346,7 +346,18 @@ public:
 					Attackers.push_back(u);
 				}
 			}
-
+			else if (IsUnitInUnits(u, AttackersRecruiting)) {
+				std::unordered_set<const Unit*> TempAttackers;
+				for (const auto& u : AttackersRecruiting) {
+					if (u->is_alive && !TempAttackers.count(u)) {
+						TempAttackers.insert(u);
+					}
+				}
+				AttackersRecruiting.clear();
+				for (const auto& u : TempAttackers) {
+					AttackersRecruiting.push_back(u);
+				}
+			}
 			switch (u->unit_type.ToType()) {
 			case UNIT_TYPEID::PROTOSS_PROBE:
 				last_dead_probe_pos.push_back(u->pos);
@@ -1925,6 +1936,8 @@ private:
 	int GetExpectedWorkers(UNIT_TYPEID vespene_building_type);
 
 	void ManageWorkers();
+
+	void FleeWorkers();
 
 	void ManageUpgrades() {
 		const ObservationInterface* observation = Observation();

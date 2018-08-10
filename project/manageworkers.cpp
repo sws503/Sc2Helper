@@ -376,3 +376,9 @@ void MEMIBot::ManageWorkers() {
 		}
 	}
 }
+
+void MEMIBot::FleeWorkers() {
+	const ObservationInterface* observation = Observation();
+
+	observation->GetUnits();
+}
