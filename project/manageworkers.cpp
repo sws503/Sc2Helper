@@ -41,6 +41,7 @@ void MEMIBot::MakeBaseResourceMap() {
 	}
 }
 
+// todo: pathingdistance
 void MEMIBot::MineIdleWorkers(const Unit* worker) {
 	const ObservationInterface* observation = Observation();
 
