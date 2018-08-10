@@ -155,7 +155,7 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildCannonNexus();
             TryBuildPylonIfNeeded(2);
             TryBuildUnit(ABILITY_ID::TRAIN_VOIDRAY, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_VOIDRAY);
-            if (observation->GetMinerals()>400 && !stargates.front()->orders.empty()) {
+            if (observation->GetMinerals()>600) {
                 TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
             }
             if (bases.size()>stargates.size()) {
