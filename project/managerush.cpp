@@ -77,6 +77,14 @@
 		}
 		TotalDPS += dps;
 	}*/
+struct IsPylon {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_PYLON: return true;
+		default: return false;
+		}
+	}
+};
 struct IsBattery {
 	bool operator()(const Unit& unit) {
 		switch (unit.unit_type.ToType()) {
@@ -463,7 +471,11 @@ void MEMIBot::ManageRush() {
 	{
 		Units NearStructure = FindUnitsNear(battery, 6, Unit::Alliance::Self, IsStructure(observation));
 
-		if (battery->orders.empty())
+		if (725 <= stage_number && stage_number <= 726 && !EnemyRush)
+		{
+
+		}
+		else if (battery->orders.empty())
 		{
 			for (const auto& unit : NearStructure)
 			{
@@ -631,6 +643,9 @@ void MEMIBot::ManageRush() {
 		float TargetAttackRange = 0.0f;
 		float UnitAttackRange = getAttackRangeGROUND(unit);
 
+		
+
+
 		// 타겟을 받아옵니다 *^^*
 		const Unit * target = GetTarget(unit, NearbyEnemies);
 		// 스킬은 알아서 피하시구요 *^^*
@@ -695,6 +710,24 @@ void MEMIBot::ManageRush() {
 			}
 			if (branch == 7)
 			{
+				if (725 == stage_number && !EnemyRush)
+				{
+					if (the_pylon != nullptr)
+					{
+
+					}
+					if (game_info_.map_name == "Newkirk Precinct TE(Void)")
+					{
+						the_pylon = FindNearestUnit(Pylon3, IsPylon());
+					}
+					else
+					{
+						the_pylon = FindNearestUnit(Pylon2, IsPylon());
+					}
+					//뉴커크일때만 pylon3을 깨야함
+					SmartAttackUnit(unit, the_pylon);
+				}
+
 				if (EvadeEffect(unit)) {}
 				else if (target != nullptr) // 카이팅은 항상하자
 				{
@@ -718,6 +751,8 @@ void MEMIBot::ManageRush() {
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
 		{
+			std::cout << "당연히 호출은 됐죠~ " << std::endl;
+
 			Units NearbyAirAttackers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, AirAttacker());
 			Units NearbyWorkers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, IsWorker());
 
@@ -733,7 +768,7 @@ void MEMIBot::ManageRush() {
 					OracleCanAttack = true;
 				}
 			}
-
+			
 			if (Workertarget != nullptr)
 			{
 				ManageOracleBeam(unit, Workertarget);
@@ -748,6 +783,7 @@ void MEMIBot::ManageRush() {
 			{
 				if (Workertarget != nullptr) // 일꾼이 있으면
 				{
+					std::cout << " 저는 1에 갇혔어요 ㅜㅜㅜ " << std::endl;
 					OracleKiting(unit, Workertarget);
 				}
 				else // 없으면
@@ -755,6 +791,7 @@ void MEMIBot::ManageRush() {
 					//ScoutWithUnit(unit, Observation());
 					if (unit->orders.empty())
 					{
+						std::cout << " 저는 2에 갇혔어요 ㅜㅜㅜ " << std::endl;
 						Roam_enemybase(unit);
 					}
 				}
@@ -763,6 +800,8 @@ void MEMIBot::ManageRush() {
 			{
 				if (Workertarget != nullptr) // 적 일꾼이 있으면
 				{
+					std::cout << " 저는 6에 갇혔어요 ㅜㅜㅜ " << std::endl;
+
 					if (OracleCanAttack == 1) // 내가 공격을 할 수 있다
 					{
 						OracleBackKiting(unit, Workertarget, Armytarget);
@@ -774,8 +813,13 @@ void MEMIBot::ManageRush() {
 				}
 				else // 적 일꾼이 없으면
 				{
+					std::cout << " 저는 7에 갇혔어요 ㅜㅜㅜ " << std::endl;
 					EvadeKiting(unit, Armytarget);
 				}
+			}
+			else
+			{
+				std::cout << " 저는 3에 갇혔어요 ㅜㅜㅜ " << std::endl;
 			}
 		}
 
@@ -997,23 +1041,30 @@ void MEMIBot::ManageOracleBeam(const Unit* unit, const Unit* target)
 
 void  MEMIBot::Roam_enemybase(const Unit* unit)
 {
-	const Unit * EnemyExpansionMineral = FindNearestMineralPatch(enemy_expansion);
-	const Unit * EnemyBaseMineral = FindNearestMineralPatch(game_info_.enemy_start_locations.front());
+	determine_enemy_expansion();
+	std::cout << " 적 앞마당 위치가  " << enemy_expansion.x << " , "<< enemy_expansion.y << std::endl;
 
-	for (const auto & enemy_bases : enemy_townhalls_scouter_seen)
+	if (enemy_townhalls_scouter_seen.size() <= 1)
 	{
-		//두번째로 가까운 base로 간다
-		//FindUnitsNear
-	}
-	
+		std::cout << " 저는 4에 갇혔어요 ㅜㅜㅜ " << std::endl;
+		//const Unit * EnemyExpansionMineral = FindNearestMineralPatch(enemy_expansion);
+		const Unit * EnemyBaseMineral = FindNearestMineralPatch(game_info_.enemy_start_locations.front());
 
-	if (Distance2D(unit->pos, EnemyBaseMineral->pos) < 15)
-	{
-		SmartMove(unit, EnemyExpansionMineral->pos);
+		if (Distance2D(unit->pos, EnemyBaseMineral->pos) < 15)
+		{
+			SmartMove(unit, enemy_expansion);
+		}
+		else
+		{
+			SmartMove(unit, EnemyBaseMineral->pos);
+		}
 	}
 	else
 	{
-		SmartMove(unit, EnemyBaseMineral->pos);
+		std::cout << " 저는 5에 갇혔어요 ㅜㅜㅜ " << std::endl;
+		const Unit * second_nearbase = FindSecondNearestUnit(unit->pos, enemy_townhalls_scouter_seen);
+
+		SmartMove(unit, second_nearbase->pos);
 	}
 }
 

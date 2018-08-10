@@ -164,6 +164,9 @@ struct IsRanged {
 	IsRanged(const ObservationInterface* obs) : observation_(obs) {}
 
 	bool operator()(const Unit& unit) {
+		if (unit.unit_type == UNIT_TYPEID::PROTOSS_ORACLE || unit.unit_type == UNIT_TYPEID::PROTOSS_CARRIER)
+			return true;
+
 		auto Weapon = observation_->GetUnitTypeData().at(unit.unit_type).weapons;
 		for (const auto& weapon : Weapon) {
 			if (weapon.range > 2.0f) {
@@ -173,6 +176,7 @@ struct IsRanged {
 		/*switch (unit.unit_type.ToType()) {
 		default: return false;
 		}*/
+		return false;
 	}
 private:
 	const ObservationInterface* observation_;
@@ -349,7 +353,7 @@ public:
                 branch = 5;
             }
 		}
-        branch = 6;
+        branch = 7;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		if (branch == 6 || branch == 7) {
@@ -801,6 +805,8 @@ public:
 	Units enemyUnitsInRegion;
 	Units Attackers;
 	Units AttackersRecruiting;
+
+	const Unit * the_pylon = nullptr;
 private:
 	void ChatVersion() {
 		Actions()->SendChat(botname + " " + version);

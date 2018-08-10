@@ -93,7 +93,7 @@ void MEMIBot::Defend() {
 	EnemyRush = !enemyUnitsInRegion.empty();
 	ManyEnemyRush = (enemyUnitsInRegion.size() > 3);
 
-	for (const auto & enemyunit : enemyUnitsInRegion)
+	/*for (const auto & enemyunit : enemyUnitsInRegion)
 	{
 		if (enemyunit->unit_type == UNIT_TYPEID::PROTOSS_PYLON || enemyunit->unit_type == UNIT_TYPEID::PROTOSS_PHOTONCANNON)
 		{
@@ -117,7 +117,7 @@ void MEMIBot::Defend() {
 		}
 		
 		
-	}
+	}*/
 	
 	/*if (!enemyUnitsInRegion.empty() && my_armies.empty())
 	{
