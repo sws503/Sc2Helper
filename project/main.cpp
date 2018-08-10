@@ -35,7 +35,7 @@ static const std::vector<std::string> map_names_2018s2({
 	"Redshift",
 	"16BitLE"
 	} );
-static const std::string ControlMap = "1pSkillTest.SC2Map"; // 1pTest 2pTest
+static const std::string ControlMap = "1pTest.SC2Map"; // 1pTest 2pTest
 
 class Human : public sc2::Agent {
 public:

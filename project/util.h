@@ -134,6 +134,9 @@ struct IsRanged {
 	IsRanged(const ObservationInterface* obs) : observation_(obs) {}
 
 	bool operator()(const Unit& unit) {
+		if (unit.unit_type == UNIT_TYPEID::PROTOSS_ORACLE || unit.unit_type == UNIT_TYPEID::PROTOSS_CARRIER)
+			return true;
+
 		auto Weapon = observation_->GetUnitTypeData().at(unit.unit_type).weapons;
 		for (const auto& weapon : Weapon) {
 			if (weapon.range > 2.0f) {
@@ -208,6 +211,23 @@ struct IsTownHall {
 		default: return false;
 		}
 	}
+};
+
+struct IsNotStructure {
+	IsNotStructure(const ObservationInterface* obs) : observation_(obs) {};
+
+	bool operator()(const Unit& unit) {
+		auto& attributes = observation_->GetUnitTypeData().at(unit.unit_type).attributes;
+		bool is_structure = true;
+		for (const auto& attribute : attributes) {
+			if (attribute == Attribute::Structure) {
+				is_structure = false;
+			}
+		}
+		return is_structure;
+	}
+private:
+	const ObservationInterface* observation_;
 };
 
 struct IsStructure {

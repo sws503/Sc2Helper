@@ -465,13 +465,13 @@ void MEMIBot::OracleKiting(const Unit* unit, const Unit* enemyarmy)
 
 	float myattackrange = getAttackRangeGROUND(unit);
 
-	if (DIST < myattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
+	if (DIST <= myattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
 	{
 		//가만히 있도록 합시다
 	}
 	else if (unit->weapon_cooldown == 0.0f)
 	{
-		SmartAttackUnit(unit, Workertarget);
+		SmartAttackMove(unit, Workertarget->pos);
 	}
 	else
 	{

@@ -95,6 +95,7 @@ public:
 		num_adept = 0;
 		num_stalker = 0;
 		num_colossus = 0;
+		num_carrier = 0;
 
 		last_map_renewal = 0;
 		resources_to_nearest_base.clear();
@@ -168,15 +169,7 @@ public:
 			EarlyStrategy();
 		}
 
-		if (observation->GetFoodUsed() <= 190)
-		{
-			Recruited = false;
-		}
-		else if (observation->GetFoodUsed() > 190 && Recruited == false)
-		{
-			timing_attack = true;
-			Recruited = true;
-		}
+		
 
 		scout_all();
 
@@ -192,7 +185,7 @@ public:
 
 		// Control 시작
 		Defend();
-		//ManageArmy();
+		ManageTimingAttack();
 		ManageRush();
 
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
@@ -259,17 +252,9 @@ public:
 	}
 
     virtual void OnUpgradeCompleted(UpgradeID upgrade) final override {
-        switch (upgrade.ToType()) {
-            case UPGRADE_ID::BLINKTECH: {
-				std::cout << "BLINK UPGRADE DONE!!";
-				BlinkResearched = true;
-				return;
-			}
-			case UPGRADE_ID::EXTENDEDTHERMALLANCE: {
-				std::cout << "COLOSSUS UPGRADE DONE!!";
-				ColossusRangeUp = true;
-				return;
-			}
+		if (branch == 5)
+		{
+			switch (upgrade.ToType()) {
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
 				std::cout << "attack1";
 				timing_attack = true;
@@ -292,6 +277,34 @@ public:
 				std::cout << "attack3";
 				timing_attack = true;
 				Attackers.clear();
+				return;
+			}
+			case UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL2: {
+				std::cout << "attack3";
+				timing_attack = true;
+				Attackers.clear();
+				return;
+			}
+			case UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL3: {
+				std::cout << "attack3";
+				timing_attack = true;
+				Attackers.clear();
+				return;
+			}
+			default:
+				break;
+			}
+		}
+
+        switch (upgrade.ToType()) {
+            case UPGRADE_ID::BLINKTECH: {
+				std::cout << "BLINK UPGRADE DONE!!";
+				BlinkResearched = true;
+				return;
+			}
+			case UPGRADE_ID::EXTENDEDTHERMALLANCE: {
+				std::cout << "COLOSSUS UPGRADE DONE!!";
+				ColossusRangeUp = true;
 				return;
 			}
             case UPGRADE_ID::WARPGATERESEARCH: {
@@ -324,6 +337,10 @@ public:
 			break;
 		case UNIT_TYPEID::PROTOSS_COLOSSUS:
 			num_colossus++;
+			break;
+		case UNIT_TYPEID::PROTOSS_CARRIER:
+			num_carrier++;
+			std::cout << num_carrier << " 는 캐리어 생산된 횟수입니다." << std::endl;
 			break;
 		default:
 
@@ -2777,6 +2794,7 @@ private:
 	uint16_t num_adept;
 	uint16_t num_stalker;
 	uint16_t num_colossus;
+	uint16_t num_carrier;
 
 	bool try_initialbalance;
 

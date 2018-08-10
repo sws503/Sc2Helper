@@ -182,7 +182,7 @@ bool MEMIBot::EarlyStrategy() {
             }
             TryBuildPylonIfNeeded(3);
             TryBuildUnit(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_CARRIER);
-            if (observation->GetMinerals()>600 && !stargates.front()->orders.empty()) {
+            if (observation->GetMinerals()>600 && !stargates.empty() && !stargates.front()->orders.empty()) {
                 TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
             }
             if (bases.size()*2>assimilator_count) {
