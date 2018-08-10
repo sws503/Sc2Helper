@@ -1102,8 +1102,8 @@ void MEMIBot::ManageRush() {
 void MEMIBot::ManageOracleBeam(const Unit* unit, const Unit* target)
 {
 	Units NearbyWorkers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, IsWorker());
-	int NumWorker = NearbyWorkers.size();
-	int EnergyNeeded = NumWorker * 1 + 30;
+	size_t NumWorker = NearbyWorkers.size();
+	int EnergyNeeded = (int)NumWorker * 1 + 30;
 	if (EnergyNeeded > 45)
 	{
 		EnergyNeeded = 45;

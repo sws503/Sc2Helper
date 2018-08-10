@@ -377,8 +377,16 @@ void MEMIBot::ManageWorkers() {
 	}
 }
 
-void MEMIBot::FleeWorkers() {
+void MEMIBot::FleeWorkers(const Unit* unit) {
+	if (unit == nullptr) return;
+	if (!ManyEnemyRush) return;
 	const ObservationInterface* observation = Observation();
 
-	observation->GetUnits();
+	Units nearworkers = FindUnitsNear(unit, 10, Unit::Alliance::Self, IsWorker());
+	const Unit* b = FindSecondNearestUnit(unit->pos, Unit::Alliance::Self, IsTownHall());
+	if (b == nullptr) return;
+	const Unit* m = FindNearestMineralPatch(b->pos);
+
+	Actions()->UnitCommand(nearworkers, ABILITY_ID::SMART);
+	return;
 }

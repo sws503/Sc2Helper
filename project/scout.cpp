@@ -19,7 +19,7 @@ twilight council 2:40~3:00
 gateway 3:10 v
 pylon v
 resonating glave 3:20~30 v
-3 adepts 
+3 adepts
 
 determine branch ~ 4:00
 
@@ -94,7 +94,7 @@ void MEMIBot::scout_all() {
 	// 정찰 : 분기 1, 2 정찰 시작
 	if (flags.status("search_branch") == 0 && find_enemy_location) {
 		SmartMove(probe_scout, EnemyBaseLocation);
-		
+
 		// trace probe_scout
 		if (DistanceSquared2D(recent_probe_scout_location, probe_scout->pos) > 4 || recent_probe_scout_location == Point2D(0, 0)) {
 			recent_probe_scout_location = probe_scout->pos;
@@ -107,8 +107,8 @@ void MEMIBot::scout_all() {
 		for (const auto& e : enemy_units_scouter_seen) {
 			Print(UnitTypeToName(e->unit_type.ToType()));
 			numExpansion += IsTownHall()(*e);
-			HasBarracksOrGateway |= IsUnits({ 
-				UNIT_TYPEID::TERRAN_BARRACKS, UNIT_TYPEID::TERRAN_BARRACKSFLYING, 
+			HasBarracksOrGateway |= IsUnits({
+				UNIT_TYPEID::TERRAN_BARRACKS, UNIT_TYPEID::TERRAN_BARRACKSFLYING,
 				UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_WARPGATE
 				})(*e);
 			IsExtractor |= IsUnit( UNIT_TYPEID::ZERG_EXTRACTOR )(*e);
@@ -127,7 +127,7 @@ void MEMIBot::scout_all() {
 
 		// not blocked and has no expansion or barracks : branch 1
 		if ( Distance2D(probe_scout->pos, EnemyBaseLocation) < 5 ){
-			// not blocked and has no expansion or barracks : 
+			// not blocked and has no expansion or barracks :
 			if (HasBarracksOrGateway) {
 				flags.set("search_branch", 1);
 				flags.set("search_result", 2);
@@ -183,7 +183,7 @@ void MEMIBot::scoutenemylocation() {
 			return;
 		}
 
-		if (observation->GetGameLoop() - recent_probe_scout_loop > 105 && 
+		if (observation->GetGameLoop() - recent_probe_scout_loop > 105 &&
 			DistanceSquared2D(probe_scout->pos, startLocation_) > 200) {
 			flags.set("search_branch", 1);	// search end
 			flags.set("search_result", 1);
@@ -222,7 +222,7 @@ void MEMIBot::scoutprobe() {
 	}
 	SmartMove(probe_scout, tag_pos);
 	// 도착하면 다음 확장으로
-	if (DistanceSquared2D(probe_scout->pos, tag_pos)<4) {
+	if (DistanceSquared2D(probe_scout->pos, tag_pos)<4 || Query()->PathingDistance(probe_scout->pos, *iter_exp)<0.1f) {
 		iter_exp++;
 		return;
 	}
@@ -249,7 +249,7 @@ void MEMIBot::manageobserver() {
 	// UNIT_TYPEID(1911); surveilance mode
 	// ABILITY_ID(3739); observer mode
 	// ABILITY_ID(3741); surveillance mode
-	Units observers = observation->GetUnits(Unit::Alliance::Self, 
+	Units observers = observation->GetUnits(Unit::Alliance::Self,
 		IsUnits({ UNIT_TYPEID::PROTOSS_OBSERVER, UNIT_TYPEID(1911) }));
 	Units observers_not_sieged = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER));
 	Units observers_sieged = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID(1911)));
@@ -277,7 +277,7 @@ void MEMIBot::manageobserver() {
 
 	if (!last_dead_probe_pos.empty()) {
 		Point2D pos = last_dead_probe_pos.front();
-		
+
 		//exclude scouter probe
 		bool nearbase = false;
 		for (const auto& b : bases) {
@@ -409,7 +409,7 @@ void MEMIBot::manageobserver() {
 				SmartMove(nearest_observer, pos);
 		}
 	}
-	
+
 	// 할 일 없으면 돌아다니기
 	for (const auto& observer : observers_not_sieged) {
 		if (attackers_probe_is_doing && observer->tag == attacker_s_observer_tag) continue;
@@ -465,3 +465,4 @@ void MEMIBot::roamobserver(const Unit* observer) {
 	Point2D RoamPosition = Point2D(mp.x + rx * roam_radius, mp.y + ry * roam_radius);
 	SmartMove(observer, RoamPosition);
 }
+
