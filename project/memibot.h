@@ -347,7 +347,7 @@ public:
                 branch = 5;
             }
 		}
-        branch = 6;
+        branch = 7;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		if (branch == 6 || branch == 7) {
@@ -2602,8 +2602,13 @@ private:
 		}
 
 		for (const auto& base : bases) {
-			if (base->build_progress == 1.0 && base->assigned_harvesters >= base->ideal_harvesters) {
+			if (base->build_progress == 1.0f && base->assigned_harvesters >= base->ideal_harvesters) {
 				if (TryBuildGas(base->pos)) {
+					return true;
+				}
+			}
+			if (base->build_progress == 1.0f && observation->GetMinerals()>1000 && observation->GetVespene()<200) {
+                if (TryBuildGas(base->pos)) {
 					return true;
 				}
 			}
@@ -2913,8 +2918,8 @@ private:
                     Batt1 = Point2D(147.0f, 121.0f);
                     Batt2 = Point2D(149.0f, 119.0f);
                     Batt3 = Point2D(57.0f, 16.0f);
-                    Batt4 = Point2D(59.0f, 18.0f);
-                    Batt5 = Point2D(61.0f, 20.0f);
+                    Batt4 = Point2D(61.0f, 20.0f);
+                    Batt5 = Point2D(59.0f, 18.0f);
                     Pylon4 = Point2D(149.0f, 121.0f);
                     Center = Point2D(84.0f, 78.0f);
                     return;
@@ -3059,7 +3064,7 @@ private:
                     Pylon1 = Point2D(38.0f, 96.0f);
                     Gate1 = Point2D(38.5f, 98.5f);
                     Core1 = Point2D(38.5f, 93.5f);
-                    Star1 = Point2D(35.5f, 99.5f);
+                    Star1 = Point2D(33.5f, 98.5f);
                     Pylon2 = Point2D(38.0f, 91.0f);
                     Batt1 = Point2D(36.0f, 97.0f);
                     Batt2 = Point2D(36.0f, 95.0f);

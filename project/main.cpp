@@ -13,17 +13,17 @@ static const std::string current_version = "v0.5";
 #ifdef DEBUG
 static const bool VsHuman = false;
 static const int stepsize = 3;
-static const bool Realtime = false;
+static const bool Realtime = true;
 static const bool ControlTest = false;
 static const std::vector<std::string> map_names({
-	"BlackpinkLE",
-	"NeonVioletSquareLE",
+	//"BlackpinkLE",
+	//"NeonVioletSquareLE",
 	"BackwaterLE",
-	"LostAndFoundLE",
-	"InterloperLE",
-	"ProximaStationLE",
-	"NewkirkPrecinctTE",
-	"BelShirVestigeLE"
+	//"LostAndFoundLE",
+	//"InterloperLE",
+	//"ProximaStationLE",
+	//"NewkirkPrecinctTE",
+	//"BelShirVestigeLE"
 	});
 
 static const std::vector<std::string> map_names_2018s2({

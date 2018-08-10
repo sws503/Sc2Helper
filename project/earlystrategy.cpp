@@ -181,7 +181,6 @@ bool MEMIBot::EarlyStrategy() {
             for (const auto& b : bases){
                 TryBuildBatteryNexus(b);
             }
-            TryBuildPylonIfNeeded(3);
             TryBuildUnit(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_CARRIER);
             if (observation->GetMinerals()>600 && !stargates.front()->orders.empty()) {
                 TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
@@ -191,6 +190,11 @@ bool MEMIBot::EarlyStrategy() {
             }
             if (bases.size()>stargates.size()) {
                 TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE);
+            }
+            if (bases.size()>3) {
+                if (twilight_council_count==0) {
+                    TryBuildStructureNearPylon(ABILITY_ID::BUILD_TWILIGHTCOUNCIL, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
+                }
             }
         }
 	}
@@ -973,7 +977,7 @@ bool MEMIBot::EarlyStrategy() {
         return TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL1);
     case 711:
         if (!gateways.front()->orders.empty()) {
-            if (gateways.front()->orders.front().progress>0.5f){
+            if (gateways.front()->orders.front().progress>0.3f){
                 return false;
             }
             stage_number=712;
@@ -1032,7 +1036,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=719;
             return false;
         }
-        return TryBuildPylon(staging_location_,15.0);
+        return TryBuildPylon(startLocation_,15.0);
      case 719:
         if (!stargates.front()->orders.empty()) {
             if (stargates.front()->orders.front().progress>0.4f) {
@@ -1047,7 +1051,11 @@ bool MEMIBot::EarlyStrategy() {
 			stage_number=721;
 			return false;
 		}
-		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE);
+		for (const auto& p : pylons) {
+            if (Distance2D(p->pos,base->pos)>18) continue;
+            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE, p);
+		}
+		return false;
      case 721:
         if (pylons.size()>5) {
             stage_number=722;
