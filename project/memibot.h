@@ -170,9 +170,11 @@ struct IsRanged {
 				return true;
 			}
 		}
-		/*switch (unit.unit_type.ToType()) {
+		/*
+		switch (unit.unit_type.ToType()) {
 		default: return false;
 		}*/
+		return false;
 	}
 private:
 	const ObservationInterface* observation_;
@@ -364,7 +366,7 @@ public:
 		recent_probe_scout_location = Point2D(0, 0);
 		recent_probe_scout_loop = 0;
 		last_dead_probe_pos.clear();
-		attacker_s_observer_tag = 0;
+		attacker_s_observer_tag = NullTag;
 
 		early_strategy = false;
 		warpgate_researched = false;
@@ -391,6 +393,8 @@ public:
 		enemy_townhalls_scouter_seen.clear();
 		adept_map.clear();
 		observer_nexus_match.clear();
+
+		try_initialbalance = false;
 
 		//Temporary, we can replace this with observation->GetStartLocation() once implemented
 		startLocation_ = Observation()->GetStartLocation();
@@ -438,14 +442,14 @@ public:
 
 	virtual void OnStep() final override {
 		const ObservationInterface* observation = Observation();
-		ActionInterface* action = Actions();
 
-		Units units = observation->GetUnits(Unit::Self, IsArmy(observation));
 		if (warpgate_researched) {
             ConvertGateWayToWarpGate();
 		}
 
-		ManageWorkers(UNIT_TYPEID::PROTOSS_PROBE);
+		if (observation->GetGameLoop() % 3 == 0) {
+			ManageWorkers();
+		}
 
 		if (!early_strategy && observation->GetGameLoop()%5==0) {
 			EarlyStrategy();
@@ -478,7 +482,7 @@ public:
 		//ManageArmy();
 		ManageRush();
 
-		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
+		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
@@ -605,7 +609,9 @@ public:
 		case UNIT_TYPEID::PROTOSS_STALKER:
 			num_stalker++;
 			break;
-
+		case UNIT_TYPEID::PROTOSS_COLOSSUS:
+			num_colossus++;
+			break;
 		default:
 
 			break;
@@ -638,16 +644,22 @@ public:
 			}
 		}
 		if (u->alliance == Unit::Alliance::Enemy) {
-			for (auto& it = enemy_units_scouter_seen.begin(); it != enemy_units_scouter_seen.end(); ++it) {
+			for (auto& it = enemy_units_scouter_seen.begin(); it != enemy_units_scouter_seen.end();) {
 				if ((*it)->tag == u->tag) {
-					enemy_units_scouter_seen.erase(it);
+					it = enemy_units_scouter_seen.erase(it);
 					break;
 				}
+				else {
+					++it;
+				}
 			}
-			for (auto& it = enemy_townhalls_scouter_seen.begin(); it != enemy_townhalls_scouter_seen.end(); ++it) {
+			for (auto& it = enemy_townhalls_scouter_seen.begin(); it != enemy_townhalls_scouter_seen.end();) {
 				if ((*it)->tag == u->tag) {
-					enemy_townhalls_scouter_seen.erase(it);
+					it = enemy_townhalls_scouter_seen.erase(it);
 					break;
+				}
+				else {
+					++it;
 				}
 			}
 		}
@@ -1530,7 +1542,8 @@ private:
 			return false;
 		}
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost 
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
             return false;
 		}
 
@@ -1564,7 +1577,8 @@ private:
 		if (observation->GetFoodUsed()+observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
 			return false;
 		}
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost 
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
             return false;
 		}
 
@@ -1596,7 +1610,8 @@ private:
 	bool TryBuildUpgradeChrono(AbilityID ability_type_for_unit, UnitTypeID building_type, UpgradeID upgrade_type) {
 		const ObservationInterface* observation = Observation();
 
-		if (observation->GetMinerals() < observation->GetUpgradeData().at(upgrade_type).mineral_cost || observation->GetVespene() < observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
+		if ((uint32_t)observation->GetMinerals() < observation->GetUpgradeData().at(upgrade_type).mineral_cost
+			|| (uint32_t)observation->GetVespene() < observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
             return false;
 		}
 
@@ -1640,7 +1655,8 @@ private:
 	bool TryBuildUpgrade(AbilityID ability_type_for_unit, UnitTypeID building_type, UpgradeID upgrade_type) {
         const ObservationInterface* observation = Observation();
 
-        if (observation->GetMinerals()<observation->GetUpgradeData().at(upgrade_type).mineral_cost || observation->GetVespene()<observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
+        if ((uint32_t)observation->GetMinerals() < observation->GetUpgradeData().at(upgrade_type).mineral_cost 
+			|| (uint32_t)observation->GetVespene() < observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
             return false;
 		}
 
@@ -1719,7 +1735,8 @@ private:
 		const ObservationInterface* observation = Observation();
 		Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost 
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
             return false;
 		}
 
@@ -1742,7 +1759,7 @@ private:
 			ability_type_for_structure == ABILITY_ID::BUILD_SPINECRAWLER ||
 			ability_type_for_structure == ABILITY_ID::BUILD_SPORECRAWLER;
 
-		// keep expansion site clean. todo: wrong expansions than expectation.
+		// keep expansion site clean.
 		if (!isExpansion && !expansion_building) {
 			bool nearExpansion = false;
 			for (const auto& expansion : expansions_) {
@@ -2393,7 +2410,7 @@ private:
 		return expected_workers;
 	}
 
-	void ManageWorkers(UNIT_TYPEID worker_type) {
+	void ManageWorkers() {
 		const ObservationInterface* observation = Observation();
 
 		Filter filter_geyser = [](const Unit& u) {
@@ -3378,7 +3395,7 @@ private:
 	uint16_t num_stalker;
 	uint16_t num_colossus;
 
-	bool try_initialbalance = false;
+	bool try_initialbalance;
 
 	uint16_t try_adept,try_stalker;
 

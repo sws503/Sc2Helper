@@ -243,7 +243,7 @@ bool MEMIBot::LoadUnitWeaponCooldown(const Unit * unit, const Unit* passenger)
 
 
 	float unitWC = unit->weapon_cooldown; // 계산 한 다음에
-	float StepWC = unitWC * 21.7;
+	float StepWC = unitWC * 21.7f;
 	Actions()->UnitCommand(unit, ABILITY_ID::LOAD, passenger); // 태우고
 
 	if (unit->last_seen_game_loop + StepWC <= game_loop) //시간이 되면
@@ -261,7 +261,7 @@ const Unit * MEMIBot::GetPassenger(const Unit * shuttle, Units & passengers)
 	double lowestHealth = std::numeric_limits<double>::max();
 	const Unit * closestTargetOutsideRange = nullptr;
 	const Unit * weakestTargetInsideRange = nullptr;
-	int highWCNear = 0;
+	float highWCNear = 0.0f;
 	const float range = 6.0f;
 
 	for (const auto & targetUnit : passengers)

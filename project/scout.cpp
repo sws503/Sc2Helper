@@ -88,29 +88,8 @@ void MEMIBot::scout_all() {
 	}
 
 	if (find_enemy_location && advance_pylon_location == Point2D((float)game_info_.width / 2, (float)game_info_.height / 2)) {
-		advance_pylon_location = (startLocation_ * 1.8 + EnemyBaseLocation * 2.2) / 4;
+		advance_pylon_location = (startLocation_ * 1.8f + EnemyBaseLocation * 2.2f) / 4.0f;
 	}
-
-	/*
-	if (game_info_.enemy_start_locations.size() == 1 && Enemy_front_expansion == Point3D(0, 0, 0))
-	{
-		float minimum_distance = std::numeric_limits<float>::max();
-		for (const auto& expansion : expansions_) {
-			float Enemy_distance = Distance2D(game_info_.enemy_start_locations.front(), expansion);
-			if (Enemy_distance < 5.0f) {
-				continue;
-			}
-
-			if (Enemy_distance < minimum_distance) {
-				if (Query()->Placement(ABILITY_ID::BUILD_NEXUS, expansion)) {
-					Enemy_front_expansion = expansion;
-					minimum_distance = Enemy_distance;
-				}
-			}
-		}
-		std::cout << "Enemy front expansion :" << Enemy_front_expansion.x << "  " << Enemy_front_expansion.y << "  " << Enemy_front_expansion.z << std::endl;
-	}
-	*/
 
 	// 정찰 : 분기 1, 2 정찰 시작
 	if (flags.status("search_branch") == 0 && find_enemy_location) {
@@ -121,35 +100,6 @@ void MEMIBot::scout_all() {
 			recent_probe_scout_location = probe_scout->pos;
 			recent_probe_scout_loop = observation->GetGameLoop();
 		}
-
-		/*
-		Units enemy_units_scouter = FindUnitsNear(probe_scout, 8, Unit::Alliance::Enemy, IsStructure(observation));
-		std::list<const Unit*> temp;
-		bool nalbil = false;
-		for (const auto& e : enemy_units_scouter) {
-			// buildings that are not in base
-			if (Distance2D(e->pos, EnemyBaseLocation) > 50) {
-				// front build
-				if (IsUnits({ UNIT_TYPEID::TERRAN_BARRACKS, UNIT_TYPEID::TERRAN_BARRACKSFLYING,
-					UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_WARPGATE})(*e)) {
-					nalbil = true;
-					break;
-				}
-				// skip??
-				else {
-					continue;
-				}
-			}
-			bool exist = false;
-			for (auto& l : enemy_units_scouter_seen) {
-				if (exist = (l->tag == e->tag)) break;
-			}
-			if (exist) continue;
-			temp.push_back(e);
-		}
-		for (const auto& e : temp) {
-			enemy_units_scouter_seen.push_back(e);
-		} */
 
 		int numExpansion = 0;
 		bool HasBarracksOrGateway = false;
@@ -205,8 +155,6 @@ void MEMIBot::scout_all() {
 	}
 
 }
-
-
 
 void MEMIBot::scoutenemylocation() {
 	const ObservationInterface* observation = Observation();
@@ -491,6 +439,7 @@ void MEMIBot::manageobserver() {
 
 	return;
 }
+
 // 돌아다니기
 void MEMIBot::roamobserver(const Unit* observer) {
 	if (observer == nullptr) return;
