@@ -455,10 +455,11 @@ public:
 		}
 
 		// Control Ω√¿€
-		//Defend();
+		Defend();
 		//ManageArmy();
-		//ManageRush();
+		ManageRush();
 
+		TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
 		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
@@ -1435,6 +1436,60 @@ private:
 		}
 		//If we never found one return nullptr
 		return target;
+	}
+
+	const Unit* FindSecondNearestUnit(const Point2D& start, const Units& units) const {
+		float nearest_distance = std::numeric_limits<float>::max();
+		float nearest_distance2 = std::numeric_limits<float>::max();
+		const Unit* nearest_unit = nullptr;
+		const Unit* nearest_unit2 = nullptr;
+		for (const auto& u : units) {
+			float current_distance = DistanceSquared2D(u->pos, start);
+			if (current_distance < nearest_distance2) {
+				nearest_distance2 = current_distance;
+				nearest_unit2 = u;
+			}
+			if (nearest_distance2 < nearest_distance) {
+				float tmp_distance;
+				const Unit* tmp_unit;
+				tmp_distance = nearest_distance;
+				nearest_distance = nearest_distance2;
+				nearest_distance2 = tmp_distance;
+				tmp_unit = nearest_unit;
+				nearest_unit = nearest_unit2;
+				nearest_unit2 = tmp_unit;
+			}
+		}
+
+		//If we never found one return nullptr
+		return nearest_unit2;
+	}
+
+	const Unit* FindSecondNearestUnit(const Point2D& start, const std::list<const Unit *>& units) const {
+		float nearest_distance = std::numeric_limits<float>::max();
+		float nearest_distance2 = std::numeric_limits<float>::max();
+		const Unit* nearest_unit = nullptr;
+		const Unit* nearest_unit2 = nullptr;
+		for (const auto& u : units) {
+			float current_distance = DistanceSquared2D(u->pos, start);
+			if (current_distance < nearest_distance2) {
+				nearest_distance2 = current_distance;
+				nearest_unit2 = u;
+			}
+			if (nearest_distance2 < nearest_distance) {
+				float tmp_distance;
+				const Unit* tmp_unit;
+				tmp_distance = nearest_distance;
+				nearest_distance = nearest_distance2;
+				nearest_distance2 = tmp_distance;
+				tmp_unit = nearest_unit;
+				nearest_unit = nearest_unit2;
+				nearest_unit2 = tmp_unit;
+			}
+		}
+
+		//If we never found one return nullptr
+		return nearest_unit2;
 	}
 
 	void TryChronoboost(Filter f = {}) {
