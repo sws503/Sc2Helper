@@ -2754,6 +2754,7 @@ private:
                 robotics_empty++;
             }
             else {
+                TryChronoboost(r);
                 if (r->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
                     robotics_observer++;
                 }
