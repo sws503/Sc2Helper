@@ -127,8 +127,11 @@ bool MEMIBot::EarlyStrategy() {
         if (stage_number>232) {
             if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() || bases.size()<3) {
                 bool expand = true;
-                if (bases.size()>2 && !timing_attack) {
+                if (bases.size()>=num_expand) {
                     expand = false;
+                }
+                if (num_expand==6) {
+                    expand = true;
                 }
                 for (const auto& b :bases) {
                     if (b->build_progress < 1.0f) {
@@ -790,11 +793,11 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
     case 231:
-        if (robotics_facility_count>=1) {
+        if (robotics_bay_count>=1) {
             stage_number=232;
             return false;
         }
-        return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+        return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSBAY, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
     case 232:
         if (robotics_facility_count>=2) {
             stage_number=233;

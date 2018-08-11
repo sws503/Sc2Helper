@@ -98,7 +98,7 @@ public:
 		try_colossus = 0;
 		try_immortal = 0;
 		num_carrier = 0;
-		num_expand = 0;
+		num_expand = 3;
 
 		last_map_renewal = 0;
 		resources_to_nearest_base.clear();
@@ -293,7 +293,16 @@ public:
 				timing_attack = true;
 				return;
 			}
+			case UPGRADE_ID::PROTOSSSHIELDSLEVEL1: {
+			    num_expand=4;
+                return;
+			}
+			case UPGRADE_ID::PROTOSSSHIELDSLEVEL2: {
+                num_expand=5;
+                return;
+			}
 			case UPGRADE_ID::PROTOSSSHIELDSLEVEL3: {
+                num_expand=6;
                 shield3 = true;
                 return;
 			}
