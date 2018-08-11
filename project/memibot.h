@@ -91,7 +91,9 @@ public:
 
 		num_adept = 0;
 		num_stalker = 0;
+		num_warpprism = 0;
 		num_colossus = 0;
+		num_immortal = 0;
 		num_carrier = 0;
 
 		last_map_renewal = 0;
@@ -330,8 +332,14 @@ public:
 		case UNIT_TYPEID::PROTOSS_STALKER:
 			num_stalker++;
 			break;
+        case UNIT_TYPEID::PROTOSS_WARPPRISM:
+            num_warpprism++;
+            break;
 		case UNIT_TYPEID::PROTOSS_COLOSSUS:
 			num_colossus++;
+			break;
+		case UNIT_TYPEID::PROTOSS_IMMORTAL:
+			num_immortal++;
 			break;
 		case UNIT_TYPEID::PROTOSS_CARRIER:
 			num_carrier++;
@@ -1975,8 +1983,10 @@ private:
 		const ObservationInterface* observation = Observation();
 		Units forges = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FORGE));
 		auto upgrades = observation->GetUpgrades();
-		if (branch == 0 || branch == 1) {
-            TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES,UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL,UPGRADE_ID::ADEPTPIERCINGATTACK);
+		if (branch == 0 || branch == 1 || branch==5) {
+            if (branch!=5) {
+                TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES,UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL,UPGRADE_ID::ADEPTPIERCINGATTACK);
+            }
             TryBuildUpgrade(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::EXTENDEDTHERMALLANCE);
 		}
 		//TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
@@ -2056,18 +2066,23 @@ private:
 
 		float minimum_distance = std::numeric_limits<float>::max();
 		Point3D closest_expansion;
-		for (const auto& expansion : expansions_) {
-			float current_distance = Query()->PathingDistance(Point2D(startLocation_.x+3,startLocation_.y+3), expansion);
-			if (current_distance < .01f) {
-				continue;
-			}
+		if (bases.size()==1 && base!=nullptr) {
+            closest_expansion = front_expansion;
+		}
+		else {
+            for (const auto& expansion : expansions_) {
+                float current_distance = Query()->PathingDistance(Point2D(startLocation_.x+3,startLocation_.y+3), expansion);
+                if (current_distance < .01f) {
+                    continue;
+                }
 
-			if (current_distance < minimum_distance) {
-				if (Query()->Placement(build_ability, expansion)) {
-					closest_expansion = expansion;
-					minimum_distance = current_distance;
-				}
-			}
+                if (current_distance < minimum_distance) {
+                    if (Query()->Placement(build_ability, expansion)) {
+                        closest_expansion = expansion;
+                        minimum_distance = current_distance;
+                    }
+                }
+            }
 		}
 		//only update staging location up till 3 bases.
 		if (TryBuildStructure(build_ability, UNIT_TYPEID::PROTOSS_NEXUS,worker_type, closest_expansion, true) && observation->GetUnits(Unit::Self, IsTownHall()).size() < 4) {
@@ -2238,11 +2253,15 @@ private:
     bool TryBuildArmyBranch0(){
         const ObservationInterface* observation = Observation();
         Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
+
         size_t stalker_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER);
         size_t sentry_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_SENTRY);
         int robotics_empty=0;
         int robotics_observer=0;
         for (const auto& r : robotics) {
+            if (r->build_progress<1.0f) {
+                continue;
+            }
             if (r->orders.empty()) {
                 robotics_empty++;
             }
@@ -2276,15 +2295,44 @@ private:
     bool TryBuildArmyBranch5(){
         const ObservationInterface* observation = Observation();
         Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
+        Units observers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER));
+        Units roboticsbay = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSBAY));
+
+
+        int robotics_empty=0;
+        int robotics_observer=0;
         for (const auto& r : robotics) {
+            if (r->build_progress<1.0f) {
+                continue;
+            }
             if (r->orders.empty()) {
-                TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
+                robotics_empty++;
             }
             else {
-                TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+                if (r->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
+                    robotics_observer++;
+                }
             }
         }
-        return false;
+
+        if (robotics_empty==0) {
+            return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+        }
+        else if (observers.size()+robotics_observer<3) {
+            return TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
+        }
+        else if (num_warpprism==0) {
+            return TryBuildUnit(ABILITY_ID::TRAIN_WARPPRISM, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_WARPPRISM);
+        }
+        else {
+            if (num_colossus>=num_immortal-1 || roboticsbay.empty()) {
+                return TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
+            }
+            if (roboticsbay.front()->build_progress<1.0f) {
+                return TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
+            }
+            return TryBuildUnit(ABILITY_ID::TRAIN_COLOSSUS, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_COLOSSUS);
+        }
     }
 
     /*bool TryBuildArmyBalance(){
@@ -2864,7 +2912,9 @@ private:
 
 	uint16_t num_adept;
 	uint16_t num_stalker;
+	uint16_t num_warpprism;
 	uint16_t num_colossus;
+	uint16_t num_immortal;
 	uint16_t num_carrier;
 
 	bool try_initialbalance;
