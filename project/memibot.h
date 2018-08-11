@@ -152,8 +152,7 @@ public:
 		staging_location_ = Point3D(((staging_location_.x + front_expansion.x) / 2), ((staging_location_.y + front_expansion.y) / 2),
 			((staging_location_.z + front_expansion.z) / 2));
 
-		//Test하려고 임시로 송우석이 뺏습니다!!!!!!!!!
-        //change_building_location();
+		change_building_location();
 	}
 
 	virtual void OnStep() final override {
