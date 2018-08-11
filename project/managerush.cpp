@@ -806,9 +806,13 @@ void MEMIBot::ManageRush() {
 			{
 				if (725 == stage_number && !EnemyRush)
 				{
-					the_pylon = FindNearestUnit(the_pylon_pos, IsPylon(), 1);
+					if (the_pylon_pos != nullptr) {
+						the_pylon = FindNearestUnit(*the_pylon_pos, IsPylon(), 1);
+					}
 					//뉴커크일때만 pylon3을 깨야함
-					SmartAttackUnit(unit, the_pylon);
+					if (the_pylon != nullptr) {
+						SmartAttackUnit(unit, the_pylon);
+					}
 				}
 
 				if (EvadeEffect(unit)) {}
