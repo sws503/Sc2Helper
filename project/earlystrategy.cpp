@@ -244,10 +244,8 @@ bool MEMIBot::EarlyStrategy() {
 		return false;
 	case 1:
 		if (pylons.size()>0) {
-            if (pylons.front()->build_progress == 1.0) {
-                stage_number=2;
-                return false;
-            }
+            stage_number=2;
+            return false;
 		}
 		TrybuildFirstPylon();
 		return false;
@@ -256,12 +254,9 @@ bool MEMIBot::EarlyStrategy() {
 			stage_number=3;
 			return false;
 		}
-		if (observation->GetMinerals()>150) {
-		    TryChronoboost(base);
-            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
-		}
-		return false;
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
 	case 3:
+	    TryChronoboost(base);
 		if (assimilator_count>=1) {
 			stage_number=4;
 			return false;
@@ -558,12 +553,9 @@ bool MEMIBot::EarlyStrategy() {
 			stage_number=202;
 			return false;
 		}
-		if (observation->GetMinerals()>150) {
-		    TryChronoboost(base);
-            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
-		}
-		return false;
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
 	case 202:
+	    TryChronoboost(base);
 		if (assimilator_count>=1) {
 			stage_number=203;
 			return false;
@@ -769,10 +761,8 @@ bool MEMIBot::EarlyStrategy() {
 
     case 601:
 		if (pylons.size()>0) {
-            if (pylons.front()->build_progress == 1.0f) {
-                stage_number=602;
-                return false;
-            }
+            stage_number=602;
+            return false;
 		}
 		return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon1);
 	case 602:
@@ -782,12 +772,11 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		if (observation->GetMinerals()>150) {
             work_probe_forward = false;
-		    TryChronoboost(base);
 		    return TryBuildStructureAtLocation(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY, Gate1);
         }
 		return false;
 	case 603:
-	    Actions()->UnitCommand(probe_forward, ABILITY_ID::MOVE, Pylon2);
+	    TryChronoboost(base);
 		if (assimilator_count>=2) {
 			stage_number=604;
 			return false;
@@ -904,17 +893,13 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon1);
     case 702:
-
         if (gateway_count>0) {
 			stage_number=703;
 			return false;
 		}
-		if (observation->GetMinerals()>150) {
-		    TryChronoboost(base);
-		    return TryBuildStructureAtLocation(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY, Gate1);
-        }
-		return false;
+		return TryBuildStructureAtLocation(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY, Gate1);
     case 703:
+        TryChronoboost(base);
         if (assimilator_count>0) {
 			stage_number=704;
 			return false;
