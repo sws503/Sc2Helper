@@ -64,7 +64,7 @@ public:
                 branch = 5;
             }
 		}
-        branch = 6;
+        //branch = 6;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		if (branch == 6 || branch == 7) {
@@ -91,6 +91,7 @@ public:
 		find_enemy_location = false;
 		work_probe_forward = true;
 
+		num_zealot = 0;
 		num_adept = 0;
 		num_stalker = 0;
 		num_colossus = 0;
@@ -155,7 +156,7 @@ public:
 			((staging_location_.z + front_expansion.z) / 2));
 
 		//Test하려고 임시로 송우석이 뺏습니다!!!!!!!!!
-        //change_building_location();
+        change_building_location();
 	}
 
 	virtual void OnStep() final override {
@@ -327,6 +328,9 @@ public:
 	// only allies. also geyser probes, passengers etc.
 	virtual void OnUnitCreated(const Unit* u) final override {
 		switch (u->unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_ZEALOT:
+			num_zealot++;
+			break;
 		case UNIT_TYPEID::PROTOSS_ADEPT:
 			num_adept++;
 			break;
@@ -959,7 +963,29 @@ private:
 			{
 				SmartMove(unit, retreat_position); // 움직여라
 			}
+		}
+		return moving;
+	}
 
+	bool RetreatPrism(const Unit* unit, Point2D retreat_position) {
+		bool moving = false;
+		
+		float dist = Distance2D(unit->pos, retreat_position);
+
+		if (dist >= 10) // 멀리있으면
+		{
+			if (!unit->orders.empty()) //뭔가를 하는게
+			{
+				if (unit->orders.front().ability_id != ABILITY_ID::UNLOADALLAT_WARPPRISM) //내리는게 아니라면
+				{
+					SmartMove(unit, retreat_position); // 움직여라
+					moving = true;
+				}
+			}
+			else //너가 아무것도 안하고 있었다면
+			{
+				SmartMove(unit, retreat_position); // 움직여라
+			}
 		}
 		return moving;
 	}
@@ -1170,6 +1196,20 @@ private:
 	}
 
 	const Unit* FindNearestUnit(const Point2D& start, const Units& units, float max_d = std::numeric_limits<float>::max()) const {
+		float distance_squared = (max_d == std::numeric_limits<float>::max()) ? max_d : max_d * max_d;
+		const Unit* target = nullptr;
+		for (const auto& u : units) {
+			float d = DistanceSquared2D(u->pos, start);
+			if (d < distance_squared) {
+				distance_squared = d;
+				target = u;
+			}
+		}
+		//If we never found one return nullptr
+		return target;
+	}
+
+	const Unit* FindNearestUnit(const Point2D& start, const std::list<const Unit *> &units, float max_d = std::numeric_limits<float>::max()) const {
 		float distance_squared = (max_d == std::numeric_limits<float>::max()) ? max_d : max_d * max_d;
 		const Unit* target = nullptr;
 		for (const auto& u : units) {
@@ -2822,6 +2862,7 @@ private:
 	const size_t max_worker_count_ = 68;
 
 	uint16_t num_adept;
+	uint16_t num_zealot;
 	uint16_t num_stalker;
 	uint16_t num_colossus;
 	uint16_t num_carrier;

@@ -7,13 +7,13 @@
 
 #include <iostream>
 
-static const std::string bot_name = "AdeptBot";
+static const std::string bot_name = "G-ScAI";
 static const std::string current_version = "v0.5";
 
 #ifdef DEBUG
 
 static const bool VsHuman = false;
-static const int stepsize = 2;
+static const int stepsize = 5;
 static const bool Realtime = false;
 static const bool ControlTest = false;
 static const std::vector<std::string> map_names({
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Terran, Difficulty::CheatVision),
+			CreateComputer(Race::Terran, Difficulty::HardVeryHard),
 			});
 	}
 
