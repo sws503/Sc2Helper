@@ -122,27 +122,12 @@ bool MEMIBot::EarlyStrategy() {
             TryChronoboost(observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front());
         }
         if (stage_number>218) {
-            TryBuildPylonIfNeeded(3);
+            TryBuildPylonIfNeeded(2);
         }
         if (stage_number>230) {
-            TryBuildCannonNexus();
-            if (bases.size()*2>assimilator_count) {
-                TryBuildAssimilator();
-            }
-
-            if (robotics_bay_count == 0 && num_warpprism>0) {
-                return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSBAY, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
-            }
-            else if (robotics_bay_count>0 && num_warpprism>0 && robotics_facility_count<2) {
-                return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
-            }
-
-            if (gateway_count<bases.size()*2-1) {
-                TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
-            }
             if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() || bases.size()<3) {
                 bool expand = 1;
-                if (ManyEnemyRush) {
+                if (bases.size()>2 && !timing_attack) {
                     expand = false;
                 }
                 for (const auto& b :bases) {
@@ -154,6 +139,27 @@ bool MEMIBot::EarlyStrategy() {
                     return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
                 }
             }
+
+            if (robotics_bay_count == 0 && num_warpprism>0) {
+                return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSBAY, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
+            }
+            else if (robotics_bay_count>0 && num_warpprism>0 && robotics_facility_count<2) {
+                return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+            }
+
+
+
+            TryBuildCannonNexus();
+            if (bases.size()*2>assimilator_count) {
+                TryBuildAssimilator();
+            }
+
+
+
+            if (gateway_count<bases.size()*2-1) {
+                TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
+            }
+
             if (warpprisms_phasing.empty()) {
                 TryBuildArmyBranch5();
             }
