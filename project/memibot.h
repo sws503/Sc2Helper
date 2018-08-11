@@ -924,7 +924,7 @@ private:
 			}
 			// TODO : 가장 마지막으로 본 적의 위치를 target_pos 로 리턴하는 함수를 만들자
 
-			SmartAttackMove(unit, target_pos); //위 작업이 끝나면 적 기지를 다시한번 간다
+			//SmartAttackMove(unit, target_pos); //위 작업이 끝나면 적 기지를 다시한번 간다
 		}
 		else { //적 기지도 모르면 막 돌아다녀라
 			if (TryFindRandomPathableLocation(unit, target_pos)) {
@@ -2904,7 +2904,7 @@ private:
 	const size_t max_worker_count_ = 68;
 
 	uint16_t num_adept;
-	uint16_t num_zealot;
+	int num_zealot;
 	uint16_t num_stalker;
 	uint16_t num_colossus;
 	uint16_t num_carrier;

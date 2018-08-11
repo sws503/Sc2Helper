@@ -580,6 +580,15 @@ void MEMIBot::ManageRush() {
 		Units NearbyArmies = FindUnitsNear(unit, 25, Unit::Alliance::Enemy, IsArmy(observation));
 		Units Airattackers = FindUnitsNear(unit, 16, Unit::Alliance::Enemy, AirAttacker());
 		//Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
+		
+		bool Summoning = false;
+		for (const Unit * zealot : Zealots)
+		{
+			if (zealot->build_progress != 1)
+			{
+				Summoning = true;
+			}
+		}
 
 		Point2D enemy_position;
 		Point2D retreat_position;
@@ -589,26 +598,26 @@ void MEMIBot::ManageRush() {
 		
 		const Unit * NearestEnemybase = FindNearestUnit(unit->pos, enemy_townhalls_scouter_seen);
 
-		if (num_zealot >= 5)
+		if ((num_zealot >= 5 || CanHitMe(unit)) && !Summoning)
 		{
+			std::cout << num_zealot << " 은 질럿 생산 횟수 " << std::endl;
 			Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMTRANSPORTMODE);
-			num_zealot -= 5;
+			num_zealot = 0;
 		}
 		
-		
+		const Unit * nearenemy = GetNearTarget(unit, Airattackers);
 
 		if (EvadeEffect(unit)) {}
-		else if (CanHitMe(unit)) //적 공중공격 유닛이 있을 경우
+		else if (CanHitMe(unit) && nearenemy != nullptr) //적 공중공격 유닛이 있을 경우
 		{
-			const Unit * nearenemy = GetNearTarget(unit, Airattackers);
 			EvadeKiting(unit, nearenemy);
-		}
-		else if (Query()->PathingDistance(unit->pos, Point2D(NearestEnemybase->pos.x + 3, NearestEnemybase->pos.y)) < 20) {
-			Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
 		}
 		else if (CurrentZealot > 0)
 		{
 			SmartMove(unit, startLocation_);
+		}
+		else if (NearestEnemybase !=nullptr && Query()->PathingDistance(unit->pos, Point2D(NearestEnemybase->pos.x + 3, NearestEnemybase->pos.y)) < 20) {
+			Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
 		}
 		else if (Attackers.size() > 5)
 		{
@@ -685,10 +694,7 @@ void MEMIBot::ManageRush() {
 		}
 	}
 
-	Point2D meeting_spot = advance_pylon_location;
-	float MeetingDistance = Distance2D(startLocation_, meeting_spot);
-
-	
+	Point2D meeting_spot = Pylon1;
 
 	if (timing_attack)
 	{
