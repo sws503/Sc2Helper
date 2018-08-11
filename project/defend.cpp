@@ -91,7 +91,7 @@ void MEMIBot::Defend() {
 		}
 	}
 	EnemyRush = !enemyUnitsInRegion.empty();
-	ManyEnemyRush = (enemyUnitsInRegion.size() > 3);
+	ManyEnemyRush = (enemyUnitsInRegion.size() >= 3);
 
 	/*for (const auto & enemyunit : enemyUnitsInRegion)
 	{
@@ -119,7 +119,10 @@ void MEMIBot::Defend() {
 		
 	}*/
 	
-	/*if (!enemyUnitsInRegion.empty() && my_armies.empty())
+	// todo: 빨려들어간다~~
+	// todo: 포톤캐논, 해처리
+	// todo: 죽은 애들 빼주기
+	if (EnemyRush && my_armies.empty())
 	{
 		for (const auto & worker : Workers)
 		{
@@ -137,7 +140,7 @@ void MEMIBot::Defend() {
 			if (Distance2D(killer->pos, startLocation_) > 10 || !killer->is_alive)
 			{
 				std::cout << " 방금 소집된 일꾼 하나를 소집해제했습니다. " << std::endl;
-				Killers.erase(it);
+				it = Killers.erase(it);
 				Actions()->UnitCommand(killer, ABILITY_ID::STOP);
 				continue;
 			}
@@ -154,7 +157,7 @@ void MEMIBot::Defend() {
 	{
 		std::cout << " 아군병력이 나왔으니 이제 일꾼은 그만싸우겠습니다. " << std::endl;
 		Killers.clear();
-	}*/
+	}
 
 
 	/*Units defenders = FindUnitsNear(startLocation_, 50, Unit::Alliance::Self, IsArmy(Observation()));
