@@ -152,8 +152,7 @@ public:
 		staging_location_ = Point3D(((staging_location_.x + front_expansion.x) / 2), ((staging_location_.y + front_expansion.y) / 2),
 			((staging_location_.z + front_expansion.z) / 2));
 
-		//Test하려고 임시로 송우석이 뺏습니다!!!!!!!!!
-        //change_building_location();
+		change_building_location();
 	}
 
 	virtual void OnStep() final override {
@@ -1970,6 +1969,8 @@ private:
 
 	void FleeWorkers(const Unit * unit);
 
+	void DefendWorkers();
+
 	void ManageUpgrades() {
 		const ObservationInterface* observation = Observation();
 		Units forges = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FORGE));
@@ -2828,7 +2829,7 @@ private:
 
 	Point2D advance_pylon_location;
 
-	std::map<Tag, uint32_t> adept_map;
+	std::unordered_map<Tag, uint32_t> adept_map;
 	Flags flags;
 
 	std::string version;
@@ -2837,7 +2838,7 @@ private:
 	bool ManyEnemyRush;
 	bool PhotonRush;
 	Point2D pylonlocation;
-	Units Killers;
+	std::unordered_set<const Unit*> emergency_killerworkers;
 
 	bool early_strategy;
 	bool warpgate_researched;
