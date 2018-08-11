@@ -721,11 +721,11 @@ void MEMIBot::ManageRush() {
 			Units MergedUnits = FindUnitsNear(closestTarget, 8, AttackersRecruiting);
 			if (MergedUnits.size() < AttackersRecruiting.size() * 0.7f)
 			{
-				std::cout << " ¾ÆÁ÷ ´ú ¹¶ÃÆ´Ù~~~ ÀÌ ¸»ÀÌ¾ß!~!! " << std::endl;
+				//std::cout << " ¾ÆÁ÷ ´ú ¹¶ÃÆ´Ù~~~ ÀÌ ¸»ÀÌ¾ß!~!! " << std::endl;
 			}
 			else
 			{
-				std::cout << " ÀÌÁ¦ ´Ù ¹¶ÃÆ´Ù~~~ ÀÌ ¸»ÀÌ¾ß!~!! " << std::endl;
+				//std::cout << " ÀÌÁ¦ ´Ù ¹¶ÃÆ´Ù~~~ ÀÌ ¸»ÀÌ¾ß!~!! " << std::endl;
 				for (const auto& unit : AttackersRecruiting)
 				{
 					Attackers.push_back(unit);

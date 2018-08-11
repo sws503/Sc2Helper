@@ -89,6 +89,7 @@ public:
 		find_enemy_location = false;
 		work_probe_forward = true;
 
+		shield3 = false;
 		num_zealot = 0;
 		num_adept = 0;
 		num_stalker = 0;
@@ -289,6 +290,10 @@ public:
 				std::cout << "attack3";
 				timing_attack = true;
 				return;
+			}
+			case UPGRADE_ID::PROTOSSSHIELDSLEVEL3: {
+                shield3 = true;
+                return;
 			}
 			default:
 				break;
@@ -975,7 +980,7 @@ private:
 
 	bool RetreatPrism(const Unit* unit, Point2D retreat_position) {
 		bool moving = false;
-		
+
 		float dist = Distance2D(unit->pos, retreat_position);
 
 		if (dist >= 10) // 멀리있으면
@@ -1837,7 +1842,7 @@ private:
 		if (pylon == nullptr) return false;
 		if (!pylon->is_alive) return false;
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost 
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost
 			|| observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
             return false;
 		}
@@ -1862,7 +1867,7 @@ private:
 	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID building_type) {
 		const ObservationInterface* observation = Observation();
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost 
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost
 			|| observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
             return false;
 		}
@@ -2249,7 +2254,7 @@ private:
 		if (observation->GetFoodUsed() + observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
 			return false;
 		}
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost 
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost
 			|| observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
 			return false;
 		}
@@ -2361,25 +2366,39 @@ private:
                 if (r->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
                     robotics_observer++;
                 }
+                if (shield3) {
+                    TryChronoboost(r);
+                }
             }
         }
 
         if (robotics_empty==0) {
+            std::cout<<"추적자"<<std::endl;
             return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
         }
         else if (observers.size()+robotics_observer<3) {
+            std::cout<<"옵저버"<<std::endl;
             return TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
         }
         else if (num_warpprism==0) {
+
+            std::cout<<"분광기"<<std::endl;
             return TryBuildUnit(ABILITY_ID::TRAIN_WARPPRISM, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_WARPPRISM);
         }
         else {
+            //std::cout<<"거신"<<num_colossus<<"불멸자"<<num_immortal<<std::endl;
             if (num_colossus>=num_immortal-1 || roboticsbay.empty()) {
+
+                std::cout<<"불멸자1"<<std::endl;
                 return TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
             }
             if (roboticsbay.front()->build_progress<1.0f) {
+
+                std::cout<<"불멸자2"<<std::endl;
                 return TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
             }
+
+            std::cout<<"거신"<<std::endl;
             return TryBuildUnit(ABILITY_ID::TRAIN_COLOSSUS, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_COLOSSUS);
         }
     }
@@ -2968,8 +2987,7 @@ private:
 	uint16_t num_carrier;
 
 	bool try_initialbalance;
-
-	uint16_t try_adept,try_stalker;
+	bool shield3;
 
 	Point2D Pylon1, Pylon2, Pylon3, Pylon4, Gate1, Core1, Star1, Batt1, Batt2, Batt3, Batt4, Batt5, Center;
 

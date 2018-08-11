@@ -146,11 +146,8 @@ bool MEMIBot::EarlyStrategy() {
             else if (robotics_bay_count>0 && num_warpprism>0 && robotics_facility_count<2) {
                 return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
             }
-
-
-
             TryBuildCannonNexus();
-            if (bases.size()*2>assimilator_count) {
+            if (bases.size()*2>assimilator_count+1) {
                 TryBuildAssimilator();
             }
 
