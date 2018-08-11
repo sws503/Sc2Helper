@@ -75,7 +75,7 @@ public:
 		initial_location_building(game_info_.map_name);
 
 		stage_number = 0;
-		iter_exp = expansions_.begin();
+		iter_exp = expansions_.end();
 		Enemy_front_expansion = Point3D(0, 0, 0);
 		recent_probe_scout_location = Point2D(0, 0);
 		recent_probe_scout_loop = 0;
@@ -118,6 +118,9 @@ public:
 		enemyUnitsInRegion.clear();
 		Attackers.clear();
 		AttackersRecruiting.clear();
+
+		emergency_killerworkers.clear();
+		scout_candidates.clear();
 
 		try_initialbalance = false;
 		the_pylon = nullptr;
@@ -2243,6 +2246,8 @@ private:
 
 	void scoutprobe();
 
+	void determine_scout_location();
+
 	void determine_enemy_expansion();
 
 	void manageobserver();
@@ -2968,6 +2973,7 @@ private:
 	Point2D recent_probe_scout_location;
 	uint32_t recent_probe_scout_loop;
 	std::list<Point2D> last_dead_probe_pos;
+	std::vector<Point3D> scout_candidates;
 
 	Point2D advance_pylon_location;
 

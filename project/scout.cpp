@@ -37,7 +37,7 @@ void MEMIBot::scout_all() {
 	manageobserver();
 
 	Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PROBE));
-
+	Units observers_not_sieged = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER));
 	//정찰 프로브 재지정
 	if (workers.size() > 2 && (probe_scout != nullptr && !probe_scout->is_alive)) {
 		for (const auto& p : workers) {
@@ -74,6 +74,26 @@ void MEMIBot::scout_all() {
 			// 본진 정찰 중단.
 			flags.set("search_branch", 1);
 			break;
+		}
+	}
+
+	// 옵저버 3마리 이상이면 프로브 대신 옵저버가 정찰
+	if (observers_not_sieged.size() >= 3) {
+		if (probe_scout == nullptr || probe_scout->unit_type != UNIT_TYPEID::PROTOSS_OBSERVER) {
+			for (const auto& observer : observers_not_sieged) {
+				if (observer->tag != attacker_s_observer_tag) {
+					probe_scout = observer;
+				}
+			}
+		}
+	}
+	else {
+		if (probe_scout == nullptr || probe_scout->unit_type != UNIT_TYPEID::PROTOSS_PROBE) {
+			for (const auto& p : workers) {
+				if (probe_forward != nullptr && p->tag == probe_forward->tag) continue;
+				if (IsCarryingMinerals(*p) || IsCarryingVespene(*p)) continue;
+				probe_scout = p;
+			}
 		}
 	}
 
@@ -198,6 +218,7 @@ void MEMIBot::scoutenemylocation() {
 	}
 }
 
+// todo: 정찰 위치 주변에 건물이 있으면 거르기
 void MEMIBot::scoutprobe() {
 	const ObservationInterface* observation = Observation();
 
@@ -228,6 +249,11 @@ void MEMIBot::scoutprobe() {
 	}
 }
 
+// todo: 만들어주기
+void MEMIBot::determine_scout_location() {
+
+}
+
 void MEMIBot::determine_enemy_expansion() {
 	if (!find_enemy_location) return;
 	float minimum_distance = std::numeric_limits<float>::max();
@@ -256,6 +282,7 @@ void MEMIBot::manageobserver() {
 	Units armies = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
 	Units enemyarmies = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
 	Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
+	Units enemystructures = observation->GetUnits(Unit::Alliance::Enemy, IsStructure(observation));
 	size_t observers_size = observers.size();
 	size_t bases_size = bases.size();
 
@@ -281,14 +308,25 @@ void MEMIBot::manageobserver() {
 
 		//exclude scouter probe
 		bool nearbase = false;
+		bool nearenemystructure = false;
 		for (const auto& b : bases) {
 			nearbase |= (DistanceSquared2D(b->pos, pos) < 200);
 			if (nearbase) break;
 		}
-		if (nearbase) {
-			dead_probe_cleared = true;
+		for (const auto& es : enemystructures) {
+			nearenemystructure |= (DistanceSquared2D(es->pos, pos) < 200);
+			if (nearenemystructure) break;
+		}
+		// 본진에 가깝다: 항상 보내기
+		// 본진과의 거리가 30보다 작고 적 건물이 없다: 보내기
+
+		if (nearbase || (Distance2D(startLocation_, pos) < 30 && FindNearestUnit(pos, enemystructures, 10) == nullptr) ) {
+			dead_probe_cleared = false;
 		}
 		else {
+			dead_probe_cleared = true;
+		}
+		if (!dead_probe_cleared) {
 			for (const auto& observer : observers_not_sieged) {
 				float dist_sq = DistanceSquared2D(observer->pos, pos);
 				// 죽은 곳으로 갔는데 없다.
@@ -390,7 +428,7 @@ void MEMIBot::manageobserver() {
 			// 가까이 있으면 감시모드
 			else {
 				if (observer->unit_type == UNIT_TYPEID::PROTOSS_OBSERVER) {
-					// change to serveilance mode
+					// change to surveilance mode
 					Actions()->UnitCommand(observer, ABILITY_ID(3741));
 				}
 			}
@@ -428,7 +466,7 @@ void MEMIBot::manageobserver() {
 		bool nearenemy = false;
 		Point2D avg_pos(0, 0);
 		for (const auto& base : bases) {
-			if (DistanceSquared2D(base->pos, observer->pos) < 14) {
+			if (DistanceSquared2D(base->pos, observer->pos) < 200) {
 				nearbase = true;
 				break;
 			}

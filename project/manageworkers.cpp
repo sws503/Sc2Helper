@@ -104,10 +104,11 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 		}
 	}
 
-	float min_distance = std::numeric_limits<float>::max();
+	std::vector<Vector2D> aux_vectors({ Vector2D(3,0), Vector2D(-3,0), Vector2D(0,3), Vector2D(0,-3) });
 
 	// Search for a base that is missing mineral workers.
 	if (has_space_for_half_mineral && !EnemyRush) {
+		float min_distance = std::numeric_limits<float>::max();
 		const Unit* target_resource = nullptr;
 		const Unit* target_base = nullptr;
 
@@ -126,18 +127,27 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 		}
 
 		if (target_resource != nullptr && target_base != nullptr) {
-			float d = Query()->PathingDistance(worker, (target_resource->pos + target_base->pos)/2 );
-			if (d > 0.01f) {
-				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
-				return;
+			std::vector<QueryInterface::PathingQuery> query_vector;
+			for (const auto& v : aux_vectors) {
+				QueryInterface::PathingQuery query;
+				query.start_unit_tag_ = worker->tag;
+				query.start_ = worker->pos;
+				query.end_ = target_base->pos + v;
+				query_vector.push_back(query);
+			}
+			std::vector<float> results = Query()->PathingDistance(query_vector);
+			for (const auto& d : results) {
+				if (d > 0.01f) {
+					Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
+					return;
+				}
 			}
 		}
 	}
 
-	
-
 	// Search for a base that does not have full of gas workers.
 	if (has_space_for_gas && !EnemyRush) {
+		float min_distance = std::numeric_limits<float>::max();
 		const Unit* target_resource = nullptr;
 		const Unit* target_base = nullptr;
 
@@ -156,16 +166,27 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 		}
 
 		if (target_resource != nullptr && target_base != nullptr) {
-			float d = Query()->PathingDistance(worker, (target_resource->pos + target_base->pos) / 2);
-			if (d > 0.01f) {
-				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
-				return;
+			std::vector<QueryInterface::PathingQuery> query_vector;
+			for (const auto& v : aux_vectors) {
+				QueryInterface::PathingQuery query;
+				query.start_unit_tag_ = worker->tag;
+				query.start_ = worker->pos;
+				query.end_ = target_base->pos + v;
+				query_vector.push_back(query);
+			}
+			std::vector<float> results = Query()->PathingDistance(query_vector);
+			for (const auto& d : results) {
+				if (d > 0.01f) {
+					Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
+					return;
+				}
 			}
 		}
 	}
 
 	// Search for a base that does not have full of mineral workers.
 	if (has_space_for_mineral && !EnemyRush) {
+		float min_distance = std::numeric_limits<float>::max();
 		const Unit* target_resource = nullptr;
 		const Unit* target_base = nullptr;
 
@@ -184,10 +205,20 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 		}
 
 		if (target_resource != nullptr && target_base != nullptr) {
-			float d = Query()->PathingDistance(worker, (target_resource->pos + target_base->pos) / 2);
-			if (d > 0.01f) {
-				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
-				return;
+			std::vector<QueryInterface::PathingQuery> query_vector;
+			for (const auto& v : aux_vectors) {
+				QueryInterface::PathingQuery query;
+				query.start_unit_tag_ = worker->tag;
+				query.start_ = worker->pos;
+				query.end_ = target_base->pos + v;
+				query_vector.push_back(query);
+			}
+			std::vector<float> results = Query()->PathingDistance(query_vector);
+			for (const auto& d : results) {
+				if (d > 0.01f) {
+					Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
+					return;
+				}
 			}
 		}
 	}
