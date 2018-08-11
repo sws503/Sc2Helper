@@ -19,7 +19,6 @@ bool MEMIBot::EarlyStrategy() {
     Units archons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ARCHON));
     Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
 
-
 	//°Ç¹° ÁöÀ» ÇÁ·Îºê ÀçÁöÁ¤
 	if (workers.size() > 2 && (probe_forward != nullptr && !probe_forward->is_alive)) {
 		for (const auto& p : workers) {
@@ -303,10 +302,10 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return TryBuildGas(base->pos);
     case 8:
-        if (cores.front()->build_progress == 1.0f) {
-            stage_number=9;
+        if (cores.front()->build_progress < 0.9f) {
             return false;
         }
+        stage_number=9;
         return false;
     case 9:
         for (const auto& gate : gateways) {
@@ -328,17 +327,15 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 11:
-		// ?•ì°° : ë¶„ê¸° 2 ê²°ì •
-        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT)) {
-            stage_number=12;
-            return false;
+        for (const auto& gate : gateways) {
+            if (gate->orders.empty()) {
+                return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
+            }
+            if (gate->orders.front().ability_id != ABILITY_ID::TRAIN_ADEPT) {
+                return false;
+            }
         }
-        return false;
-    case 12:
-        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT)) {
-            stage_number=13;
-            return false;
-        }
+        stage_number=13;
         return false;
     case 13:
         if (pylons.size()>2) {
@@ -371,10 +368,10 @@ bool MEMIBot::EarlyStrategy() {
             if (gate->orders.empty()) {
                 return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
             }
-            else if(gate->orders.front().progress>0.7f) {
+            if (gate->orders.front().ability_id != ABILITY_ID::TRAIN_STALKER) {
                 return false;
             }
-            else TryChronoboost(gate);
+            TryChronoboost(gate);
         }
         stage_number=17;
         return false;
@@ -385,6 +382,19 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureNearPylon(ABILITY_ID::BUILD_TWILIGHTCOUNCIL, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
     case 18:
+        for (const auto& gate : gateways) {
+            if (gate->orders.empty()) {
+                return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
+            }
+            if (gate->orders.front().ability_id != ABILITY_ID::TRAIN_ADEPT) {
+                return false;
+            }
+        }
+        if (num_adept<2) {
+            return false;
+        }
+        stage_number=20;
+        return false;/*
         if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT)) {
             stage_number=318;
             return false;
@@ -398,7 +408,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=20;
             return false;
         }
-        return false;
+        return false;*/
 
 
         /*for (const auto& gate : gateways) {
@@ -434,6 +444,22 @@ bool MEMIBot::EarlyStrategy() {
 
     case 23:
         for (const auto& gate : gateways) {
+            if (gate->build_progress < 1.0f) {
+                continue;
+            }
+            if (gate->orders.empty()) {
+                return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
+            }
+            if (gate->orders.front().ability_id != ABILITY_ID::TRAIN_ADEPT) {
+                return false;
+            }
+            if (gate->orders.front().progress>0.5f) {
+                return false;
+            }
+        }
+        stage_number=26;
+        return false;/*
+        for (const auto& gate : gateways) {
             if (gate->build_progress != 1.0f) {
                 continue;
             }
@@ -445,7 +471,7 @@ bool MEMIBot::EarlyStrategy() {
             }
         }
         stage_number=26;
-        return false;
+        return false;*/
     case 26:
         if (branch==3) {
             stage_number=50;
@@ -480,7 +506,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         TryBuildPylon(front_expansion, 6.0);
     case 29:
-        if (adepts.size()>=9) {
+        if (num_adept>8) {
             stage_number=32;
             return false;
         }
