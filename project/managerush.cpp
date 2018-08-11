@@ -1183,7 +1183,10 @@ void MEMIBot::ManageOracleBeam(const Unit* unit, const Unit* target)
 
 void  MEMIBot::Roam_enemybase(const Unit* unit)
 {
-	const Unit * EnemyBaseMineral = FindNearestMineralPatch(game_info_.enemy_start_locations.front());
+	const Unit * EnemyBaseMineral = FindNearestMineralPatch(EnemyBaseLocation);
+	if (EnemyBaseMineral == nullptr) {
+		return;
+	}
 
 	determine_enemy_expansion();
 	if (enemy_townhalls_scouter_seen.size() <= 1)
@@ -1205,6 +1208,9 @@ void  MEMIBot::Roam_enemybase(const Unit* unit)
 	else
 	{
 		const Unit * second_nearbase = FindSecondNearestUnit(unit->pos, enemy_townhalls_scouter_seen);
+		if (EnemyBaseMineral == nullptr) {
+			return;
+		}
 		std::cout << " 두번째로 가까운 위치가  " << second_nearbase->pos.x << " , " << second_nearbase->pos.y << std::endl;
 		SmartMove(unit, second_nearbase->pos);
 	}

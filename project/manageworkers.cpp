@@ -400,6 +400,7 @@ void MEMIBot::ManageWorkers() {
 	}
 }
 
+// Todo: 스킬 피하기, 공중유닛 피하기, disruptor, baneling 피하기, 작은 유닛 죽이기
 void MEMIBot::FleeWorkers(const Unit* unit) {
 	if (unit == nullptr) return;
 	if (!ManyEnemyRush) {
@@ -417,7 +418,9 @@ void MEMIBot::FleeWorkers(const Unit* unit) {
 
 		nearworkers.push_back(worker);
 	}
-	const Unit* b = FindSecondNearestUnit(unit->pos, Unit::Alliance::Self, IsTownHall());
+	Filter base_filter = [](const Unit& u) { return IsTownHall()(u) && u.build_progress >= 0.9; };
+
+	const Unit* b = FindSecondNearestUnit(unit->pos, Unit::Alliance::Self, base_filter);
 	if (b == nullptr) return;
 	const Unit* m = FindNearestMineralPatch(b->pos);
 	

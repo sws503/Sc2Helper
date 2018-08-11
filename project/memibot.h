@@ -55,6 +55,11 @@ public:
 
         Observation()->GetUnitTypeData();
 
+		// 테스트맵용
+		if (game_info_.enemy_start_locations.empty()) {
+			game_info_.enemy_start_locations.push_back(Point2D());
+		}
+
         initial_location_building(game_info_.map_name);
 
 		//상대 종족
@@ -150,12 +155,9 @@ public:
 			}
 		}
 
-
-
 		staging_location_ = Point3D(((staging_location_.x + front_expansion.x) / 2), ((staging_location_.y + front_expansion.y) / 2),
 			((staging_location_.z + front_expansion.z) / 2));
 
-		//Test하려고 임시로 송우석이 뺏습니다!!!!!!!!!
         change_building_location();
 	}
 
@@ -560,6 +562,13 @@ private:
 #endif
 	}
 
+	void DrawLine(Point3D p0, Point3D p1) {
+#ifdef DEBUG
+		Debug()->DebugLineOut(p0, p1);
+		Debug()->SendDebug();
+#endif
+	}
+
 	void PrintCursor() {
 		const ObservationInterface* observation = Observation();
 		for (const auto & p : observation->GetUnits([](const Unit& u) {return u.is_selected;})) {
@@ -619,13 +628,14 @@ private:
 	// Todo: baneling, disrupterphased etc 피하기
 	bool EvadeEffect(const Unit* unit)
 	{
+		const ObservationInterface* observation = Observation();
 		bool moving = false;
 		Vector2D mul_diff(0, 0);
-		for (const auto & effect : Observation()->GetEffects())
+		for (const auto & effect : observation->GetEffects())
 		{
 			if (isBadEffect(effect.effect_id))
 			{
-				const EffectData& ed = Observation()->GetEffectData().at(effect.effect_id);
+				const EffectData& ed = observation->GetEffectData().at(effect.effect_id);
 				const float radius = ed.radius + 1.0f;
 				/*
 				if (EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHED)
@@ -649,7 +659,7 @@ private:
 
 						if (EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHED || EffectID(effect.effect_id).ToType() == EFFECT_ID::LIBERATORMORPHING)
 						{
-							Units bases = Observation()->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+							Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 
 							for (const auto & base : bases)
 							{
@@ -667,6 +677,18 @@ private:
 			}
 			if (moving) break;
 		}
+		if (!moving) {
+			Units explodingunits = observation->GetUnits(Unit::Alliance::Enemy,
+				IsUnits({ UNIT_TYPEID::TERRAN_WIDOWMINE, UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED, UNIT_TYPEID::PROTOSS_DISRUPTORPHASED, UNIT_TYPEID::ZERG_BANELING, UNIT_TYPEID::ZERG_BANELINGBURROWED }));
+			const Unit* nearestu = FindNearestUnit(unit->pos, explodingunits, 5.5);
+			if (nearestu != nullptr) {
+				Point2D pos = nearestu->pos;
+				Vector2D diff = unit->pos - pos; // 7.3 적 유닛과의 반대 방향으로 도망
+				Normalize2D(diff);
+				mul_diff += diff * (1.0f /*+ radius + unit->radius - dist*/);
+				moving = true;
+			}
+		}
 		if (moving) {
 			Point2D fleeingPos(staging_location_);
 			if (mul_diff != Point2D(0, 0)) {
@@ -674,8 +696,10 @@ private:
 			}
 			SmartMove(unit, fleeingPos);
 			Chat("Enemy Skill Run~");
+			DrawLine(unit->pos, Point3D(fleeingPos.x, fleeingPos.y, unit->pos.z));
+			return true;
 		}
-
+		
 		return moving;
 	}
 
@@ -2444,7 +2468,8 @@ private:
         Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
         Units pylons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
         for (const auto& b :bases) {
-            const Unit* mineral = FindNearestMineralPatch(b->pos);
+            const Unit* mineral = FindNearestMineralPatch(b->pos, 15);
+			if (mineral == nullptr) continue;
             if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PHOTONCANNON, mineral->pos, 6)>=num && CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PHOTONCANNON, b->pos, 10)>0) {
                 continue;
             }
@@ -2452,16 +2477,16 @@ private:
                 TryBuildPylon(mineral->pos,6,3);
                 continue;
             }
-            else {
-                float rx = GetRandomScalar();
-                float ry = GetRandomScalar();
-                const Unit* pylon = FindNearestUnit(mineral->pos, pylons);
-                Point2D build_location = Point2D(pylon->pos.x + rx * 7, pylon->pos.y + ry * 7);
-                if (Distance2D(build_location,mineral->pos)>3) {
-                    continue;
-                }
-                TryBuildStructure(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
-            }
+
+			float rx = GetRandomScalar();
+			float ry = GetRandomScalar();
+			const Unit* pylon = FindNearestUnit(mineral->pos, pylons);
+			Point2D build_location = Point2D(pylon->pos.x + rx * 7, pylon->pos.y + ry * 7);
+			if (Distance2D(build_location, mineral->pos)>3) {
+				continue;
+			}
+			TryBuildStructure(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+
         }
     }
 

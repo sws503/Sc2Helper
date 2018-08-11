@@ -55,7 +55,7 @@ bool MEMIBot::EarlyStrategy() {
     size_t twilight_council_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
     size_t robotics_facility_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
 	size_t robotics_bay_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
-
+	size_t fleetbeacon_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FLEETBEACON);
     size_t templar_archive_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_TEMPLARARCHIVE);
 
 #ifdef DEBUG
@@ -246,11 +246,9 @@ bool MEMIBot::EarlyStrategy() {
 				}
 			}
 		}
-		//ë³¸ì§„ ?¥ì„œ??ì§€??
 		else if (bases.size() == 1){
 			base = bases.front();
 		}
-		//?•ì°° ?„ë¡œë¸?ì§€??
 		if (probe_scout == nullptr || !probe_scout->is_alive) {
 			for (const auto& p : workers) {
 				if (probe_forward == p) continue;
@@ -258,7 +256,6 @@ bool MEMIBot::EarlyStrategy() {
 				break;
 			}
 		}
-		//ê±´ë¬¼ ì§€???„ë¡œë¸?ì§€??
 		if (probe_forward == nullptr || !probe_forward->is_alive) {
 			for (const auto& p : workers) {
 				if (probe_scout == p) continue;
@@ -324,7 +321,6 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 6:
-		// ?•ì°° : ë¶„ê¸° 1, 2 ?•ì°° ?œìž‘
 		if (cybernetics_count>0) {
 			stage_number=7;
 			return false;
@@ -337,6 +333,10 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return TryBuildGas(base->pos);
     case 8:
+		if (cybernetics_count == 0) {
+			stage_number = 6;
+			return false;
+		}
         if (cores.front()->build_progress < 0.9f) {
             return false;
         }
@@ -352,6 +352,10 @@ bool MEMIBot::EarlyStrategy() {
         stage_number=10;
         return false;
     case 10:
+		if (cybernetics_count == 0) {
+			stage_number = 6;
+			return false;
+		}
         if (!cores.front()->orders.empty()) {
             stage_number=11;
             return false;
@@ -445,6 +449,10 @@ bool MEMIBot::EarlyStrategy() {
     case 22:
 		work_probe_forward = false;
 		SmartMove(probe_forward, advance_pylon_location);
+		if (twilight_council_count == 0) {
+			stage_number = 17;
+			return false;
+		}
         if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
             stage_number=23;
             return false;
@@ -567,6 +575,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         return false;
     case 38:
+		if (twilight_council_count == 0) {
+			stage_number = 17;
+			return false;
+		}
         if (BlinkResearched || !observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
             stage_number=39;
             return false;
@@ -633,6 +645,10 @@ bool MEMIBot::EarlyStrategy() {
 		return TryBuildGas(base->pos);
 
 	case 207:
+		if (gateway_count == 0) {
+			stage_number = 201;
+			return false;
+		}
 	    if (!gateways.front()->orders.empty()) {
             TryChronoboost(gateways.front());
             stage_number=208;
@@ -640,6 +656,10 @@ bool MEMIBot::EarlyStrategy() {
 	    }
         return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
    case 208:
+	    if (cybernetics_count == 0) {
+	 	    stage_number = 204;
+		    return false;
+	    }
         if (!cores.front()->orders.empty()) {
             stage_number=209;
             return false;
@@ -661,6 +681,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureNearPylon(ABILITY_ID::BUILD_TWILIGHTCOUNCIL, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
     case 210:
+		if (gateway_count == 0) {
+			stage_number = 201;
+			return false;
+		}
         if (!gateways.front()->orders.empty()) {
             if (gateways.front()->orders.front().progress<0.5f) {
                 stage_number=211;
@@ -686,6 +710,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildPylon(startLocation_,15.0);
     case 213:
+		if (gateway_count == 0) {
+			stage_number = 201;
+			return false;
+		}
         if (!gateways.front()->orders.empty()) {
             if (gateways.front()->orders.front().progress<0.5f) {
                 stage_number=214;
@@ -758,6 +786,10 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
     case 226:
+		if (twilight_council_count == 0) {
+			stage_number = 209;
+			return false;
+		}
         if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
             stage_number=227;
             return false;
@@ -780,6 +812,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
     case 229:
+		if (robotics_facility_count == 0) {
+			stage_number = 214;
+			return false;
+		}
         if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY)).front()->orders.empty()) {
             if (observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY)).front()->orders.front().ability_id != ABILITY_ID::TRAIN_OBSERVER) {
                 return false;
@@ -832,7 +868,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon2);
 	case 605:
-	    Actions()->UnitCommand(gateways.front(),ABILITY_ID::RALLY_UNITS, startLocation_);
+	    Actions()->UnitCommand(gateways,ABILITY_ID::RALLY_UNITS, startLocation_);
 		// ?•ì°° : ë¶„ê¸° 1, 2 ?•ì°° ?œìž‘
 		if (cybernetics_count>0) {
 			stage_number=606;
@@ -852,12 +888,20 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return TryBuildStructureAtLocation(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE, Star1);
     case 608:
+		if (gateway_count == 0) {
+			stage_number = 602;
+			return false;
+		}
         if (!gateways.front()->orders.empty()) {
             stage_number=609;
             return false;
         }
         return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
     case 609:
+		if (cybernetics_count == 0) {
+			stage_number = 605;
+			return false;
+		}
         if (!cores.front()->orders.empty()) {
             stage_number=610;
             return false;
@@ -876,6 +920,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY, Batt2);
     case 612:
+		if (gateway_count == 0) {
+			stage_number = 602;
+			return false;
+		}
         if (!gateways.front()->orders.empty()) {
             if (gateways.front()->orders.front().progress>0.5f){
                 return false;
@@ -885,6 +933,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
     case 613:
+		if (stargate_count == 0) {
+			stage_number = 607;
+			return false;
+		}
         if (!stargates.front()->orders.empty()) {
             stage_number=614;
             return false;
@@ -909,6 +961,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY, Batt5);
     case 617:
+		if (stargate_count == 0) {
+			stage_number = 607;
+			return false;
+		}
         if (!stargates.front()->orders.empty()) {
             if (stargates.front()->orders.front().progress>0.4f) {
                 return false;
@@ -960,7 +1016,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_NEXUS, front_expansion);
     case 705:
-        Actions()->UnitCommand(gateways.front(),ABILITY_ID::RALLY_UNITS, Star1);
+        Actions()->UnitCommand(gateways,ABILITY_ID::RALLY_UNITS, Star1);
         if (cybernetics_count>0) {
 			stage_number=706;
 			return false;
@@ -983,6 +1039,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon2);
     case 708:
+		if (gateway_count == 0) {
+			stage_number = 702;
+			return false;
+		}
         if (!gateways.front()->orders.empty()) {
             stage_number=709;
             return false;
@@ -995,12 +1055,20 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return TryBuildStructureAtLocation(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE, Star1);
     case 710:
-         if (!cores.front()->orders.empty()) {
+		if (cybernetics_count == 0) {
+			stage_number = 705;
+			return false;
+		}
+        if (!cores.front()->orders.empty()) {
             stage_number=711;
             return false;
         }
         return TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL1);
     case 711:
+		if (gateway_count == 0) {
+			stage_number = 702;
+			return false;
+		}
         if (!gateways.front()->orders.empty()) {
             if (gateways.front()->orders.front().progress>0.3f){
                 return false;
@@ -1020,13 +1088,17 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon3);
     case 713:
+		if (stargate_count == 0) {
+			stage_number = 709;
+			return false;
+		}
         if (!stargates.front()->orders.empty()) {
             stage_number=714;
             return false;
         }
         return TryBuildUnit(ABILITY_ID::TRAIN_ORACLE, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_ORACLE);
     case 714:
-        TryChronoboost(stargates.front());
+        TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
         if (battery_count>0) {
             stage_number=715;
             return false;
@@ -1039,6 +1111,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY, Batt2);
     case 716:
+		if (stargate_count == 0) {
+			stage_number = 709;
+			return false;
+		}
         if (!stargates.front()->orders.empty()) {
             if (stargates.front()->orders.front().progress>0.2f) {
                 return false;
@@ -1063,6 +1139,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildPylon(startLocation_,15.0);
      case 719:
+		 if (stargate_count == 0) {
+			 stage_number = 709;
+			 return false;
+		 }
         if (!stargates.front()->orders.empty()) {
             if (stargates.front()->orders.front().progress>0.4f) {
                 return false;
@@ -1146,6 +1226,10 @@ bool MEMIBot::EarlyStrategy() {
         stage_number=729;
         return false;
      case 729:
+		if (cybernetics_count == 0) {
+			stage_number = 705;
+			return false;
+		}
         if (cores.front()->orders.empty()) {
             return TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL1);
         }
@@ -1160,6 +1244,10 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE);
      case 731:
+		if (fleetbeacon_count == 0) {
+			stage_number = 723;
+			return false;
+		}
         if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FLEETBEACON)).front()->orders.empty()) {
             stage_number=732;
             return false;
