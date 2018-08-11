@@ -2449,15 +2449,15 @@ private:
                 case 'l'://blackpink
                     Pylon1 = Point2D(147.0f, 119.0f);
                     Gate1 = Point2D(144.5f, 119.5f);
-                    Pylon2 = Point2D(59.0f, 16.0f);
+                    Pylon2 = Point2D(60.0f, 16.0f);
                     Core1 = Point2D(147.5f, 116.5f);
                     Star1 = Point2D(62.5f, 15.5f);
                     Pylon3 = Point2D(63.0f, 18.0f);
                     Batt1 = Point2D(147.0f, 121.0f);
                     Batt2 = Point2D(149.0f, 119.0f);
-                    Batt3 = Point2D(57.0f, 16.0f);
-                    Batt4 = Point2D(61.0f, 20.0f);
-                    Batt5 = Point2D(59.0f, 18.0f);
+                    Batt3 = Point2D(58.0f, 15.0f);
+                    Batt4 = Point2D(61.0f, 18.0f);
+                    Batt5 = Point2D(65.0f, 17.0f);
                     Pylon4 = Point2D(149.0f, 121.0f);
                     return;
                 case 'a'://backwater
@@ -2471,7 +2471,7 @@ private:
                     Batt2 = Point2D(21.0f, 113.0f);
                     Batt3 = Point2D(99.0f, 22.0f);
                     Batt4 = Point2D(99.0f, 18.0f);
-                    Batt5 = Point2D(101.0f, 17.0f);
+                    Batt5 = Point2D(100.0f, 16.0f);
                     Pylon4 = Point2D(19.0f, 113.0f);
                     return;
 
@@ -2490,7 +2490,7 @@ private:
                 Batt2 = Point2D(55.0f, 131.0f);
                 Batt3 = Point2D(116.0f, 44.0f);
                 Batt4 = Point2D(116.0f, 42.0f);
-                Batt5 = Point2D(120.0f, 38.0f);
+                Batt5 = Point2D(114.0f, 42.0f);
                 Pylon4 = Point2D(55.0f, 133.0f);
                 return;
             case 17://lost and found
@@ -2630,14 +2630,14 @@ private:
 				the_pylon_pos = Pylon2;
                 return;
             case 13://interloper
-                Pylon1 = Point2D(36.0f, 111.0f);
-                Gate1 = Point2D(36.5f, 113.5f);
-                Core1 = Point2D(36.5f, 108.5f);
-                Star1 = Point2D(31.5f, 112.5f);
-                Pylon2 = Point2D(34.0f, 107.0f);
-                Batt1 = Point2D(34.0f, 109.0f);
-                Batt2 = Point2D(34.0f, 113.0f);
-                Pylon3 = Point2D(34.0f, 111.0f);
+                Pylon1 = Point2D(37.0f, 111.0f);
+                Gate1 = Point2D(37.5f, 113.5f);
+                Core1 = Point2D(37.5f, 108.5f);
+                Star1 = Point2D(32.5f, 112.5f);
+                Pylon2 = Point2D(35.0f, 107.0f);
+                Batt1 = Point2D(35.0f, 109.0f);
+                Batt2 = Point2D(35.0f, 113.0f);
+                Pylon3 = Point2D(35.0f, 111.0f);
 				the_pylon_pos = Pylon2;
                 return;
             case 18://proxima station
@@ -2668,14 +2668,14 @@ private:
                     return;
 
                 case 'B'://belshir
-                    Pylon1 = Point2D(66.0f, 131.0f);
-                    Gate1 = Point2D(68.5f, 131.5f);
-                    Core1 = Point2D(64.5f, 128.5f);
-                    Star1 = Point2D(66.5f, 135.5f);
-                    Pylon2 = Point2D(63.0f, 126.0f);
-                    Batt1 = Point2D(66.0f, 133.0f);
-                    Batt2 = Point2D(64.0f, 131.0f);
-                    Pylon3 = Point2D(64.0f, 133.0f);
+                    Pylon1 = Point2D(65.0f, 129.0f);
+                    Gate1 = Point2D(63.5f, 126.5f);
+                    Core1 = Point2D(67.5f, 130.5f);
+                    Star1 = Point2D(65.5f, 135.5f);
+                    Pylon2 = Point2D(70.0f, 132.0f);
+                    Batt1 = Point2D(63.0f, 129.0f);
+                    Batt2 = Point2D(65.0f, 131.0f);
+                    Pylon3 = Point2D(63.0f, 131.0f);
 					the_pylon_pos = Pylon2;
                     return;
 
