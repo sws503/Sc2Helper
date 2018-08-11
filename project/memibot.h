@@ -92,7 +92,9 @@ public:
 		num_zealot = 0;
 		num_adept = 0;
 		num_stalker = 0;
+		num_warpprism = 0;
 		num_colossus = 0;
+		num_immortal = 0;
 		num_carrier = 0;
 
 		last_map_renewal = 0;
@@ -335,8 +337,14 @@ public:
 		case UNIT_TYPEID::PROTOSS_STALKER:
 			num_stalker++;
 			break;
+        case UNIT_TYPEID::PROTOSS_WARPPRISM:
+            num_warpprism++;
+            break;
 		case UNIT_TYPEID::PROTOSS_COLOSSUS:
 			num_colossus++;
+			break;
+		case UNIT_TYPEID::PROTOSS_IMMORTAL:
+			num_immortal++;
 			break;
 		case UNIT_TYPEID::PROTOSS_CARRIER:
 			num_carrier++;
@@ -533,7 +541,7 @@ public:
 	Units AttackersRecruiting;
 
 	const Unit * the_pylon;
-	Point2D the_pylon_pos;
+	Point2D* the_pylon_pos;
 private:
 	void ChatVersion() {
 		Actions()->SendChat(botname + " " + version);
@@ -1829,7 +1837,8 @@ private:
 		if (pylon == nullptr) return false;
 		if (!pylon->is_alive) return false;
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost 
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
             return false;
 		}
 
@@ -1853,7 +1862,8 @@ private:
 	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID building_type) {
 		const ObservationInterface* observation = Observation();
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost 
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
             return false;
 		}
 
@@ -1867,14 +1877,19 @@ private:
 		if (advance_pylon !=nullptr && Distance2D(random_power_source.position,advance_pylon->pos)<10) {
             return false;
 		}
-		if (observation->GetUnit(random_power_source.tag) != nullptr) {
-			if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISM) {
+		if (observation->GetUnit(random_power_source.tag) == nullptr) {
+			return false;
+		}
+		if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISM) {
+			return false;
+		}
+		// do not build near the_pylon
+		if (branch == 7 && the_pylon_pos != nullptr && *the_pylon_pos == random_power_source.position) {
+			if (observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON)).size() >= 2) {
 				return false;
 			}
 		}
-		else {
-			return false;
-		}
+
 		float radius = random_power_source.radius;
 		float rx = GetRandomScalar();
 		float ry = GetRandomScalar();
@@ -2016,8 +2031,10 @@ private:
 		const ObservationInterface* observation = Observation();
 		Units forges = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FORGE));
 		auto upgrades = observation->GetUpgrades();
-		if (branch == 0 || branch == 1) {
-            TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES,UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL,UPGRADE_ID::ADEPTPIERCINGATTACK);
+		if (branch == 0 || branch == 1 || branch==5) {
+            if (branch!=5) {
+                TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES,UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL,UPGRADE_ID::ADEPTPIERCINGATTACK);
+            }
             TryBuildUpgrade(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::EXTENDEDTHERMALLANCE);
 		}
 		//TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
@@ -2097,18 +2114,23 @@ private:
 
 		float minimum_distance = std::numeric_limits<float>::max();
 		Point3D closest_expansion;
-		for (const auto& expansion : expansions_) {
-			float current_distance = Query()->PathingDistance(Point2D(startLocation_.x+3,startLocation_.y+3), expansion);
-			if (current_distance < .01f) {
-				continue;
-			}
+		if (bases.size()==1 && base!=nullptr) {
+            closest_expansion = front_expansion;
+		}
+		else {
+            for (const auto& expansion : expansions_) {
+                float current_distance = Query()->PathingDistance(Point2D(startLocation_.x+3,startLocation_.y+3), expansion);
+                if (current_distance < .01f) {
+                    continue;
+                }
 
-			if (current_distance < minimum_distance) {
-				if (Query()->Placement(build_ability, expansion)) {
-					closest_expansion = expansion;
-					minimum_distance = current_distance;
-				}
-			}
+                if (current_distance < minimum_distance) {
+                    if (Query()->Placement(build_ability, expansion)) {
+                        closest_expansion = expansion;
+                        minimum_distance = current_distance;
+                    }
+                }
+            }
 		}
 		//only update staging location up till 3 bases.
 		if (TryBuildStructure(build_ability, UNIT_TYPEID::PROTOSS_NEXUS,worker_type, closest_expansion, true) && observation->GetUnits(Unit::Self, IsTownHall()).size() < 4) {
@@ -2227,7 +2249,8 @@ private:
 		if (observation->GetFoodUsed() + observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
 			return false;
 		}
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost 
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
 			return false;
 		}
         if (observation->GetFoodUsed() >= observation->GetFoodCap()) {
@@ -2279,11 +2302,15 @@ private:
     bool TryBuildArmyBranch0(){
         const ObservationInterface* observation = Observation();
         Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
+
         size_t stalker_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER);
         size_t sentry_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_SENTRY);
         int robotics_empty=0;
         int robotics_observer=0;
         for (const auto& r : robotics) {
+            if (r->build_progress<1.0f) {
+                continue;
+            }
             if (r->orders.empty()) {
                 robotics_empty++;
             }
@@ -2317,15 +2344,44 @@ private:
     bool TryBuildArmyBranch5(){
         const ObservationInterface* observation = Observation();
         Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
+        Units observers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER));
+        Units roboticsbay = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSBAY));
+
+
+        int robotics_empty=0;
+        int robotics_observer=0;
         for (const auto& r : robotics) {
+            if (r->build_progress<1.0f) {
+                continue;
+            }
             if (r->orders.empty()) {
-                TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
+                robotics_empty++;
             }
             else {
-                TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+                if (r->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
+                    robotics_observer++;
+                }
             }
         }
-        return false;
+
+        if (robotics_empty==0) {
+            return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+        }
+        else if (observers.size()+robotics_observer<3) {
+            return TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
+        }
+        else if (num_warpprism==0) {
+            return TryBuildUnit(ABILITY_ID::TRAIN_WARPPRISM, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_WARPPRISM);
+        }
+        else {
+            if (num_colossus>=num_immortal-1 || roboticsbay.empty()) {
+                return TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
+            }
+            if (roboticsbay.front()->build_progress<1.0f) {
+                return TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
+            }
+            return TryBuildUnit(ABILITY_ID::TRAIN_COLOSSUS, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_COLOSSUS);
+        }
     }
 
     /*bool TryBuildArmyBalance(){
@@ -2673,7 +2729,7 @@ private:
                     Batt1 = Point2D(135.0f, 107.0f);
                     Batt2 = Point2D(137.0f, 105.0f);
                     Pylon3 = Point2D(137.0f, 107.0f);
-					the_pylon_pos = Pylon2;
+					the_pylon_pos = &Pylon2;
                     return;
                 case 'a'://backwater
                     Pylon1 = Point2D(38.0f, 96.0f);
@@ -2684,7 +2740,7 @@ private:
                     Batt1 = Point2D(36.0f, 97.0f);
                     Batt2 = Point2D(36.0f, 95.0f);
                     Pylon3 = Point2D(34.0f, 96.0f);
-					the_pylon_pos = Pylon2;
+					the_pylon_pos = &Pylon2;
                     return;
 
                 default:
@@ -2701,7 +2757,7 @@ private:
                 Batt2 = Point2D(47.0f, 113.0f);
                 Pylon3 = Point2D(42.0f, 106.0f);
                 Batt3 = Point2D(44.0f, 109.0f);
-				the_pylon_pos = Pylon2;
+				the_pylon_pos = &Pylon2;
                 return;
             case 17://lost and found
                 Pylon1 = Point2D(136.0f, 101.0f);
@@ -2712,7 +2768,7 @@ private:
                 Batt1 = Point2D(136.0f, 103.0f);
                 Batt2 = Point2D(138.0f, 101.0f);
                 Pylon3 = Point2D(138.0f, 103.0f);
-				the_pylon_pos = Pylon2;
+				the_pylon_pos = &Pylon2;
                 return;
             case 13://interloper
                 Pylon1 = Point2D(37.0f, 111.0f);
@@ -2723,7 +2779,7 @@ private:
                 Batt1 = Point2D(35.0f, 109.0f);
                 Batt2 = Point2D(35.0f, 113.0f);
                 Pylon3 = Point2D(35.0f, 111.0f);
-				the_pylon_pos = Pylon2;
+				the_pylon_pos = &Pylon2;
                 return;
             case 18://proxima station
                 Pylon1 = Point2D(144.0f, 101.0f);
@@ -2734,7 +2790,7 @@ private:
                 Batt1 = Point2D(146.0f, 101.0f);
                 Batt2 = Point2D(143.0f, 103.0f);
                 Pylon3 = Point2D(145.0f, 103.0f);
-				the_pylon_pos = Pylon2;
+				the_pylon_pos = &Pylon2;
                 return;
             case 26:
                 switch (map_name[0]) {
@@ -2749,7 +2805,7 @@ private:
                     Pylon3 = Point2D(47.0f, 62.0f);
                     Batt3 = Point2D(46.0f, 58.0f);
                     Pylon4 = Point2D(49.0f, 53.0f);
-					the_pylon_pos = Pylon3;				//뉴커크일때만 pylon3을 깨야함
+					the_pylon_pos = &Pylon3;				//뉴커크일때만 pylon3을 깨야함
                     return;
 
                 case 'B'://belshir
@@ -2761,7 +2817,7 @@ private:
                     Batt1 = Point2D(63.0f, 129.0f);
                     Batt2 = Point2D(65.0f, 131.0f);
                     Pylon3 = Point2D(63.0f, 131.0f);
-					the_pylon_pos = Pylon2;
+					the_pylon_pos = &Pylon2;
                     return;
 
                 default:
@@ -2906,7 +2962,9 @@ private:
 	uint16_t num_adept;
 	int num_zealot;
 	uint16_t num_stalker;
+	uint16_t num_warpprism;
 	uint16_t num_colossus;
+	uint16_t num_immortal;
 	uint16_t num_carrier;
 
 	bool try_initialbalance;

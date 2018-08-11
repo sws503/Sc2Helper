@@ -101,16 +101,20 @@ bool MEMIBot::EarlyStrategy() {
                 TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
             }
             else if (observation->GetFoodUsed()>120 && GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() ) {
-                for (const auto& b : bases) {
+                bool expand = 1;
+                if (ManyEnemyRush) {
+                    expand = false;
+                }
+                for (const auto& b :bases) {
                     if (b->build_progress < 1.0f) {
-                        return TryBuildArmyBranch0();
+                        expand = false;
                     }
                 }
-                TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+                if (expand) {
+                    return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+                }
             }
-            else{
-                TryBuildArmyBranch0();
-            }
+            TryBuildArmyBranch0();
         }
     }
 	else if (branch == 5) {
@@ -122,14 +126,33 @@ bool MEMIBot::EarlyStrategy() {
         }
         if (stage_number>230) {
             TryBuildCannonNexus();
-            if (bases.size()*2>assimilator_count+2) {
+            if (bases.size()*2>assimilator_count) {
                 TryBuildAssimilator();
             }
-            if (gateway_count<bases.size()*2) {
+
+            if (robotics_bay_count == 0 && num_warpprism>0) {
+                return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSBAY, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
+            }
+            else if (robotics_bay_count>0 && num_warpprism>0 && robotics_facility_count<2) {
+                return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+            }
+
+            if (gateway_count<bases.size()*2-1) {
                 TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
             }
-            if (observation->GetFoodUsed()>150 || bases.size()<3) {
-                TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+            if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() || bases.size()<3) {
+                bool expand = 1;
+                if (ManyEnemyRush) {
+                    expand = false;
+                }
+                for (const auto& b :bases) {
+                    if (b->build_progress < 1.0f) {
+                        expand = false;
+                    }
+                }
+                if (expand) {
+                    return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+                }
             }
             if (warpprisms_phasing.empty()) {
                 TryBuildArmyBranch5();
@@ -180,8 +203,19 @@ bool MEMIBot::EarlyStrategy() {
                 TryBuildBatteryNexus(b);
             }
             TryBuildUnit(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_CARRIER);
-            if (observation->GetMinerals()>600) {
-                TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+            if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() || bases.size()<3) {
+                bool expand = 1;
+                if (ManyEnemyRush) {
+                    expand = false;
+                }
+                for (const auto& b :bases) {
+                    if (b->build_progress < 1.0f) {
+                        expand = false;
+                    }
+                }
+                if (expand) {
+                    return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+                }
             }
             if (bases.size()*2>assimilator_count) {
                 TryBuildAssimilator();
@@ -700,10 +734,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
     case 221:
-        /*if (TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER)) {
+        if (TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER)) {
             stage_number=222;
             return false;
-        }*/
+        }
         return false;
     case 222:
         if (stalkers.size()>=7) {
@@ -712,7 +746,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
     case 225:
-        if (gateway_count>4) {
+        if (gateway_count>3) {
 			stage_number=226;
 			return false;
 		}
@@ -734,20 +768,20 @@ bool MEMIBot::EarlyStrategy() {
     case 228:
         for (const auto& s : stalkers) {
             if (s->build_progress<1.0f) {
-                stage_number=229;
+                stage_number=230;
                 return false;
             }
         }
         return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
     case 229:
         if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY)).front()->orders.empty()) {
-            if (observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY)).front()->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
+            if (observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY)).front()->orders.front().ability_id != ABILITY_ID::TRAIN_OBSERVER) {
                 return false;
             }
             stage_number=230;
             return false;
         }
-        if (TryBuildUnit(ABILITY_ID::TRAIN_WARPPRISM, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_WARPPRISM)) {
+        if (TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER)) {
             stage_number=230;
             return false;
         }
