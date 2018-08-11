@@ -1972,6 +1972,8 @@ private:
 
 	void FleeWorkers(const Unit * unit);
 
+	void DefendWorkers();
+
 	void ManageUpgrades() {
 		const ObservationInterface* observation = Observation();
 		Units forges = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FORGE));
@@ -2759,7 +2761,7 @@ private:
 
 	Point2D advance_pylon_location;
 
-	std::map<Tag, uint32_t> adept_map;
+	std::unordered_map<Tag, uint32_t> adept_map;
 	Flags flags;
 
 	std::string version;
@@ -2768,7 +2770,7 @@ private:
 	bool ManyEnemyRush;
 	bool PhotonRush;
 	Point2D pylonlocation;
-	Units Killers;
+	std::unordered_set<const Unit*> emergency_killerworkers;
 
 	bool early_strategy;
 	bool warpgate_researched;
