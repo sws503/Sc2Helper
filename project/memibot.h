@@ -73,7 +73,6 @@ public:
 
 		stage_number = 0;
 		iter_exp = expansions_.begin();
-		advance_pylon_location = Point2D((float)game_info_.width / 2, (float)game_info_.height / 2);
 		Enemy_front_expansion = Point3D(0, 0, 0);
 		recent_probe_scout_location = Point2D(0, 0);
 		recent_probe_scout_loop = 0;
@@ -107,7 +106,12 @@ public:
 		adept_map.clear();
 		observer_nexus_match.clear();
 
+		enemyUnitsInRegion.clear();
+		Attackers.clear();
+		AttackersRecruiting.clear();
+
 		try_initialbalance = false;
+		the_pylon = nullptr;
 
 		//Temporary, we can replace this with observation->GetStartLocation() once implemented
 		startLocation_ = Observation()->GetStartLocation();
@@ -169,7 +173,7 @@ public:
 			EarlyStrategy();
 		}
 
-		
+
 
 		scout_all();
 
@@ -311,7 +315,7 @@ public:
     }
 
 	virtual void OnBuildingConstructionComplete(const Unit* u) final override {
-		std::cout << UnitTypeToName(u->unit_type.ToType()) << std::endl;
+		Print(UnitTypeToName(u->unit_type.ToType()));
 		if (u->alliance == Unit::Alliance::Self) {
 			/*switch (u->unit_type.ToType()) {
 			default:
@@ -526,7 +530,8 @@ public:
 	Units Attackers;
 	Units AttackersRecruiting;
 
-	const Unit * the_pylon = nullptr;
+	const Unit * the_pylon;
+	Point2D the_pylon_pos;
 private:
 	void ChatVersion() {
 		Actions()->SendChat(botname + " " + version);
@@ -1294,7 +1299,7 @@ private:
 			return false;
 		}
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost 
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost
 			|| observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
             return false;
 		}
@@ -1329,7 +1334,7 @@ private:
 		if (observation->GetFoodUsed()+observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
 			return false;
 		}
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost 
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost
 			|| observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
             return false;
 		}
@@ -1407,7 +1412,7 @@ private:
 	bool TryBuildUpgrade(AbilityID ability_type_for_unit, UnitTypeID building_type, UpgradeID upgrade_type) {
         const ObservationInterface* observation = Observation();
 
-        if ((uint32_t)observation->GetMinerals() < observation->GetUpgradeData().at(upgrade_type).mineral_cost 
+        if ((uint32_t)observation->GetMinerals() < observation->GetUpgradeData().at(upgrade_type).mineral_cost
 			|| (uint32_t)observation->GetVespene() < observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
             return false;
 		}
@@ -1487,7 +1492,7 @@ private:
 		const ObservationInterface* observation = Observation();
 		Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(unit_type));
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost 
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost
 			|| observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
             return false;
 		}
@@ -2391,6 +2396,55 @@ private:
     }
 
     void initial_location_building(std::string map_name) {
+        switch (map_name.length()) {
+            case 12:
+                switch (map_name[1]) {
+                case 'l'://blackpink
+                    advance_pylon_location = Point2D(59.0f, 16.0f);
+                    Center = Point2D(84.0f, 78.0f);
+                    break;
+                case 'a'://backwater
+                    advance_pylon_location = Point2D(101.0f, 19.0f);
+                    Center = Point2D(85.0f, 74.0f);
+                    break;
+                default:
+                    break;
+                }
+
+            case 21://neon violet square
+                advance_pylon_location = Point2D(117.0f, 40.0f);
+                Center = Point2D(100.0f, 82.0f);
+                break;
+            case 17://lost and found
+                advance_pylon_location = Point2D(62.0f, 33.0f);
+                Center = Point2D(84.0f, 82.0f);
+                break;
+            case 13://interloper
+                advance_pylon_location = Point2D(92.0f, 23.0f);
+                Center = Point2D(76.0f, 84.0f);
+                break;
+            case 18://proxima station
+                advance_pylon_location = Point2D(31.0f, 55.0f);
+                Center = Point2D(100.0f, 84.0f);
+                break;
+            case 26:
+                switch (map_name[0]) {
+                case 'N'://newkirk
+                    advance_pylon_location = Point2D(138.0f, 25.0f);
+                    Center = Point2D(112.0f, 70.0f);
+                    break;
+                case 'B'://belshir
+                    advance_pylon_location = Point2D(122.0f, 54.0f);
+                    Center = Point2D(72.0f, 80.0f);
+                    break;
+                default:
+                    break;
+                }
+
+            default:
+                return;
+            }
+
         if (branch==6) {
             switch (map_name.length()) {
             case 12:
@@ -2408,7 +2462,6 @@ private:
                     Batt4 = Point2D(61.0f, 20.0f);
                     Batt5 = Point2D(59.0f, 18.0f);
                     Pylon4 = Point2D(149.0f, 121.0f);
-                    Center = Point2D(84.0f, 78.0f);
                     return;
                 case 'a'://backwater
                     Pylon1 = Point2D(21.0f, 111.0f);
@@ -2423,7 +2476,6 @@ private:
                     Batt4 = Point2D(99.0f, 18.0f);
                     Batt5 = Point2D(101.0f, 17.0f);
                     Pylon4 = Point2D(19.0f, 113.0f);
-                    Center = Point2D(85.0f, 74.0f);
                     return;
 
                 default:
@@ -2443,7 +2495,6 @@ private:
                 Batt4 = Point2D(116.0f, 42.0f);
                 Batt5 = Point2D(120.0f, 38.0f);
                 Pylon4 = Point2D(55.0f, 133.0f);
-                Center = Point2D(100.0f, 82.0f);
                 return;
             case 17://lost and found
                 Pylon1 = Point2D(133.0f, 121.0f);
@@ -2458,7 +2509,6 @@ private:
                 Batt4 = Point2D(66.0f, 32.0f);
                 Batt5 = Point2D(65.0f, 30.0f);
                 Pylon4 = Point2D(131.0f, 123.0f);
-                Center = Point2D(84.0f, 82.0f);
                 return;
             case 13://interloper
                 Pylon1 = Point2D(37.0f, 125.0f);
@@ -2473,7 +2523,6 @@ private:
                 Batt4 = Point2D(95.0f, 26.0f);
                 Batt5 = Point2D(92.0f, 27.0f);
                 Pylon4 = Point2D(39.0f, 127.0f);
-                Center = Point2D(76.0f, 84.0f);
                 return;
             case 18://proxima station
                 Pylon1 = Point2D(149.0f, 120.0f);
@@ -2488,7 +2537,6 @@ private:
                 Batt4 = Point2D(34.0f, 53.0f);
                 Batt5 = Point2D(33.0f, 55.0f);
                 Pylon4 = Point2D(32.0f, 51.0f);
-                Center = Point2D(100.0f, 84.0f);
                 return;
             case 26:
                 switch (map_name[0]) {
@@ -2505,7 +2553,6 @@ private:
                     Batt4 = Point2D(136.0f, 25.0f);
                     Batt5 = Point2D(138.0f, 27.0f);
                     Pylon4 = Point2D(57.0f, 41.0f);
-                    Center = Point2D(112.0f, 70.0f);
                     return;
 
                 case 'B'://belshir
@@ -2521,7 +2568,6 @@ private:
                     Batt4 = Point2D(123.0f, 52.0f);
                     Batt5 = Point2D(121.0f, 52.0f);
                     Pylon4 = Point2D(41.0f, 135.0f);
-                    Center = Point2D(72.0f, 80.0f);
                     return;
 
                 default:
@@ -2545,7 +2591,7 @@ private:
                     Batt1 = Point2D(135.0f, 107.0f);
                     Batt2 = Point2D(137.0f, 105.0f);
                     Pylon3 = Point2D(137.0f, 107.0f);
-                    Center = Point2D(84.0f, 78.0f);
+					the_pylon_pos = Pylon2;
                     return;
                 case 'a'://backwater
                     Pylon1 = Point2D(38.0f, 96.0f);
@@ -2556,8 +2602,7 @@ private:
                     Batt1 = Point2D(36.0f, 97.0f);
                     Batt2 = Point2D(36.0f, 95.0f);
                     Pylon3 = Point2D(34.0f, 96.0f);
-
-                    Center = Point2D(85.0f, 74.0f);
+					the_pylon_pos = Pylon2;
                     return;
 
                 default:
@@ -2574,9 +2619,7 @@ private:
                 Batt2 = Point2D(47.0f, 113.0f);
                 Pylon3 = Point2D(42.0f, 106.0f);
                 Batt3 = Point2D(44.0f, 109.0f);
-
-                Center = Point2D(100.0f, 82.0f);
-
+				the_pylon_pos = Pylon2;
                 return;
             case 17://lost and found
                 Pylon1 = Point2D(136.0f, 101.0f);
@@ -2587,8 +2630,7 @@ private:
                 Batt1 = Point2D(136.0f, 103.0f);
                 Batt2 = Point2D(138.0f, 101.0f);
                 Pylon3 = Point2D(138.0f, 103.0f);
-
-                Center = Point2D(84.0f, 82.0f);
+				the_pylon_pos = Pylon2;
                 return;
             case 13://interloper
                 Pylon1 = Point2D(36.0f, 111.0f);
@@ -2599,8 +2641,7 @@ private:
                 Batt1 = Point2D(34.0f, 109.0f);
                 Batt2 = Point2D(34.0f, 113.0f);
                 Pylon3 = Point2D(34.0f, 111.0f);
-
-                Center = Point2D(76.0f, 84.0f);
+				the_pylon_pos = Pylon2;
                 return;
             case 18://proxima station
                 Pylon1 = Point2D(144.0f, 101.0f);
@@ -2611,8 +2652,7 @@ private:
                 Batt1 = Point2D(146.0f, 101.0f);
                 Batt2 = Point2D(143.0f, 103.0f);
                 Pylon3 = Point2D(145.0f, 103.0f);
-
-                Center = Point2D(100.0f, 84.0f);
+				the_pylon_pos = Pylon2;
                 return;
             case 26:
                 switch (map_name[0]) {
@@ -2627,8 +2667,7 @@ private:
                     Pylon3 = Point2D(47.0f, 62.0f);
                     Batt3 = Point2D(46.0f, 58.0f);
                     Pylon4 = Point2D(49.0f, 53.0f);
-
-                    Center = Point2D(112.0f, 70.0f);
+					the_pylon_pos = Pylon3;				//뉴커크일때만 pylon3을 깨야함
                     return;
 
                 case 'B'://belshir
@@ -2640,9 +2679,7 @@ private:
                     Batt1 = Point2D(66.0f, 133.0f);
                     Batt2 = Point2D(64.0f, 131.0f);
                     Pylon3 = Point2D(64.0f, 133.0f);
-
-                    Center = Point2D(72.0f, 80.0f);
-
+					the_pylon_pos = Pylon2;
                     return;
 
                 default:
@@ -2671,6 +2708,7 @@ private:
                 Batt4.y = Center.y*2-Batt4.y;
                 Batt5.y = Center.y*2-Batt5.y;
                 Pylon4.y = Center.y*2-Pylon4.y;
+                advance_pylon_location.y = Center.y*2-advance_pylon_location.y;
                 return;
             }
             //x같고 y위
@@ -2695,6 +2733,7 @@ private:
                 Batt4.x = Center.x*2-Batt4.x;
                 Batt5.x = Center.x*2-Batt5.x;
                 Pylon4.x = Center.x*2-Pylon4.x;
+                advance_pylon_location.x = Center.x*2-advance_pylon_location.x;
 
                 Pylon1.y = Center.y*2-Pylon1.y;
                 Gate1.y = Center.y*2-Gate1.y;
@@ -2708,6 +2747,7 @@ private:
                 Batt4.y = Center.y*2-Batt4.y;
                 Batt5.y = Center.y*2-Batt5.y;
                 Pylon4.y = Center.y*2-Pylon4.y;
+                advance_pylon_location.y = Center.y*2-advance_pylon_location.y;
                 return;
             }
             else {
@@ -2724,6 +2764,7 @@ private:
                 Batt4.x = Center.x*2-Batt4.x;
                 Batt5.x = Center.x*2-Batt5.x;
                 Pylon4.x = Center.x*2-Pylon4.x;
+                advance_pylon_location.x = Center.x*2-advance_pylon_location.x;
                 return;
                 }
             }
