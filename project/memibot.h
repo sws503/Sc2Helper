@@ -64,7 +64,7 @@ public:
                 branch = 5;
             }
 		}
-        branch = 6;
+        branch = 5;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
@@ -1988,12 +1988,9 @@ private:
             if (forges.size() ==0) {
                 return;
             }
-            if (TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1)) {
-                return;
-            }
-            if (TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL1)) {
-                return;
-            }
+            TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1);
+            TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL1);
+
             for (const auto& upgrade : upgrades) {
                 if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1) {
                     TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2);
@@ -2443,7 +2440,52 @@ private:
                 break;
         }
 
-        if (branch==6) {
+        if (branch==0 || branch==1 || branch==5) {
+            switch (map_name.length()) {
+            case 12:
+                switch (map_name[1]) {
+                case 'l'://blackpink
+                    Pylon1 = Point2D(135.0f, 105.0f);
+                    return;
+                case 'a'://backwater
+                    Pylon1 = Point2D(38.0f, 96.0f);
+                    return;
+
+                default:
+                    return;
+                }
+
+            case 21://neon violet square
+                Pylon1 = Point2D(46.0f, 109.0f);
+                return;
+            case 17://lost and found
+                Pylon1 = Point2D(136.0f, 101.0f);
+                return;
+            case 13://interloper
+                Pylon1 = Point2D(37.0f, 111.0f);
+                return;
+            case 18://proxima station
+                Pylon1 = Point2D(144.0f, 101.0f);
+                return;
+            case 26:
+                switch (map_name[0]) {
+                case 'N'://newkirk
+                    Pylon1 = Point2D(51.0f, 56.0f);			//뉴커크일때만 pylon3을 깨야함
+                    return;
+
+                case 'B'://belshir
+                    Pylon1 = Point2D(65.0f, 129.0f);
+                    return;
+
+                default:
+                    return;
+                }
+
+            default:
+                return;
+            }
+        }
+        else if (branch==6) {
             switch (map_name.length()) {
             case 12:
                 switch (map_name[1]) {
