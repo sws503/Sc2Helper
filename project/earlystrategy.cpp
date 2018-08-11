@@ -394,33 +394,7 @@ bool MEMIBot::EarlyStrategy() {
             return false;
         }
         stage_number=20;
-        return false;/*
-        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT)) {
-            stage_number=318;
-            return false;
-        }
         return false;
-    case 318:
-        stage_number=19;
-        return false;
-    case 19:
-        if (TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT)) {
-            stage_number=20;
-            return false;
-        }
-        return false;*/
-
-
-        /*for (const auto& gate : gateways) {
-            if (gate->orders.empty()){
-                return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
-            }
-            if (gate->orders.front().progress>0.4f) {
-                return false;
-            }
-        }
-        stage_number=20;
-        return false;*/
     case 20:
 		if (gateway_count>2) {
 			stage_number=21;
@@ -453,9 +427,9 @@ bool MEMIBot::EarlyStrategy() {
             if (gate->orders.front().ability_id != ABILITY_ID::TRAIN_ADEPT) {
                 return false;
             }
-            if (gate->orders.front().progress>0.5f) {
-                return false;
-            }
+        }
+        if (num_adept<4) {
+            return false;
         }
         stage_number=26;
         return false;/*
