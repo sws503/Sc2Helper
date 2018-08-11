@@ -536,7 +536,7 @@ public:
 	Units AttackersRecruiting;
 
 	const Unit * the_pylon;
-	Point2D the_pylon_pos;
+	Point2D* the_pylon_pos;
 private:
 	void ChatVersion() {
 		Actions()->SendChat(botname + " " + version);
@@ -1796,7 +1796,8 @@ private:
 		if (pylon == nullptr) return false;
 		if (!pylon->is_alive) return false;
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost 
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
             return false;
 		}
 
@@ -1820,7 +1821,8 @@ private:
 	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID building_type) {
 		const ObservationInterface* observation = Observation();
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost 
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
             return false;
 		}
 
@@ -1834,14 +1836,19 @@ private:
 		if (advance_pylon !=nullptr && Distance2D(random_power_source.position,advance_pylon->pos)<10) {
             return false;
 		}
-		if (observation->GetUnit(random_power_source.tag) != nullptr) {
-			if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISM) {
+		if (observation->GetUnit(random_power_source.tag) == nullptr) {
+			return false;
+		}
+		if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISM) {
+			return false;
+		}
+		// do not build near the_pylon
+		if (branch == 7 && the_pylon_pos != nullptr && *the_pylon_pos == random_power_source.position) {
+			if (observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON)).size() >= 2) {
 				return false;
 			}
 		}
-		else {
-			return false;
-		}
+
 		float radius = random_power_source.radius;
 		float rx = GetRandomScalar();
 		float ry = GetRandomScalar();
@@ -2201,7 +2208,8 @@ private:
 		if (observation->GetFoodUsed() + observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
 			return false;
 		}
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost 
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
 			return false;
 		}
         if (observation->GetFoodUsed() >= observation->GetFoodCap()) {
@@ -2680,7 +2688,7 @@ private:
                     Batt1 = Point2D(135.0f, 107.0f);
                     Batt2 = Point2D(137.0f, 105.0f);
                     Pylon3 = Point2D(137.0f, 107.0f);
-					the_pylon_pos = Pylon2;
+					the_pylon_pos = &Pylon2;
                     return;
                 case 'a'://backwater
                     Pylon1 = Point2D(38.0f, 96.0f);
@@ -2691,7 +2699,7 @@ private:
                     Batt1 = Point2D(36.0f, 97.0f);
                     Batt2 = Point2D(36.0f, 95.0f);
                     Pylon3 = Point2D(34.0f, 96.0f);
-					the_pylon_pos = Pylon2;
+					the_pylon_pos = &Pylon2;
                     return;
 
                 default:
@@ -2708,7 +2716,7 @@ private:
                 Batt2 = Point2D(47.0f, 113.0f);
                 Pylon3 = Point2D(42.0f, 106.0f);
                 Batt3 = Point2D(44.0f, 109.0f);
-				the_pylon_pos = Pylon2;
+				the_pylon_pos = &Pylon2;
                 return;
             case 17://lost and found
                 Pylon1 = Point2D(136.0f, 101.0f);
@@ -2719,7 +2727,7 @@ private:
                 Batt1 = Point2D(136.0f, 103.0f);
                 Batt2 = Point2D(138.0f, 101.0f);
                 Pylon3 = Point2D(138.0f, 103.0f);
-				the_pylon_pos = Pylon2;
+				the_pylon_pos = &Pylon2;
                 return;
             case 13://interloper
                 Pylon1 = Point2D(37.0f, 111.0f);
@@ -2730,7 +2738,7 @@ private:
                 Batt1 = Point2D(35.0f, 109.0f);
                 Batt2 = Point2D(35.0f, 113.0f);
                 Pylon3 = Point2D(35.0f, 111.0f);
-				the_pylon_pos = Pylon2;
+				the_pylon_pos = &Pylon2;
                 return;
             case 18://proxima station
                 Pylon1 = Point2D(144.0f, 101.0f);
@@ -2741,7 +2749,7 @@ private:
                 Batt1 = Point2D(146.0f, 101.0f);
                 Batt2 = Point2D(143.0f, 103.0f);
                 Pylon3 = Point2D(145.0f, 103.0f);
-				the_pylon_pos = Pylon2;
+				the_pylon_pos = &Pylon2;
                 return;
             case 26:
                 switch (map_name[0]) {
@@ -2756,7 +2764,7 @@ private:
                     Pylon3 = Point2D(47.0f, 62.0f);
                     Batt3 = Point2D(46.0f, 58.0f);
                     Pylon4 = Point2D(49.0f, 53.0f);
-					the_pylon_pos = Pylon3;				//뉴커크일때만 pylon3을 깨야함
+					the_pylon_pos = &Pylon3;				//뉴커크일때만 pylon3을 깨야함
                     return;
 
                 case 'B'://belshir
@@ -2768,7 +2776,7 @@ private:
                     Batt1 = Point2D(63.0f, 129.0f);
                     Batt2 = Point2D(65.0f, 131.0f);
                     Pylon3 = Point2D(63.0f, 131.0f);
-					the_pylon_pos = Pylon2;
+					the_pylon_pos = &Pylon2;
                     return;
 
                 default:
