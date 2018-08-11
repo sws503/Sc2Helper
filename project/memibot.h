@@ -94,13 +94,16 @@ public:
 		find_enemy_location = false;
 		work_probe_forward = true;
 
+		shield3 = false;
 		num_zealot = 0;
 		num_adept = 0;
 		num_stalker = 0;
 		num_warpprism = 0;
 		num_colossus = 0;
-		num_immortal = 0;
+		try_colossus = 0;
+		try_immortal = 0;
 		num_carrier = 0;
+		num_expand = 3;
 
 		last_map_renewal = 0;
 		resources_to_nearest_base.clear();
@@ -264,7 +267,7 @@ public:
 			switch (upgrade.ToType()) {
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
 				std::cout << "attack1";
-				timing_attack = true;
+				//timing_attack = true;
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2: {
@@ -291,6 +294,19 @@ public:
 				std::cout << "attack3";
 				timing_attack = true;
 				return;
+			}
+			case UPGRADE_ID::PROTOSSSHIELDSLEVEL1: {
+			    num_expand=4;
+                return;
+			}
+			case UPGRADE_ID::PROTOSSSHIELDSLEVEL2: {
+                num_expand=5;
+                return;
+			}
+			case UPGRADE_ID::PROTOSSSHIELDSLEVEL3: {
+                num_expand=6;
+                shield3 = true;
+                return;
 			}
 			default:
 				break;
@@ -344,9 +360,10 @@ public:
             break;
 		case UNIT_TYPEID::PROTOSS_COLOSSUS:
 			num_colossus++;
+			try_colossus++;
 			break;
 		case UNIT_TYPEID::PROTOSS_IMMORTAL:
-			num_immortal++;
+			try_immortal++;
 			break;
 		case UNIT_TYPEID::PROTOSS_CARRIER:
 			num_carrier++;
@@ -999,7 +1016,7 @@ private:
 
 	bool RetreatPrism(const Unit* unit, Point2D retreat_position) {
 		bool moving = false;
-		
+
 		float dist = Distance2D(unit->pos, retreat_position);
 
 		if (dist >= 10) // 멀리있으면
@@ -1861,7 +1878,7 @@ private:
 		if (pylon == nullptr) return false;
 		if (!pylon->is_alive) return false;
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost 
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost
 			|| observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
             return false;
 		}
@@ -1886,7 +1903,7 @@ private:
 	bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID building_type) {
 		const ObservationInterface* observation = Observation();
 
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost 
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost
 			|| observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
             return false;
 		}
@@ -2273,7 +2290,7 @@ private:
 		if (observation->GetFoodUsed() + observation->GetUnitTypeData().at(unit_type).food_required > observation->GetFoodCap()) {
 			return false;
 		}
-		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost 
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(unit_type).mineral_cost
 			|| observation->GetVespene() < observation->GetUnitTypeData().at(unit_type).vespene_cost) {
 			return false;
 		}
@@ -2385,6 +2402,9 @@ private:
                 if (r->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
                     robotics_observer++;
                 }
+                if (shield3) {
+                    TryChronoboost(r);
+                }
             }
         }
 
@@ -2398,7 +2418,7 @@ private:
             return TryBuildUnit(ABILITY_ID::TRAIN_WARPPRISM, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_WARPPRISM);
         }
         else {
-            if (num_colossus>=num_immortal-1 || roboticsbay.empty()) {
+            if (try_colossus>=try_immortal-1 || roboticsbay.empty()) {
                 return TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
             }
             if (roboticsbay.front()->build_progress<1.0f) {
@@ -2989,12 +3009,13 @@ private:
 	uint16_t num_stalker;
 	uint16_t num_warpprism;
 	uint16_t num_colossus;
-	uint16_t num_immortal;
+	uint16_t try_colossus;
+	uint16_t try_immortal;
 	uint16_t num_carrier;
+	uint16_t num_expand;
 
 	bool try_initialbalance;
-
-	uint16_t try_adept,try_stalker;
+	bool shield3;
 
 	Point2D Pylon1, Pylon2, Pylon3, Pylon4, Gate1, Core1, Star1, Batt1, Batt2, Batt3, Batt4, Batt5, Center;
 

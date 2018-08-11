@@ -124,11 +124,14 @@ bool MEMIBot::EarlyStrategy() {
         if (stage_number>218) {
             TryBuildPylonIfNeeded(2);
         }
-        if (stage_number>230) {
+        if (stage_number>232) {
             if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() || bases.size()<3) {
-                bool expand = 1;
-                if (bases.size()>2 && !timing_attack) {
+                bool expand = true;
+                if (bases.size()>=num_expand) {
                     expand = false;
+                }
+                if (num_expand==6) {
+                    expand = true;
                 }
                 for (const auto& b :bases) {
                     if (b->build_progress < 1.0f) {
@@ -140,17 +143,8 @@ bool MEMIBot::EarlyStrategy() {
                 }
             }
 
-            if (robotics_bay_count == 0 && num_warpprism>0) {
-                return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSBAY, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
-            }
-            else if (robotics_bay_count>0 && num_warpprism>0 && robotics_facility_count<2) {
-                return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
-            }
-
-
-
             TryBuildCannonNexus();
-            if (bases.size()*2>assimilator_count) {
+            if (bases.size()*2>assimilator_count+1) {
                 TryBuildAssimilator();
             }
 
@@ -834,6 +828,20 @@ bool MEMIBot::EarlyStrategy() {
 			return false;
 		}
 		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
+    case 231:
+        if (robotics_bay_count>=1) {
+            stage_number=232;
+            return false;
+        }
+        return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSBAY, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
+    case 232:
+        if (robotics_facility_count>=2) {
+            stage_number=233;
+            return false;
+        }
+        return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+
+
 
     case 601:
 		if (pylons.size()>0) {
