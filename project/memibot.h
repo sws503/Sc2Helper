@@ -95,8 +95,10 @@ public:
 		num_stalker = 0;
 		num_warpprism = 0;
 		num_colossus = 0;
-		num_immortal = 0;
+		try_colossus = 0;
+		try_immortal = 0;
 		num_carrier = 0;
+		num_expand = 0;
 
 		last_map_renewal = 0;
 		resources_to_nearest_base.clear();
@@ -263,7 +265,7 @@ public:
 			switch (upgrade.ToType()) {
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
 				std::cout << "attack1";
-				timing_attack = true;
+				//timing_attack = true;
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2: {
@@ -347,9 +349,10 @@ public:
             break;
 		case UNIT_TYPEID::PROTOSS_COLOSSUS:
 			num_colossus++;
+			try_colossus++;
 			break;
 		case UNIT_TYPEID::PROTOSS_IMMORTAL:
-			num_immortal++;
+			try_immortal++;
 			break;
 		case UNIT_TYPEID::PROTOSS_CARRIER:
 			num_carrier++;
@@ -2373,32 +2376,21 @@ private:
         }
 
         if (robotics_empty==0) {
-            std::cout<<"추적자"<<std::endl;
             return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
         }
         else if (observers.size()+robotics_observer<3) {
-            std::cout<<"옵저버"<<std::endl;
             return TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
         }
         else if (num_warpprism==0) {
-
-            std::cout<<"분광기"<<std::endl;
             return TryBuildUnit(ABILITY_ID::TRAIN_WARPPRISM, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_WARPPRISM);
         }
         else {
-            //std::cout<<"거신"<<num_colossus<<"불멸자"<<num_immortal<<std::endl;
-            if (num_colossus>=num_immortal-1 || roboticsbay.empty()) {
-
-                std::cout<<"불멸자1"<<std::endl;
+            if (try_colossus>=try_immortal-1 || roboticsbay.empty()) {
                 return TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
             }
             if (roboticsbay.front()->build_progress<1.0f) {
-
-                std::cout<<"불멸자2"<<std::endl;
                 return TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
             }
-
-            std::cout<<"거신"<<std::endl;
             return TryBuildUnit(ABILITY_ID::TRAIN_COLOSSUS, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_COLOSSUS);
         }
     }
@@ -2983,8 +2975,10 @@ private:
 	uint16_t num_stalker;
 	uint16_t num_warpprism;
 	uint16_t num_colossus;
-	uint16_t num_immortal;
+	uint16_t try_colossus;
+	uint16_t try_immortal;
 	uint16_t num_carrier;
+	uint16_t num_expand;
 
 	bool try_initialbalance;
 	bool shield3;
