@@ -712,18 +712,7 @@ void MEMIBot::ManageRush() {
 			{
 				if (725 == stage_number && !EnemyRush)
 				{
-					if (the_pylon != nullptr)
-					{
-
-					}
-					if (game_info_.map_name == "Newkirk Precinct TE(Void)")
-					{
-						the_pylon = FindNearestUnit(Pylon3, IsPylon());
-					}
-					else
-					{
-						the_pylon = FindNearestUnit(Pylon2, IsPylon());
-					}
+					the_pylon = FindNearestUnit(the_pylon_pos, IsPylon(), 1);
 					//뉴커크일때만 pylon3을 깨야함
 					SmartAttackUnit(unit, the_pylon);
 				}

@@ -105,10 +105,12 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 	}
 
 	float min_distance = std::numeric_limits<float>::max();
-	const Unit* target_resource = nullptr;
 
 	// Search for a base that is missing mineral workers.
 	if (has_space_for_half_mineral && !EnemyRush) {
+		const Unit* target_resource = nullptr;
+		const Unit* target_base = nullptr;
+
 		for (const auto& mineral : minerals) {
 			Tag b = resources_to_nearest_base.count(mineral->tag) ? resources_to_nearest_base.at(mineral->tag) : NullTag;
 			if (b == NullTag) continue;
@@ -119,17 +121,26 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 			if (current_distance < min_distance) {
 				min_distance = current_distance;
 				target_resource = mineral;
+				target_base = base;
+			}
+		}
+
+		if (target_resource != nullptr && target_base != nullptr) {
+			float d = Query()->PathingDistance(worker, (target_resource->pos + target_base->pos)/2 );
+			if (d > 0.01f) {
+				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
+				return;
 			}
 		}
 	}
 
-	if (target_resource != nullptr) {
-		Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
-		return;
-	}
+	
 
 	// Search for a base that does not have full of gas workers.
 	if (has_space_for_gas && !EnemyRush) {
+		const Unit* target_resource = nullptr;
+		const Unit* target_base = nullptr;
+
 		for (const auto& geyser : geysers) {
 			if (geyser->assigned_harvesters >= geyser->ideal_harvesters) continue;
 			Tag b = resources_to_nearest_base.count(geyser->tag) ? resources_to_nearest_base.at(geyser->tag) : NullTag;
@@ -140,17 +151,24 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 			if (current_distance < min_distance) {
 				min_distance = current_distance;
 				target_resource = geyser;
+				target_base = base;
+			}
+		}
+
+		if (target_resource != nullptr && target_base != nullptr) {
+			float d = Query()->PathingDistance(worker, (target_resource->pos + target_base->pos) / 2);
+			if (d > 0.01f) {
+				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
+				return;
 			}
 		}
 	}
 
-	if (target_resource != nullptr) {
-		Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
-		return;
-	}
-
 	// Search for a base that does not have full of mineral workers.
 	if (has_space_for_mineral && !EnemyRush) {
+		const Unit* target_resource = nullptr;
+		const Unit* target_base = nullptr;
+
 		for (const auto& mineral : minerals) {
 			Tag b = resources_to_nearest_base.count(mineral->tag) ? resources_to_nearest_base.at(mineral->tag) : NullTag;
 			if (b == NullTag) continue;
@@ -161,13 +179,17 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 			if (current_distance < min_distance) {
 				min_distance = current_distance;
 				target_resource = mineral;
+				target_base = base;
 			}
 		}
-	}
 
-	if (target_resource != nullptr) {
-		Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
-		return;
+		if (target_resource != nullptr && target_base != nullptr) {
+			float d = Query()->PathingDistance(worker, (target_resource->pos + target_base->pos) / 2);
+			if (d > 0.01f) {
+				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
+				return;
+			}
+		}
 	}
 
 	if (!worker->orders.empty()) {

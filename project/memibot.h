@@ -106,7 +106,12 @@ public:
 		adept_map.clear();
 		observer_nexus_match.clear();
 
+		enemyUnitsInRegion.clear();
+		Attackers.clear();
+		AttackersRecruiting.clear();
+
 		try_initialbalance = false;
+		the_pylon = nullptr;
 
 		//Temporary, we can replace this with observation->GetStartLocation() once implemented
 		startLocation_ = Observation()->GetStartLocation();
@@ -304,7 +309,7 @@ public:
     }
 
 	virtual void OnBuildingConstructionComplete(const Unit* u) final override {
-		std::cout << UnitTypeToName(u->unit_type.ToType()) << std::endl;
+		Print(UnitTypeToName(u->unit_type.ToType()));
 		if (u->alliance == Unit::Alliance::Self) {
 			/*switch (u->unit_type.ToType()) {
 			default:
@@ -541,7 +546,8 @@ public:
 	Units Attackers;
 	Units AttackersRecruiting;
 
-	const Unit * the_pylon = nullptr;
+	const Unit * the_pylon;
+	Point2D the_pylon_pos;
 private:
 	void ChatVersion() {
 		Actions()->SendChat(botname + " " + version);
@@ -2557,7 +2563,9 @@ private:
                     Batt1 = Point2D(135.0f, 107.0f);
                     Batt2 = Point2D(137.0f, 105.0f);
                     Pylon3 = Point2D(137.0f, 107.0f);
+
                     Center = Point2D(84.0f, 78.0f);
+					the_pylon_pos = Pylon2;
                     return;
                 case 'a'://backwater
                     Pylon1 = Point2D(38.0f, 96.0f);
@@ -2570,6 +2578,7 @@ private:
                     Pylon3 = Point2D(34.0f, 96.0f);
 
                     Center = Point2D(85.0f, 74.0f);
+					the_pylon_pos = Pylon2;
                     return;
 
                 default:
@@ -2588,7 +2597,7 @@ private:
                 Batt3 = Point2D(44.0f, 109.0f);
 
                 Center = Point2D(100.0f, 82.0f);
-
+				the_pylon_pos = Pylon2;
                 return;
             case 17://lost and found
                 Pylon1 = Point2D(136.0f, 101.0f);
@@ -2601,6 +2610,7 @@ private:
                 Pylon3 = Point2D(138.0f, 103.0f);
 
                 Center = Point2D(84.0f, 82.0f);
+				the_pylon_pos = Pylon2;
                 return;
             case 13://interloper
                 Pylon1 = Point2D(36.0f, 111.0f);
@@ -2613,6 +2623,7 @@ private:
                 Pylon3 = Point2D(34.0f, 111.0f);
 
                 Center = Point2D(76.0f, 84.0f);
+				the_pylon_pos = Pylon2;
                 return;
             case 18://proxima station
                 Pylon1 = Point2D(144.0f, 101.0f);
@@ -2625,6 +2636,7 @@ private:
                 Pylon3 = Point2D(145.0f, 103.0f);
 
                 Center = Point2D(100.0f, 84.0f);
+				the_pylon_pos = Pylon2;
                 return;
             case 26:
                 switch (map_name[0]) {
@@ -2641,6 +2653,7 @@ private:
                     Pylon4 = Point2D(49.0f, 53.0f);
 
                     Center = Point2D(112.0f, 70.0f);
+					the_pylon_pos = Pylon3;				//뉴커크일때만 pylon3을 깨야함
                     return;
 
                 case 'B'://belshir
@@ -2654,7 +2667,7 @@ private:
                     Pylon3 = Point2D(64.0f, 133.0f);
 
                     Center = Point2D(72.0f, 80.0f);
-
+					the_pylon_pos = Pylon2;
                     return;
 
                 default:
