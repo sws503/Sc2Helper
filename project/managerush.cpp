@@ -837,6 +837,8 @@ void MEMIBot::ManageRush() {
 
 			Units NearbyAirAttackers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, AirAttacker());
 			Units NearbyWorkers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, IsWorker());
+			
+			
 
 			const Unit * Workertarget = GetOracleTarget(unit, NearbyWorkers);
 			const Unit * Armytarget = GetTarget(unit, NearbyAirAttackers);
@@ -860,7 +862,13 @@ void MEMIBot::ManageRush() {
 				Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);
 			}
 
+			Units ArmiesNearStar1 = FindUnitsNear(Star1, 10, Unit::Alliance::Enemy, IsArmy(Observation()));
+
 			if (EvadeEffect(unit)) {}
+			else if (ArmiesNearStar1.size() > 0)
+			{
+				OracleKiting(unit, Workertarget);
+			}
 			else if (!CanHitMe(unit)) //적 공중공격 유닛이 없을 경우
 			{
 				if (Workertarget != nullptr) // 일꾼이 있으면

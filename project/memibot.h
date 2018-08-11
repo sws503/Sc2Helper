@@ -64,6 +64,8 @@ public:
                 branch = 5;
             }
 		}
+        branch = 6;
+
 		//branch 6 or 7은 이 전에 fix 되어야함
 		if (branch == 6 || branch == 7) {
             initial_location_building(game_info_.map_name);
@@ -914,7 +916,8 @@ private:
 			}
 			else if (!enemy_units.empty()) // 적 유닛이 있는 상황이면 또는 이 유닛이 적 기지 근처에 없는상황이면
 			{
-				SmartAttackUnit(unit, enemy_units.front());
+				const Unit * closest_enemy = FindNearestUnit(unit->pos, enemy_units);
+				SmartAttackUnit(unit, closest_enemy);
 				return;
 			}
 			// TODO : 가장 마지막으로 본 적의 위치를 target_pos 로 리턴하는 함수를 만들자
