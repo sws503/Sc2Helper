@@ -67,9 +67,7 @@ public:
         branch = 6;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
-		if (branch == 6 || branch == 7) {
-            initial_location_building(game_info_.map_name);
-		}
+		initial_location_building(game_info_.map_name);
 
 		stage_number = 0;
 		iter_exp = expansions_.begin();
@@ -2442,8 +2440,8 @@ private:
                 }
 
             default:
-                return;
-            }
+                break;
+        }
 
         if (branch==6) {
             switch (map_name.length()) {

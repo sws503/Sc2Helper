@@ -115,10 +115,10 @@ void MEMIBot::Defend() {
 			//const Unit * fighter = FindNearestUnit(enemyunit->pos, Workers);
 			//SmartAttackUnit(fighter, enemyunit);
 		}
-		
-		
+
+
 	}*/
-	
+
 	// todo: 빨려들어간다~~
 	// todo: 포톤캐논, 해처리
 	// todo: 죽은 애들 빼주기
@@ -133,20 +133,20 @@ void MEMIBot::Defend() {
 				Killers.push_back(worker);
 			}
 		}
-		std::cout << enemyUnitsInRegion.size() << "만큼 상대하기 위해 " << Killers.size() << "를 소집했습니다." << std::endl;
+		//std::cout << enemyUnitsInRegion.size() << "만큼 상대하기 위해 " << Killers.size() << "를 소집했습니다." << std::endl;
 		for (auto& it = Killers.begin(); it != Killers.end();)
 		{
 			const Unit* killer = *it;
 			if (Distance2D(killer->pos, startLocation_) > 10 || !killer->is_alive)
 			{
-				std::cout << " 방금 소집된 일꾼 하나를 소집해제했습니다. " << std::endl;
+				//std::cout << " 방금 소집된 일꾼 하나를 소집해제했습니다. " << std::endl;
 				it = Killers.erase(it);
 				Actions()->UnitCommand(killer, ABILITY_ID::STOP);
 				continue;
 			}
 			else
 			{
-				std::cout << " 공격명령을 내리고 다른 killer로 넘어가겠습니다. " << std::endl;
+				//std::cout << " 공격명령을 내리고 다른 killer로 넘어가겠습니다. " << std::endl;
 				const Unit* target = GetTarget(killer, enemyUnitsInRegion);
 				SmartAttackUnit(killer, target);
 				it++;
@@ -155,7 +155,7 @@ void MEMIBot::Defend() {
 	}
 	else
 	{
-		std::cout << " 아군병력이 나왔으니 이제 일꾼은 그만싸우겠습니다. " << std::endl;
+		//std::cout << " 아군병력이 나왔으니 이제 일꾼은 그만싸우겠습니다. " << std::endl;
 		Killers.clear();
 	}
 
@@ -178,7 +178,7 @@ void MEMIBot::Defend() {
 
 			Units defenders = observation->GetUnits(Unit::Alliance::Self, IsNearbyArmies(observation, base->pos, 35));
 
-			
+
 			for (const auto & defender : defenders)
 			{
 				const Unit* target = GetTarget(defender, enemyUnitsInRegion);
