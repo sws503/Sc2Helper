@@ -404,12 +404,82 @@ void MEMIBot::FleeWorkers(const Unit* unit) {
 	if (unit == nullptr) return;
 	if (!ManyEnemyRush) return;
 	const ObservationInterface* observation = Observation();
+	Units workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
 
-	Units nearworkers = FindUnitsNear(unit, 10, Unit::Alliance::Self, IsWorker());
+	Units nearworkers(workers.size());
+	for (const auto& worker : workers) {
+		// consider near workers (distance < 10)
+		if (DistanceSquared2D(unit->pos, worker->pos) > 100) continue;
+		// do not consider killerworkers
+		if (emergency_killerworkers.count(worker)) continue;
+
+		nearworkers.push_back(worker);
+	}
 	const Unit* b = FindSecondNearestUnit(unit->pos, Unit::Alliance::Self, IsTownHall());
 	if (b == nullptr) return;
 	const Unit* m = FindNearestMineralPatch(b->pos);
-
+	
 	Actions()->UnitCommand(nearworkers, ABILITY_ID::SMART);
 	return;
+}
+
+// todo: 포톤캐논, 해처리
+// todo: fleeworkers와 충돌
+void MEMIBot::DefendWorkers() {
+	const ObservationInterface* observation = Observation();
+	Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
+	Units workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
+	Units my_armies = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
+
+	size_t workers_size = workers.size();
+
+	// push
+	if (flags.status("defend_workers"))
+	{
+		// remove dead
+		for (auto& it = emergency_killerworkers.begin(); it != emergency_killerworkers.end();)
+		{
+			const Unit* killerworker = *it;
+			if (!killerworker->is_alive)
+			{
+				it = emergency_killerworkers.erase(it);
+			}
+			else {
+				++it;
+			}
+		}
+
+		// push alive
+		for (const auto& worker : workers) {
+			if (emergency_killerworkers.count(worker)) continue;
+			const Unit* target = GetTarget(worker, enemyUnitsInRegion);
+			if (target == nullptr) continue;
+			if (emergency_killerworkers.size() <= enemyUnitsInRegion.size() + 1)
+			{
+				emergency_killerworkers.insert(worker);
+			}
+		}
+		// attack
+		for (const auto& killerworker : emergency_killerworkers)
+		{
+			{
+				const Unit* target = GetTarget(killerworker, enemyUnitsInRegion);
+				SmartAttackUnit(killerworker, target);
+			}
+		}
+	}
+	// pop
+	else
+	{
+		if (!emergency_killerworkers.empty()) {
+			Units tmp_killerworkers(emergency_killerworkers.size());
+			for (const auto& killerworker : emergency_killerworkers) {
+				if (killerworker->is_alive) {
+					tmp_killerworkers.push_back(killerworker);
+				}
+			}
+			Actions()->UnitCommand(tmp_killerworkers, ABILITY_ID::STOP);
+			emergency_killerworkers.clear();
+		}
+	}
 }
