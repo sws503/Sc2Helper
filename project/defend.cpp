@@ -56,7 +56,7 @@ void MEMIBot::Defend() {
 	Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
 	Units workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
 	Units my_armies = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
-	Units enemy_units = FindUnitsNear(startLocation_, 50, Unit::Alliance::Enemy);
+	Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
 	Units EnemyCannon = observation->GetUnits(Unit::Alliance::Enemy, Rusher(startLocation_));
 	size_t cannon_count = EnemyCannon.size();
 
@@ -85,12 +85,6 @@ void MEMIBot::Defend() {
 	EnemyRush = !enemyUnitsInRegion.empty();
 	ManyEnemyRush = (enemyUnitsInRegion.size() >= 3);
 
-	if (EnemyRush && my_armies.size() < 2) {
-		flags.set("defend_workers");
-	}
-	else {
-		flags.clear("defend_workers");
-	}
 	DefendWorkers();
 
 	/*for (const auto & enemyunit : enemyUnitsInRegion)
