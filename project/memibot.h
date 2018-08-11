@@ -64,7 +64,7 @@ public:
                 branch = 5;
             }
 		}
-        branch = 7;
+        //branch = 7;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		if (branch == 6 || branch == 7) {
@@ -151,7 +151,7 @@ public:
 			((staging_location_.z + front_expansion.z) / 2));
 
 		//Test하려고 임시로 송우석이 뺏습니다!!!!!!!!!
-        change_building_location();
+        //change_building_location();
 	}
 
 	virtual void OnStep() final override {
@@ -258,37 +258,31 @@ public:
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
 				std::cout << "attack1";
 				timing_attack = true;
-				Attackers.clear();
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2: {
 				std::cout << "attack2";
 				timing_attack = true;
-				Attackers.clear();
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL3: {
 				std::cout << "attack3";
 				timing_attack = true;
-				Attackers.clear();
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL1: {
 				std::cout << "attack3";
 				timing_attack = true;
-				Attackers.clear();
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL2: {
 				std::cout << "attack3";
 				timing_attack = true;
-				Attackers.clear();
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL3: {
 				std::cout << "attack3";
 				timing_attack = true;
-				Attackers.clear();
 				return;
 			}
 			default:
@@ -489,47 +483,21 @@ public:
 
 			if (targetPosition.x < x_min)
 			{
-				if (targetPosition.y > attacker->pos.y)
-				{
-					targetPositionNew = sc2::Point2D(x_min, y_max);
-				}
-				else
-				{
-					targetPositionNew = sc2::Point2D(x_min, y_min);
-				}
+
+				targetPositionNew = sc2::Point2D(x_min, targetPosition.y);
 			}
 			else if (targetPosition.x > x_max)
 			{
-				if (targetPosition.y > attacker->pos.y)
-				{
-					targetPositionNew = sc2::Point2D(x_max, y_max);
-				}
-				else
-				{
-					targetPositionNew = sc2::Point2D(x_max, y_min);
-				}
+				targetPositionNew = sc2::Point2D(x_max, targetPosition.y);
 			}
 			else if (targetPosition.y < y_min)
 			{
-				if (targetPosition.x > attacker->pos.x)
-				{
-					targetPositionNew = sc2::Point2D(x_max, y_min);
-				}
-				else
-				{
-					targetPositionNew = sc2::Point2D(x_min, y_min);
-				}
+				targetPositionNew = sc2::Point2D(targetPosition.x, y_min);
 			}
 			else if (targetPosition.y > y_max)
 			{
-				if (targetPosition.x > attacker->pos.x)
-				{
-					targetPositionNew = sc2::Point2D(x_max, y_max);
-				}
-				else
-				{
-					targetPositionNew = sc2::Point2D(x_min, y_max);
-				}
+
+				targetPositionNew = sc2::Point2D(targetPosition.x, y_max);
 			}
 			Actions()->UnitCommand(attacker, sc2::ABILITY_ID::MOVE, targetPositionNew);
 		}
@@ -737,6 +705,8 @@ private:
 	void DistanceKiting(const Unit * unit, const Unit * enemyarmy, const Unit * army);
 
 	void FrontKiting(const Unit * unit, const Unit * enemyarmy);
+
+	bool CanHitMeGROUND(const Unit * unit);
 
 	bool CanHitMe(const Unit * unit);
 

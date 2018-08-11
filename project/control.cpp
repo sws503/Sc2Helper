@@ -230,24 +230,8 @@ void MEMIBot::FrontKiting(const Unit* unit, const Unit* enemyarmy) // ¿œ≤€ ∞¯∞›«
 		sc2::Point2D KitingLocation = unit->pos;
 		//If its a building we want range -1 distance
 		//The same is true if it outranges us. We dont want to block following units
-		KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos);
+		KitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 3.0f;
 
-		/*if (!Observation()->IsPathable(KitingLocation)) // ¿Ãµø«“ ¿ßƒ°∞° ¡ˆªÛ¿Ø¥÷¿Ã ∞• ºˆ æ¯¥¬ ∞˜¿Ã∂Û∏È
-		{
-		EmergencyKiting(unit, enemyarmy);
-		}
-		else if (float pathingdistance = Query()->PathingDistance(unit, KitingLocation) > 10) // ¿Ãµø«“ ¿ßƒ°∞° ∏÷∏Æ µπæ∆∞°æﬂ«œ¥¬ ∞˜¿Ã∂Û∏È
-		{
-		EmergencyKiting(unit, enemyarmy);
-		}
-		else if (pathingdistance == 0)
-		{
-		EmergencyKiting(unit, enemyarmy);
-		}
-		else
-		{
-		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-		}*/
 		SmartMove(unit, KitingLocation);
 	}
 	else // ∞≈∏Æ∞° ∞°±Óøˆº≠ µµ∏¡∞°æﬂ «œ¥¬ ªÛ»≤
@@ -255,27 +239,32 @@ void MEMIBot::FrontKiting(const Unit* unit, const Unit* enemyarmy) // ¿œ≤€ ∞¯∞›«
 		sc2::Point2D KitingLocation = unit->pos;
 		//If its a building we want range -1 distance
 		//The same is true if it outranges us. We dont want to block following units
-		KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos);
+		KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 3.0f;
 
-		/*if (!Observation()->IsPathable(KitingLocation)) // ¿Ãµø«“ ¿ßƒ°∞° ¡ˆªÛ¿Ø¥÷¿Ã ∞• ºˆ æ¯¥¬ ∞˜¿Ã∂Û∏È
-		{
-		EmergencyKiting(unit, enemyarmy);
-		}
-		else if (float pathingdistance = Query()->PathingDistance(unit, KitingLocation) > 10) // ¿Ãµø«“ ¿ßƒ°∞° ∏÷∏Æ µπæ∆∞°æﬂ«œ¥¬ ∞˜¿Ã∂Û∏È
-		{
-		EmergencyKiting(unit, enemyarmy);
-		}
-		else if (pathingdistance == 0)
-		{
-		EmergencyKiting(unit, enemyarmy);
-		}
-		else
-		{
-		Actions()->UnitCommand(unit, ABILITY_ID::MOVE, KitingLocation);
-		}*/
 		SmartMove(unit, KitingLocation);
 	}
 }
+
+bool MEMIBot::CanHitMeGROUND(const Unit* unit)
+{
+	Units NearbyArmies = FindUnitsNear(unit, 15, Unit::Alliance::Enemy, IsArmy(Observation()));
+
+	bool hitme = false;
+	for (const auto & target : NearbyArmies)
+	{
+		float dist = Distance2D(unit->pos, target->pos);
+		float DIST = dist - unit->radius - target->radius;
+
+		float targetattackrange = getAttackRangeGROUND(target);
+
+		if (DIST <= targetattackrange * 1.35 + 0.5f)
+		{
+			hitme = true;
+		}
+	}
+	return hitme;
+}
+
 
 bool MEMIBot::CanHitMe(const Unit* unit)
 {
@@ -321,7 +310,7 @@ void MEMIBot::ComeOnKiting(const Unit* unit, const Unit* enemyarmy)
 
 	const Unit& ENEMYARMY = *enemyarmy;
 
-	if (CanHitMe(unit) == false) //¿˚ ∞¯∞›ªÁ∞≈∏Æ∞° ≥™∫∏¥Ÿ ¬™¿∏∏È ∞¯∞›«—¥Ÿ
+	if (CanHitMeGROUND(unit) == false) //¿˚ ∞¯∞›ªÁ∞≈∏Æ∞° ≥™∫∏¥Ÿ ¬™¿∏∏È ∞¯∞›«—¥Ÿ
 	{
 		SmartAttackUnit(unit, enemyarmy);
 	}
@@ -528,7 +517,11 @@ void MEMIBot::ColossusKiting(const Unit* unit, const Unit* enemyarmy)
 		sc2::Point2D FrontKitingLocation = unit->pos;
 		FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
 
-		if (IsStructure(Observation())(ENEMYARMY)) // ∞«π∞¿Ã∏È
+		if (IsTurretType()(ENEMYARMY))
+		{
+			SmartMoveEfficient(unit, KitingLocation, enemyarmy);
+		}
+		else if (IsStructure(Observation())(ENEMYARMY)) // ∞«π∞¿Ã∏È
 		{
 			SmartMove(unit, FrontKitingLocation);
 		}

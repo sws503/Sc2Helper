@@ -38,6 +38,20 @@ private:
 	Point2D sl;
 };
 
+struct IsTurretType {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_PHOTONCANNON: return true;
+		case UNIT_TYPEID::ZERG_SPORECRAWLER: return true;
+		case UNIT_TYPEID::ZERG_SPINECRAWLER: return true;
+		case UNIT_TYPEID::TERRAN_BUNKER: return true;
+		case UNIT_TYPEID::TERRAN_MISSILETURRET: return true;
+
+		default: return false;
+		}
+	}
+};
+
 struct AirAttacker { // 공중 공격 가능한 적들 (폭풍함이 우선 공격하는 적) //시간이 남으면 weapon.type == sc2::Weapon::TargetType::Air 으로 할수있지만 시간이 없음
 	bool operator()(const Unit& unit) {
 		switch (unit.unit_type.ToType()) {
@@ -170,11 +184,6 @@ struct IsArmy {
 
 	bool operator()(const Unit& unit) {
 		auto attributes = observation_->GetUnitTypeData().at(unit.unit_type).attributes;
-		for (const auto& attribute : attributes) {
-			if (attribute == Attribute::Structure) {
-				return false;
-			}
-		}
 		switch (unit.unit_type.ToType()) {
 		case UNIT_TYPEID::ZERG_OVERLORD: return false;
 		case UNIT_TYPEID::PROTOSS_PROBE: return false;
@@ -187,8 +196,20 @@ struct IsArmy {
 		case UNIT_TYPEID::TERRAN_NUKE: return false;
 		case UNIT_TYPEID::PROTOSS_WARPPRISM: return false;
 		case UNIT_TYPEID::PROTOSS_WARPPRISMPHASING: return false;
-
-		default: return true;
+		case UNIT_TYPEID::PROTOSS_PHOTONCANNON: return true;
+		case UNIT_TYPEID::ZERG_SPORECRAWLER: return true;
+		case UNIT_TYPEID::ZERG_SPINECRAWLER: return true;
+		case UNIT_TYPEID::TERRAN_BUNKER: return true;
+		case UNIT_TYPEID::TERRAN_MISSILETURRET: return true;
+		default:
+		{
+			for (const auto& attribute : attributes) {
+				if (attribute == Attribute::Structure) {
+					return false;
+				}
+			}
+			return true;
+		}
 		}
 	}
 private:

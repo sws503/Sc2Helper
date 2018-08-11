@@ -480,7 +480,7 @@ bool MEMIBot::EarlyStrategy() {
         }
         TryBuildPylon(front_expansion, 6.0);
     case 29:
-        if (adepts.size()>=9) {
+        if (num_adept>=9) {
             stage_number=32;
             return false;
         }

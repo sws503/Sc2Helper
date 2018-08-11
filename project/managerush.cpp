@@ -940,17 +940,20 @@ void MEMIBot::ManageRush() {
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_ADEPT)
 		{
+
 			Units NearbyArmies = FindUnitsNear(unit, 7, Unit::Alliance::Enemy, IsArmy(observation));
 			Units NearbyWorkers = FindUnitsNear(unit, 6, Unit::Alliance::Enemy, IsWorker());
 
-			bool ComeOn = false;
+			
 
 			if (EvadeEffect(unit)) {}
 			else if (26 <= stage_number && stage_number <= 35)
 			{
+				bool ComeOn = false;
+
 				if (target != nullptr)
 				{
-					if (getunitsDpsGROUND(NearbyArmies) > 10.0f)
+					if (getunitsDpsGROUND(NearbyArmies) > 6.0f)
 					{
 						AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
 					}

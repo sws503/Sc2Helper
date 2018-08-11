@@ -254,6 +254,7 @@ void MEMIBot::manageobserver() {
 	Units observers_not_sieged = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER));
 	Units observers_sieged = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID(1911)));
 	Units armies = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
+	Units enemyarmies = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
 	Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
 	size_t observers_size = observers.size();
 	size_t bases_size = bases.size();
@@ -330,23 +331,31 @@ void MEMIBot::manageobserver() {
 	// 옵저버 한마리 attackers와 함께 다니기
 	if (flags.status("observer_on_nexus") == 2) {
 		Point2D avg_pos(0, 0);
-		if (GetPosition(Attackers, avg_pos) && attacker_s_observer != nullptr) {
-			const Unit* n_u = FindNearestUnit(avg_pos, Attackers);
-			Point2D move_pos(avg_pos);
-			if (n_u != nullptr) {
-				move_pos = n_u->pos;
+		if (attacker_s_observer != nullptr) {
+			if (EvadeEffect(attacker_s_observer)) {}
+			else if (CanHitMe(attacker_s_observer)) 
+			{
+				const Unit * target = GetTarget(attacker_s_observer, enemyarmies);
+				FleeKiting(attacker_s_observer, target);
 			}
-			SmartMove(attacker_s_observer, move_pos);
-			attackers_probe_is_doing = true;
-		}
-		else if (GetPosition(AttackersRecruiting, avg_pos) && attacker_s_observer != nullptr) {
-			const Unit* n_u = FindNearestUnit(avg_pos, AttackersRecruiting);
-			Point2D move_pos(avg_pos);
-			if (n_u != nullptr) {
-				move_pos = n_u->pos;
+			else if (GetPosition(Attackers, avg_pos)) {
+				const Unit* n_u = FindNearestUnit(avg_pos, Attackers);
+				Point2D move_pos(avg_pos);
+				if (n_u != nullptr) {
+					move_pos = n_u->pos;
+				}
+				SmartMove(attacker_s_observer, move_pos);
+				attackers_probe_is_doing = true;
 			}
-			SmartMove(attacker_s_observer, move_pos);
-			attackers_probe_is_doing = true;
+			else if (GetPosition(AttackersRecruiting, avg_pos)) {
+				const Unit* n_u = FindNearestUnit(avg_pos, AttackersRecruiting);
+				Point2D move_pos(avg_pos);
+				if (n_u != nullptr) {
+					move_pos = n_u->pos;
+				}
+				SmartMove(attacker_s_observer, move_pos);
+				attackers_probe_is_doing = true;
+			}
 		}
 	}
 
