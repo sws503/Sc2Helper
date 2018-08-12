@@ -87,7 +87,7 @@ struct AirAttacker { // 공중 공격 가능한 적들 (폭풍함이 우선 공격하는 적) //시간
 		case UNIT_TYPEID::PROTOSS_PHOENIX:
 		case UNIT_TYPEID::PROTOSS_CARRIER:
 		case UNIT_TYPEID::PROTOSS_SENTRY:
-		case UNIT_TYPEID::PROTOSS_ARCHON: return build_progress == 1.0f;
+		case UNIT_TYPEID::PROTOSS_ARCHON: return unit.build_progress == 1.0f;
 
 		default: return false;
 		}
