@@ -859,6 +859,7 @@ bool MEMIBot::EarlyStrategy() {
 		return false;
 	case 603:
 	    TryChronoboost(base);
+	    Actions()->UnitCommand(probe_forward, ABILITY_ID::MOVE, Pylon2);
 		if (assimilator_count>=2) {
 			stage_number=604;
 			return false;
@@ -867,20 +868,19 @@ bool MEMIBot::EarlyStrategy() {
 			return TryBuildGas(base->pos);
 		}
 		return false;
-    case 604:
-        if (pylons.size()>1) {
-            stage_number=605;
-            return false;
-        }
-        return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon2);
-	case 605:
+	case 604:
 	    Actions()->UnitCommand(gateways,ABILITY_ID::RALLY_UNITS, startLocation_);
-		// ?•ì°° : ë¶„ê¸° 1, 2 ?•ì°° ?œì‘
 		if (cybernetics_count>0) {
-			stage_number=606;
+			stage_number=605;
 			return false;
 		}
 		return TryBuildStructureAtLocation(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, Core1);
+    case 605:
+        if (pylons.size()>1) {
+            stage_number=606;
+            return false;
+        }
+        return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon2);
     case 606:
         if (pylons.size()>2) {
             stage_number=607;
@@ -954,7 +954,7 @@ bool MEMIBot::EarlyStrategy() {
 			return false;
 		}
         if (!stargates.front()->orders.empty()) {
-            if (stargates.front()->orders.front().progress>0.4f) {
+            if (stargates.front()->orders.front().ability_id != ABILITY_ID::TRAIN_VOIDRAY) {
                 return false;
             }
             stage_number=617;
@@ -1169,11 +1169,7 @@ bool MEMIBot::EarlyStrategy() {
 			stage_number=721;
 			return false;
 		}
-		for (const auto& p : pylons) {
-            if (Distance2D(p->pos,base->pos)>18) continue;
-            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE, p);
-		}
-		return false;
+		return TryBuildStructureNearPylonInBase(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE);
      case 721:
         if (pylons.size()>5) {
             stage_number=722;
