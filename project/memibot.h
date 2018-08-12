@@ -808,7 +808,12 @@ private:
 
 	bool GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D & position);
 
+	int getRushPriority(const Unit * u);
+
 	int getAttackPriority(const Unit * u);
+
+	int getOraclePriority(const Unit * u);
+
 
 	bool IsBonusType(const Unit * rangedUnit, const Unit * target);
 
@@ -824,7 +829,11 @@ private:
 
 	void ManageWarpBlink(const Unit * unit, const Unit * shuttle);
 
+	const Unit * GetRushTarget(const Unit * rangedUnit, Units & targets);
+
 	const Unit * GetTarget(const Unit * rangedUnit, Units & targets);
+
+	const Unit * GetOracleRushTarget(const Unit * rangedUnit, Units & targets);
 
 	const Unit * GetZealotTarget(const Unit * rangedUnit, Units & targets);
 
@@ -2770,9 +2779,9 @@ private:
                 return;
             case 17://lost and found
                 Pylon1 = Point2D(133.0f, 121.0f);
-                Gate1 = Point2D(132.5f, 118.5f);
+                Gate1 = Point2D(135.5f, 121.5f);
                 Pylon2 = Point2D(62.0f, 33.0f);
-                Core1 = Point2D(135.5f, 121.5f);
+                Core1 = Point2D(132.5f, 118.5f);
                 Star1 = Point2D(64.5f, 34.5f);
                 Pylon3 = Point2D(67.0f, 34.0f);
                 Batt1 = Point2D(131.0f, 121.0f);
@@ -2797,13 +2806,13 @@ private:
                 Pylon4 = Point2D(39.0f, 127.0f);
                 return;
             case 18://proxima station
-                Pylon1 = Point2D(149.0f, 120.0f);
+                Pylon1 = Point2D(149.0f, 119.0f);
                 Gate1 = Point2D(146.5f, 119.5f);
                 Pylon2 = Point2D(31.0f, 55.0f);
                 Core1 = Point2D(149.5f, 116.5f);
                 Star1 = Point2D(29.5f, 52.5f);
                 Pylon3 = Point2D(151.0f, 121.0f);
-                Batt1 = Point2D(148.0f, 122.0f);
+                Batt1 = Point2D(149.0f, 121.0f);
                 Batt2 = Point2D(151.0f, 119.0f);
                 Batt3 = Point2D(32.0f, 53.0f);
                 Batt4 = Point2D(34.0f, 53.0f);

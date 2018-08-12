@@ -428,6 +428,7 @@ void MEMIBot::VoidRayKiting(const Unit* unit, const Unit* enemyarmy)
 
 	//Our range
 	float unitattackrange = getAttackRangeGROUND(unit);
+	const Unit& ENEMYARMY = *enemyarmy;
 
 	if (DIST < unitattackrange)
 	{
@@ -440,7 +441,8 @@ void MEMIBot::VoidRayKiting(const Unit* unit, const Unit* enemyarmy)
 		}
 	}
 	
-	else if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f)
+
+	if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f)
 	{
 		//가만히 있도록 합시다
 	}
@@ -448,12 +450,12 @@ void MEMIBot::VoidRayKiting(const Unit* unit, const Unit* enemyarmy)
 	{
 		SmartAttackUnit(unit, enemyarmy);
 	}
-	else
+	else if (IsStructure(Observation())(ENEMYARMY) && dist > 1.5f)
 	{
 		sc2::Point2D FrontKitingLocation = unit->pos;
-		FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 4.0f;
+		FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 1.0f;
 
-		//SmartMove(unit, FrontKitingLocation);
+		SmartMove(unit, FrontKitingLocation);
 	}
 }
 

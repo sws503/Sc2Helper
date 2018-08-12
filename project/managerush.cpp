@@ -889,17 +889,19 @@ void MEMIBot::ManageRush() {
 		}
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
 		{
-			if (AirAttackers.empty())
-			{
-				target = GetTarget(unit, NearbyEnemies);
-			}
-			else
-			{
-				target = GetTarget(unit, AirAttackers);
-			}
+			
 
 			if (branch == 6)
 			{
+				if (AirAttackers.empty())
+				{
+					target = GetRushTarget(unit, NearbyEnemies);
+				}
+				else
+				{
+					target = GetRushTarget(unit, AirAttackers);
+				}
+
 				if (EvadeEffect(unit)) {}
 				else if (ChargeShield(unit)) {}
 				else if (target != nullptr) // 카이팅은 항상하자
@@ -913,6 +915,15 @@ void MEMIBot::ManageRush() {
 			}
 			if (branch == 7)
 			{
+				if (AirAttackers.empty())
+				{
+					target = GetTarget(unit, NearbyEnemies);
+				}
+				else
+				{
+					target = GetTarget(unit, AirAttackers);
+				}
+
 				if (725 <= stage_number && stage_number<= 726 && !EnemyRush)
 				{
 					if (the_pylon_pos != nullptr) {
@@ -951,9 +962,7 @@ void MEMIBot::ManageRush() {
 			Units NearbyAirAttackers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, AirAttacker());
 			Units NearbyWorkers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, IsWorker());
 			
-			
-
-			const Unit * Workertarget = GetOracleTarget(unit, NearbyWorkers);
+			const Unit * Workertarget = GetOracleRushTarget(unit, NearbyWorkers);
 			const Unit * Armytarget = GetTarget(unit, NearbyAirAttackers);
 
 			bool OracleCanAttack = false;
@@ -980,14 +989,20 @@ void MEMIBot::ManageRush() {
 			if (EvadeEffect(unit)) {}
 			else if (ArmiesNearStar1.size() > 0)
 			{
-				const Unit * groundtarget = FindNearestUnit(unit->pos, ArmiesNearStar1);
-				SmartAttackMove(unit, groundtarget->pos);
+				const Unit * EmergencyTarget = GetOracleTarget(unit, ArmiesNearStar1);
+				
+				if (EmergencyTarget != nullptr)
+				{
+					ManageOracleBeam(unit, EmergencyTarget);
+				}
+				SmartAttackMove(unit, EmergencyTarget->pos);
 				//OracleKiting(unit, groundtarget);
 			}
 			else if (!CanHitMe(unit)) //적 공중공격 유닛이 없을 경우
 			{
 				if (Workertarget != nullptr) // 일꾼이 있으면
 				{
+					std::cout << " 적 일꾼 어택땅 했어요 " << std::endl;
 					SmartAttackMove(unit, Workertarget->pos);
 					//OracleKiting(unit, Workertarget);
 				}
@@ -1028,7 +1043,7 @@ void MEMIBot::ManageRush() {
 			if (branch == 6)
 			{
 				if (EvadeEffect(unit)) {}
-				else if (DefendDuty(unit)) {}
+				else if (DefendDutyAttack(unit)) {}
 				else if (unit->orders.empty())
 				{
 					Roam_randombase(unit);
@@ -1565,6 +1580,87 @@ bool MEMIBot::GetPosition(Units Enemyunits, Unit::Alliance alliace, Point2D& pos
 	return true;
 }
 
+int MEMIBot::getRushPriority(const Unit * u)
+{
+	//보너스 안써야할듯
+	if (u == nullptr) return 0;
+	const Unit& unit = *u;
+	if (getAttackRangeAIR(u) > 0)
+	{
+		if (unit.build_progress != 1)
+		{
+			return 145;
+		}
+		else
+		{
+			if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_QUEEN || unit.unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_MISSILETURRET || unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
+			{
+				return 200;
+			}
+			if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_SPORECRAWLER || unit.unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_MARINE || unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_PHOTONCANNON)
+			{
+				return 190;
+			}
+			if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_STALKER)
+			{
+				return 180;
+			}
+			if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_PHOENIX)
+			{
+				return 170;
+			}
+			//저그 : 여왕 포자촉수
+			return 150;
+		}
+	}
+	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY)
+	{
+		return 160;
+	}
+	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_OVERLORD || unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_PYLON)
+	{
+		return 140;
+	}
+	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_SPAWNINGPOOL)
+	{
+		return 130;
+	}
+	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_HYDRALISKDEN)
+	{
+		return 129;
+	}
+	if (IsWorker()(unit))
+	{
+		return 120;
+	}
+	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_ENGINEERINGBAY)
+	{
+		return 110;
+	}
+	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::TERRAN_BARRACKS)
+	{
+		return 109;
+	}
+	if (IsStructure(Observation())(unit))
+	{
+		return 30;
+	}
+	return 50;
+}
+
+int MEMIBot::getOraclePriority(const Unit * u)
+{
+	//보너스 안써야할듯
+	if (u == nullptr) return 0;
+	const Unit& unit = *u;
+	if (IsStructure(Observation())(unit) || unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_LARVA || unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_EGG)
+	{
+		return 1;
+	}
+	return 50;
+}
+
+
 int MEMIBot::getAttackPriority(const Unit * u)
 {
 	if (u == nullptr) return 0;
@@ -1639,6 +1735,60 @@ const Unit * MEMIBot::GetOracleTarget(const Unit * rangedUnit, Units & targets)
 	int highPriorityFar = 0;
 	int highPriorityNear = 0;
 	int highDpsNear = 0;
+	double closestDist = std::numeric_limits<double>::max();
+	double lowestHealth = std::numeric_limits<double>::max();
+	const Unit * closestTargetOutsideRange = nullptr;
+	const Unit * weakestTargetInsideRange = nullptr;
+
+	for (const auto & targetUnit : targets)
+	{
+		if (!targetUnit->is_alive)
+		{
+			continue;
+		}
+		const float range = getAttackRangeGROUND(rangedUnit);
+		int priority = getOraclePriority(targetUnit);
+
+		const float distance = Distance2D(rangedUnit->pos, targetUnit->pos);
+
+		if (distance > range) //적과 나 사이의 거리 > 나의 사정거리 // 거리가 멀어서 때릴 수 없는 경우
+		{
+			// If in sight we just add 20 to prio. This should make sure that a unit in sight has higher priority than any unit outside of range
+			//
+			float SightRange = Observation()->GetUnitTypeData()[rangedUnit->unit_type].sight_range;
+
+			if (distance <= SightRange)
+			{
+				priority += 20;
+			}
+			// 우선순위가 높거나 또는 거리가 가까우면 설정한다
+			if (!closestTargetOutsideRange || (priority > highPriorityFar) || (priority == highPriorityFar && distance < closestDist))
+			{
+				closestDist = distance;
+				highPriorityFar = priority;
+				closestTargetOutsideRange = targetUnit;
+			}
+		}
+		else
+		{
+			if (!weakestTargetInsideRange || (priority > highPriorityNear) || (priority == highPriorityNear && targetUnit->health < lowestHealth)) // 건물을 때리고 싶을 때는
+			{
+				lowestHealth = targetUnit->health + targetUnit->shield;
+				highPriorityNear = priority;
+				weakestTargetInsideRange = targetUnit;
+
+			}
+		}
+	}
+	return weakestTargetInsideRange && highPriorityNear>1 ? weakestTargetInsideRange : closestTargetOutsideRange;
+}
+
+
+const Unit * MEMIBot::GetOracleRushTarget(const Unit * rangedUnit, Units & targets)
+{
+	int highPriorityFar = 0;
+	int highPriorityNear = 0;
+	int highDpsNear = 0;
 	double lowestHealthOutside = std::numeric_limits<double>::max();
 	double lowestHealthInside = std::numeric_limits<double>::max();
 	const Unit * weakestTargetOutsideRange = nullptr;
@@ -1665,6 +1815,7 @@ const Unit * MEMIBot::GetOracleTarget(const Unit * rangedUnit, Units & targets)
 			{
 				priority += 10;
 			}
+
 			// 우선순위가 높거나 또는 거리가 가까우면 설정한다
 			if (!weakestTargetOutsideRange || (priority > highPriorityFar) || (priority == highPriorityFar && targetUnit->health < lowestHealthOutside))
 			{
@@ -1758,6 +1909,67 @@ const Unit * MEMIBot::GetOracleTarget(const Unit * rangedUnit, Units & targets)
 	}
 	return weakestTargetInsideRange && highPriorityNear>1 ? weakestTargetInsideRange : closestTargetOutsideRange;
 }
+
+ const Unit * MEMIBot::GetRushTarget(const Unit * rangedUnit, Units & targets)
+ {
+	 int highPriorityFar = 0;
+	 int highPriorityNear = 0;
+	 int highDpsNear = 0;
+	 double closestDist = std::numeric_limits<double>::max();
+	 double lowestHealth = std::numeric_limits<double>::max();
+	 const Unit * closestTargetOutsideRange = nullptr;
+	 const Unit * weakestTargetInsideRange = nullptr;
+
+	 for (const auto & targetUnit : targets)
+	 {
+		 if (!targetUnit->is_alive)
+		 {
+			 continue;
+		 }
+		 if (targetUnit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_INTERCEPTOR)
+		 {
+			 continue;
+		 }
+
+
+		 const float range = getAttackRangeGROUND(rangedUnit); //rangedUnit->getAttackRange(targetUnit); 사도 사거리 4
+		 int priority = getRushPriority(targetUnit);
+
+		 float target_dps = getDpsGROUND(targetUnit);
+
+		 const float distance = Distance2D(rangedUnit->pos, targetUnit->pos);
+
+		 if (distance > range) //적과 나 사이의 거리 > 나의 사정거리 // 거리가 멀어서 때릴 수 없는 경우
+		 {
+			 // If in sight we just add 20 to prio. This should make sure that a unit in sight has higher priority than any unit outside of range
+			 //
+			 float SightRange = Observation()->GetUnitTypeData()[rangedUnit->unit_type].sight_range;
+
+			 if (distance <= SightRange)
+			 {
+				 priority += 20;
+			 }
+			 // 우선순위가 높거나 또는 거리가 가까우면 설정한다
+			 if (!closestTargetOutsideRange || (priority > highPriorityFar) || (priority == highPriorityFar && distance < closestDist))
+			 {
+				 closestDist = distance;
+				 highPriorityFar = priority;
+				 closestTargetOutsideRange = targetUnit;
+			 }
+		 }
+		 else
+		 {
+			 if (!weakestTargetInsideRange || (priority > highPriorityNear) || (priority == highPriorityNear && targetUnit->health < lowestHealth)) // 건물을 때리고 싶을 때는
+			 {
+				 lowestHealth = targetUnit->health + targetUnit->shield;
+				 highPriorityNear = priority;
+				 weakestTargetInsideRange = targetUnit;
+			 }
+		 }
+	 }
+	 return weakestTargetInsideRange && highPriorityNear>1 ? weakestTargetInsideRange : closestTargetOutsideRange;
+ }
+
 
  const Unit * MEMIBot::GetZealotTarget(const Unit * rangedUnit, Units & targets)
  {

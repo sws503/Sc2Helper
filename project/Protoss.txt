@@ -1,10 +1,20 @@
-Newkirk Precinct TE (Void)
+Proxima Station LE
 2
 1
 1
 1
-Bel'Shir Vestige LE (Void)
+Lost and Found LE
 3
+1
+1
+1
+Bel'Shir Vestige LE (Void)
+4
+1
+1
+1
+Newkirk Precinct TE (Void)
+2
 1
 1
 1
@@ -18,17 +28,7 @@ Blackpink LE
 1
 1
 1
-Lost and Found LE
-1
-1
-1
-1
 Neon Violet Square LE
-1
-1
-1
-1
-Proxima Station LE
 1
 1
 1
