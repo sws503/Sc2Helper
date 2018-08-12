@@ -121,6 +121,7 @@ public:
 		num_stalker = 0;
 		num_warpprism = 0;
 		num_colossus = 0;
+        num_voidray = 0;
 		try_colossus = 0;
 		try_immortal = 0;
 		num_carrier = 0;
@@ -387,6 +388,8 @@ public:
 			num_colossus++;
 			try_colossus++;
 			break;
+        case UNIT_TYPEID::PROTOSS_VOIDRAY:
+            num_voidray++;
 		case UNIT_TYPEID::PROTOSS_IMMORTAL:
 			try_immortal++;
 			break;
@@ -1963,6 +1966,47 @@ private:
 		return TryBuildStructure(ability_type_for_structure, building_type, UNIT_TYPEID::PROTOSS_PROBE, build_location);
 	}
 
+	bool TryBuildStructureNearPylonInBase(AbilityID ability_type_for_structure, UnitTypeID building_type) {
+		const ObservationInterface* observation = Observation();
+
+		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost
+			|| observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
+            return false;
+		}
+
+		//Need to check to make sure its a pylon instead of a warp prism
+		std::vector<PowerSource> power_sources = observation->GetPowerSources();
+		if (power_sources.empty()) {
+			return false;
+		}
+
+		const PowerSource& random_power_source = GetRandomEntry(power_sources);
+		if (Distance2D(random_power_source.position,base->pos)>20) {
+            return false;
+		}
+		if (advance_pylon !=nullptr && Distance2D(random_power_source.position,advance_pylon->pos)<10) {
+            return false;
+		}
+		if (observation->GetUnit(random_power_source.tag) == nullptr) {
+			return false;
+		}
+		if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISM) {
+			return false;
+		}
+		// do not build near the_pylon
+		if (branch == 7 && the_pylon_pos != nullptr && *the_pylon_pos == random_power_source.position) {
+			if (observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON)).size() >= 2) {
+				return false;
+			}
+		}
+
+		float radius = random_power_source.radius;
+		float rx = GetRandomScalar();
+		float ry = GetRandomScalar();
+		Point2D build_location = Point2D(random_power_source.position.x + rx * radius, random_power_source.position.y + ry * radius);
+		return TryBuildStructure(ability_type_for_structure, building_type, UNIT_TYPEID::PROTOSS_PROBE, build_location);
+	}
+
 	/*bool TryBuildStructureNearPylon(AbilityID ability_type_for_structure, UnitTypeID, const Unit* pylon) {
 		return TryBuildStructureNearPylon(ability_type_for_structure, pylon);
 	}
@@ -3058,6 +3102,7 @@ private:
 	uint16_t num_stalker;
 	uint16_t num_warpprism;
 	uint16_t num_colossus;
+	uint16_t num_voidray;
 	uint16_t try_colossus;
 	uint16_t try_immortal;
 	uint16_t num_carrier;
