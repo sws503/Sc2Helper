@@ -830,11 +830,11 @@ private:
 	void ManageWarpBlink(const Unit * unit, const Unit * shuttle);
 
 	const Unit * GetRushTarget(const Unit * rangedUnit, Units & targets);
-	
+
 	const Unit * GetTarget(const Unit * rangedUnit, Units & targets);
 
 	const Unit * GetOracleRushTarget(const Unit * rangedUnit, Units & targets);
-	
+
 	const Unit * GetZealotTarget(const Unit * rangedUnit, Units & targets);
 
 	const Unit * GetNearTarget(const Unit * rangedUnit, Units & targets);
@@ -2806,13 +2806,13 @@ private:
                 Pylon4 = Point2D(39.0f, 127.0f);
                 return;
             case 18://proxima station
-                Pylon1 = Point2D(149.0f, 120.0f);
+                Pylon1 = Point2D(149.0f, 119.0f);
                 Gate1 = Point2D(146.5f, 119.5f);
                 Pylon2 = Point2D(31.0f, 55.0f);
                 Core1 = Point2D(149.5f, 116.5f);
                 Star1 = Point2D(29.5f, 52.5f);
                 Pylon3 = Point2D(151.0f, 121.0f);
-                Batt1 = Point2D(148.0f, 122.0f);
+                Batt1 = Point2D(149.0f, 121.0f);
                 Batt2 = Point2D(151.0f, 119.0f);
                 Batt3 = Point2D(32.0f, 53.0f);
                 Batt4 = Point2D(34.0f, 53.0f);
