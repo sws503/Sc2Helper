@@ -67,16 +67,30 @@ public:
 		// zerg : 5, 6 (기록 없으면 5)
 		int strategy = ReadStats();
 
-		// todo: strategy에 따라서 branch 변경해주기
-
-		//상대 종족
-		branch = 0;
-		for (const auto& p : game_info_.player_info) {
-            if(p.race_requested == Race::Terran) {
-                branch = 5;
-            }
+		switch (strategy) {
+        case 1:
+            branch = 0;
+            break;
+        case 2:
+            branch = 7;
+            break;
+        case 3:
+            branch = 5;
+            break;
+        case 4:
+            branch = 6;
+            break;
+        case 5:
+            branch = 6;
+            break;
+        case 6:
+            branch = 7;
+            break;
+        default:
+            branch = 0;
+            break;
 		}
-        //branch = 6;
+        branch=6;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
@@ -369,9 +383,6 @@ public:
 		case UNIT_TYPEID::PROTOSS_STALKER:
 			num_stalker++;
 			break;
-        case UNIT_TYPEID::PROTOSS_WARPPRISM:
-            num_warpprism++;
-            break;
 		case UNIT_TYPEID::PROTOSS_COLOSSUS:
 			num_colossus++;
 			try_colossus++;
@@ -730,7 +741,7 @@ private:
 			DrawLine(unit->pos, Point3D(fleeingPos.x, fleeingPos.y, unit->pos.z));
 			return true;
 		}
-		
+
 		return moving;
 	}
 
@@ -2085,12 +2096,13 @@ private:
 	void ManageUpgrades() {
 		const ObservationInterface* observation = Observation();
 		Units forges = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FORGE));
+		size_t base_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_NEXUS);
 		auto upgrades = observation->GetUpgrades();
 		if (branch == 0 || branch == 1 || branch==5) {
             if (branch!=5) {
                 TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES,UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL,UPGRADE_ID::ADEPTPIERCINGATTACK);
             }
-            TryBuildUpgrade(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::EXTENDEDTHERMALLANCE);
+            TryBuildUpgrade(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::GRAVITICDRIVE);
 		}
 		//TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
 		if (branch == 0 || branch == 1 || branch == 5) {
@@ -2104,6 +2116,9 @@ private:
             }
             TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1);
             TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL1);
+            if (branch==5 && base_count>3) {
+                TryBuildUpgrade(ABILITY_ID::RESEARCH_GRAVITICDRIVE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::PROTOSSSHIELDSLEVEL1);
+            }
 
             for (const auto& upgrade : upgrades) {
                 if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1) {
@@ -2404,6 +2419,7 @@ private:
         Units observers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER));
         Units roboticsbay = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSBAY));
 
+        size_t sentry_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_SENTRY);
 
         int robotics_empty=0;
         int robotics_observer=0;
@@ -2418,6 +2434,9 @@ private:
                 if (r->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
                     robotics_observer++;
                 }
+                if (r->orders.front().ability_id == ABILITY_ID::TRAIN_WARPPRISM) {
+                    num_warpprism=1;
+                }
                 if (shield3) {
                     TryChronoboost(r);
                 }
@@ -2425,7 +2444,12 @@ private:
         }
 
         if (robotics_empty==0) {
-            return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+            if (sentry_count<2) {
+                return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_SENTRY, front_expansion);
+            }
+            else {
+                return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+            }
         }
         else if (observers.size()+robotics_observer<3) {
             return TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
@@ -2564,6 +2588,7 @@ private:
                 default:
                     break;
                 }
+                break;
 
             case 21://neon violet square
                 advance_pylon_location = Point2D(117.0f, 40.0f);
@@ -2594,6 +2619,7 @@ private:
                 default:
                     break;
                 }
+                break;
 
             default:
                 break;
@@ -2613,6 +2639,7 @@ private:
                 default:
                     return;
                 }
+                return;
 
             case 21://neon violet square
                 Pylon1 = Point2D(46.0f, 109.0f);
@@ -2639,6 +2666,7 @@ private:
                 default:
                     return;
                 }
+                return;
 
             default:
                 return;
@@ -2680,6 +2708,7 @@ private:
                 default:
                     return;
                 }
+                return;
 
             case 21://neon violet square
                 Pylon1 = Point2D(53.0f, 131.0f);
@@ -2772,6 +2801,7 @@ private:
                 default:
                     return;
                 }
+                return;
 
             default:
                 return;
@@ -2807,6 +2837,7 @@ private:
                 default:
                     return;
                 }
+                return;
 
             case 21://neon violet square
                 Pylon1 = Point2D(46.0f, 109.0f);
@@ -2884,6 +2915,7 @@ private:
                 default:
                     return;
                 }
+                return;
 
             default:
                 return;

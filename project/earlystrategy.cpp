@@ -18,6 +18,7 @@ bool MEMIBot::EarlyStrategy() {
     Units templars = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_HIGHTEMPLAR));
     Units archons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ARCHON));
     Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
+    Units twilights = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL));
 
 	//건물 지을 프로브 재지정
 	if (workers.size() > 2 && (probe_forward != nullptr && !probe_forward->is_alive)) {
@@ -28,22 +29,21 @@ bool MEMIBot::EarlyStrategy() {
 		}
 	}
 	//브랜치 지정
-	//디폴트 branch = 2
-	/*if (branch !=5 && flags.status("search_branch") == 1) {
+	if (branch ==0 && flags.status("search_branch") == 1) {
 		// 정찰 실패: 입구를 막았거나 프로브가 죽었음
 		if (flags.status("search_result") == 1) {
-			branch = 2;
+			//branch = 2;
 		}
 		// 적이 정석 빌드를 감: 멀티가 있거나 barracks, gateway가 있거나 extracter가 없음
 		else if (flags.status("search_result") == 2) {
-			branch = 0;
+			//branch = 0;
 		}
 		// 적이 심상치 않음: extracter가 있거나, 멀티도 없고 barracks, gateway도 없다.
 		//					또는 정찰 가다가 본진 밖에 있는 건물을 봤다.
 		else if (flags.status("search_result") == 3) {
 			branch = 1;
 		}
-	}*/
+	}
 
 	size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
 	size_t cannon_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_PHOTONCANNON);
@@ -118,8 +118,10 @@ bool MEMIBot::EarlyStrategy() {
         }
     }
 	else if (branch == 5) {
-        if (!BlinkResearched && stage_number>211) {
-            TryChronoboost(observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front());
+        if (!BlinkResearched && stage_number>211 && !twilights.front()->orders.empty()) {
+            if (twilights.front()->orders.front().progress<0.75f) {
+                TryChronoboost(observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front());
+            }
         }
         if (stage_number>218) {
             TryBuildPylonIfNeeded(2);
@@ -750,23 +752,34 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildPylon(startLocation_,15.0);
     case 219:
-        if (TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL)) {
+        if (robotics.empty()) {
+			stage_number = 214;
+			return false;
+		}
+        if (!robotics.front()->orders.empty()) {
             stage_number=220;
             return false;
-        }
-        return false;
+	    }
+        return TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
     case 220:
+        TryChronoboost(robotics.front());
         if (bases.size()>=3) {
             stage_number=222;
             return false;
         }
         return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
     case 221:
-        if (TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER)) {
-            stage_number=222;
-            return false;
-        }
-        return false;
+        if (robotics.empty()) {
+			stage_number = 214;
+			return false;
+		}
+        if (!robotics.front()->orders.empty()) {
+            if (robotics.front()->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
+                stage_number=220;
+                return false;
+            }
+	    }
+        return TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
     case 222:
         if (stalkers.size()>=7) {
             stage_number=225;

@@ -18,14 +18,14 @@ static const int stepsize = 5;
 static const bool Realtime = false;
 static const bool ControlTest = false;
 static const std::vector<std::string> map_names({
-	"BlackpinkLE",
-	"NeonVioletSquareLE",
+	//"BlackpinkLE",
+	//"NeonVioletSquareLE",
 	"BackwaterLE",
-	"LostAndFoundLE",
-	"InterloperLE",
-	"ProximaStationLE",
-	"NewkirkPrecinctTE",
-	"BelShirVestigeLE"
+	//"LostAndFoundLE",
+	//"InterloperLE",
+	//"ProximaStationLE",
+	//"NewkirkPrecinctTE",
+	//"BelShirVestigeLE"
 	});
 
 static const std::vector<std::string> map_names_2018s2({
