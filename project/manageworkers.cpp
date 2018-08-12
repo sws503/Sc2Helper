@@ -104,10 +104,11 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 		}
 	}
 
-	float min_distance = std::numeric_limits<float>::max();
+	std::vector<Vector2D> aux_vectors({ Vector2D(3,0), Vector2D(-3,0), Vector2D(0,3), Vector2D(0,-3) });
 
 	// Search for a base that is missing mineral workers.
 	if (has_space_for_half_mineral && !EnemyRush) {
+		float min_distance = std::numeric_limits<float>::max();
 		const Unit* target_resource = nullptr;
 		const Unit* target_base = nullptr;
 
@@ -126,18 +127,27 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 		}
 
 		if (target_resource != nullptr && target_base != nullptr) {
-			float d = Query()->PathingDistance(worker, (target_resource->pos + target_base->pos)/2 );
-			if (d > 0.01f) {
-				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
-				return;
+			std::vector<QueryInterface::PathingQuery> query_vector;
+			for (const auto& v : aux_vectors) {
+				QueryInterface::PathingQuery query;
+				query.start_unit_tag_ = worker->tag;
+				query.start_ = worker->pos;
+				query.end_ = target_base->pos + v;
+				query_vector.push_back(query);
+			}
+			std::vector<float> results = Query()->PathingDistance(query_vector);
+			for (const auto& d : results) {
+				if (d > 0.01f) {
+					Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
+					return;
+				}
 			}
 		}
 	}
 
-	
-
 	// Search for a base that does not have full of gas workers.
 	if (has_space_for_gas && !EnemyRush) {
+		float min_distance = std::numeric_limits<float>::max();
 		const Unit* target_resource = nullptr;
 		const Unit* target_base = nullptr;
 
@@ -156,16 +166,27 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 		}
 
 		if (target_resource != nullptr && target_base != nullptr) {
-			float d = Query()->PathingDistance(worker, (target_resource->pos + target_base->pos) / 2);
-			if (d > 0.01f) {
-				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
-				return;
+			std::vector<QueryInterface::PathingQuery> query_vector;
+			for (const auto& v : aux_vectors) {
+				QueryInterface::PathingQuery query;
+				query.start_unit_tag_ = worker->tag;
+				query.start_ = worker->pos;
+				query.end_ = target_base->pos + v;
+				query_vector.push_back(query);
+			}
+			std::vector<float> results = Query()->PathingDistance(query_vector);
+			for (const auto& d : results) {
+				if (d > 0.01f) {
+					Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
+					return;
+				}
 			}
 		}
 	}
 
 	// Search for a base that does not have full of mineral workers.
 	if (has_space_for_mineral && !EnemyRush) {
+		float min_distance = std::numeric_limits<float>::max();
 		const Unit* target_resource = nullptr;
 		const Unit* target_base = nullptr;
 
@@ -184,10 +205,20 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 		}
 
 		if (target_resource != nullptr && target_base != nullptr) {
-			float d = Query()->PathingDistance(worker, (target_resource->pos + target_base->pos) / 2);
-			if (d > 0.01f) {
-				Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
-				return;
+			std::vector<QueryInterface::PathingQuery> query_vector;
+			for (const auto& v : aux_vectors) {
+				QueryInterface::PathingQuery query;
+				query.start_unit_tag_ = worker->tag;
+				query.start_ = worker->pos;
+				query.end_ = target_base->pos + v;
+				query_vector.push_back(query);
+			}
+			std::vector<float> results = Query()->PathingDistance(query_vector);
+			for (const auto& d : results) {
+				if (d > 0.01f) {
+					Actions()->UnitCommand(worker, ABILITY_ID::HARVEST_GATHER, target_resource);
+					return;
+				}
 			}
 		}
 	}
@@ -400,13 +431,16 @@ void MEMIBot::ManageWorkers() {
 	}
 }
 
+// Todo: 스킬 피하기, 공중유닛 피하기, disruptor, baneling 피하기, 작은 유닛 죽이기
 void MEMIBot::FleeWorkers(const Unit* unit) {
 	if (unit == nullptr) return;
-	if (!ManyEnemyRush) return;
+	if (!ManyEnemyRush) {
+		return;
+	}
 	const ObservationInterface* observation = Observation();
 	Units workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
 
-	Units nearworkers(workers.size());
+	Units nearworkers;
 	for (const auto& worker : workers) {
 		// consider near workers (distance < 10)
 		if (DistanceSquared2D(unit->pos, worker->pos) > 100) continue;
@@ -415,26 +449,59 @@ void MEMIBot::FleeWorkers(const Unit* unit) {
 
 		nearworkers.push_back(worker);
 	}
-	const Unit* b = FindSecondNearestUnit(unit->pos, Unit::Alliance::Self, IsTownHall());
+	Filter base_filter = [](const Unit& u) { return IsTownHall()(u) && u.build_progress >= 0.9; };
+
+	const Unit* b = FindSecondNearestUnit(unit->pos, Unit::Alliance::Self, base_filter);
 	if (b == nullptr) return;
 	const Unit* m = FindNearestMineralPatch(b->pos);
 	
-	Actions()->UnitCommand(nearworkers, ABILITY_ID::SMART);
+	std::cout << nearworkers.size() << std::endl;
+	Actions()->UnitCommand(nearworkers, ABILITY_ID::SMART, m);
+	Print("MOVED!");
 	return;
 }
 
-// todo: 포톤캐논, 해처리
-// todo: fleeworkers와 충돌
+// todo: 적절한 수의 프로브 보내기
+// todo: 포톤캐논, 해처리, 배럭 등등 처리하기
 void MEMIBot::DefendWorkers() {
 	const ObservationInterface* observation = Observation();
 	Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
 	Units workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
 	Units my_armies = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
-
+	Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
 	size_t workers_size = workers.size();
+	size_t enemy_units_size = enemy_units.size();
+	size_t my_armies_size = my_armies.size();
+
+	Units enemy_units_killing_workers;
+
+	size_t probes_needed = 0;
+	bool defend_now = false;
+	const float base_range = 10;
+	for (const auto & eu : enemy_units)
+	{
+		if (Distance2D(startLocation_, eu->pos) < base_range)
+		{
+			enemy_units_killing_workers.push_back(eu);
+			continue;
+		}
+		for (const auto & b : bases) //기지별로
+		{
+			if (Distance2D(b->pos, eu->pos) < base_range)
+			{
+				enemy_units_killing_workers.push_back(eu);
+				break;
+			}
+		}
+	}
+
+	defend_now = (enemy_units_killing_workers.size() >= 1)
+		&& (my_armies_size < 2);
+
+	size_t workers_needed = enemy_units_killing_workers.size() + 1;
 
 	// push
-	if (flags.status("defend_workers"))
+	if (defend_now)
 	{
 		// remove dead
 		for (auto& it = emergency_killerworkers.begin(); it != emergency_killerworkers.end();)
@@ -449,21 +516,25 @@ void MEMIBot::DefendWorkers() {
 			}
 		}
 
+		int32_t workers_short = static_cast<int32_t>(workers_needed - emergency_killerworkers.size());
+
 		// push alive
-		for (const auto& worker : workers) {
-			if (emergency_killerworkers.count(worker)) continue;
-			const Unit* target = GetTarget(worker, enemyUnitsInRegion);
-			if (target == nullptr) continue;
-			if (emergency_killerworkers.size() <= enemyUnitsInRegion.size() + 1)
-			{
+		if (workers_short > 0) {
+			for (const auto& worker : workers) {
+				if (emergency_killerworkers.count(worker)) continue;
+				const Unit* target = GetTarget(worker, enemy_units_killing_workers);
+				if (target == nullptr) continue;
 				emergency_killerworkers.insert(worker);
+				workers_short--;
+				if (workers_short <= 0) break;
 			}
 		}
+		
 		// attack
 		for (const auto& killerworker : emergency_killerworkers)
 		{
 			{
-				const Unit* target = GetTarget(killerworker, enemyUnitsInRegion);
+				const Unit* target = GetTarget(killerworker, enemy_units_killing_workers);
 				SmartAttackUnit(killerworker, target);
 			}
 		}
@@ -472,7 +543,8 @@ void MEMIBot::DefendWorkers() {
 	else
 	{
 		if (!emergency_killerworkers.empty()) {
-			Units tmp_killerworkers(emergency_killerworkers.size());
+			Units tmp_killerworkers;
+			tmp_killerworkers.reserve(emergency_killerworkers.size());
 			for (const auto& killerworker : emergency_killerworkers) {
 				if (killerworker->is_alive) {
 					tmp_killerworkers.push_back(killerworker);

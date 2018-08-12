@@ -723,11 +723,11 @@ void MEMIBot::ManageRush() {
 			Units MergedUnits = FindUnitsNear(closestTarget, 8, AttackersRecruiting);
 			if (MergedUnits.size() < AttackersRecruiting.size() * 0.7f)
 			{
-				std::cout << " ¾ÆÁ÷ ´ú ¹¶ÃÆ´Ù~~~ ÀÌ ¸»ÀÌ¾ß!~!! " << std::endl;
+				//std::cout << " ¾ÆÁ÷ ´ú ¹¶ÃÆ´Ù~~~ ÀÌ ¸»ÀÌ¾ß!~!! " << std::endl;
 			}
 			else
 			{
-				std::cout << " ÀÌÁ¦ ´Ù ¹¶ÃÆ´Ù~~~ ÀÌ ¸»ÀÌ¾ß!~!! " << std::endl;
+				//std::cout << " ÀÌÁ¦ ´Ù ¹¶ÃÆ´Ù~~~ ÀÌ ¸»ÀÌ¾ß!~!! " << std::endl;
 				for (const auto& unit : AttackersRecruiting)
 				{
 					Attackers.push_back(unit);
@@ -1185,7 +1185,10 @@ void MEMIBot::ManageOracleBeam(const Unit* unit, const Unit* target)
 
 void  MEMIBot::Roam_enemybase(const Unit* unit)
 {
-	const Unit * EnemyBaseMineral = FindNearestMineralPatch(game_info_.enemy_start_locations.front());
+	const Unit * EnemyBaseMineral = FindNearestMineralPatch(EnemyBaseLocation);
+	if (EnemyBaseMineral == nullptr) {
+		return;
+	}
 
 	determine_enemy_expansion();
 	if (enemy_townhalls_scouter_seen.size() <= 1)
@@ -1207,6 +1210,9 @@ void  MEMIBot::Roam_enemybase(const Unit* unit)
 	else
 	{
 		const Unit * second_nearbase = FindSecondNearestUnit(unit->pos, enemy_townhalls_scouter_seen);
+		if (EnemyBaseMineral == nullptr) {
+			return;
+		}
 		std::cout << " µÎ¹øÂ°·Î °¡±î¿î À§Ä¡°¡  " << second_nearbase->pos.x << " , " << second_nearbase->pos.y << std::endl;
 		SmartMove(unit, second_nearbase->pos);
 	}

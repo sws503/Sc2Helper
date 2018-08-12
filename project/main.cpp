@@ -12,6 +12,7 @@ static const std::string current_version = "v0.5";
 
 #ifdef DEBUG
 
+static const bool EnableCheat = false;
 static const bool VsHuman = false;
 static const int stepsize = 5;
 static const bool Realtime = false;
@@ -42,6 +43,17 @@ class Human : public sc2::Agent {
 public:
 	void OnGameStart() final {
 		Debug()->DebugTextOut("Human");
+		if (EnableCheat) {
+			Debug()->DebugEnemyControl();
+			//Debug()->DebugIgnoreFood();
+			//Debug()->DebugIgnoreResourceCost();
+			//Debug()->DebugShowMap();
+			//Debug()->DebugFastBuild();
+			//Debug()->DebugNoCooldowns();
+			//Debug()->DebugGiveAllTech();
+			//Debug()->DebugGiveAllUpgrades();
+			//Debug()->DebugGodMode();
+		}
 		Debug()->SendDebug();
 	}
 };
@@ -77,7 +89,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Terran, Difficulty::HardVeryHard),
+			CreateComputer(Race::Terran, Difficulty::CheatVision),
 			});
 	}
 
