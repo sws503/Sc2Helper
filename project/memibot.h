@@ -67,6 +67,7 @@ public:
 		// zerg : 5, 6 (기록 없으면 5)
 		int strategy = ReadStats();
 
+		tryadeptbranch6 = false;
 		switch (strategy) {
         case 1:
             branch = 0;
@@ -82,6 +83,7 @@ public:
             break;
         case 5:
             branch = 6;
+            tryadeptbranch6 = true;
             break;
         case 6:
             branch = 7;
@@ -3120,6 +3122,7 @@ private:
 
 	bool try_initialbalance;
 	bool shield3;
+	bool tryadeptbranch6;
 
 	Point2D Pylon1, Pylon2, Pylon3, Pylon4, Gate1, Core1, Star1, Batt1, Batt2, Batt3, Batt4, Batt5, Center;
 
