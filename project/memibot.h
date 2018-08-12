@@ -62,6 +62,13 @@ public:
 
         initial_location_building(game_info_.map_name);
 
+		// protoss : 1, 2 (기록 없으면 1)
+		// terran : 3, 4 (기록 없으면 3)
+		// zerg : 5, 6 (기록 없으면 5)
+		int strategy = ReadStats();
+
+		// todo: strategy에 따라서 branch 변경해주기
+
 		//상대 종족
 		branch = 0;
 		for (const auto& p : game_info_.player_info) {
@@ -165,6 +172,10 @@ public:
 			((staging_location_.z + front_expansion.z) / 2));
 
         change_building_location();
+	}
+
+	virtual void OnGameEnd() final override{
+		WriteStats();
 	}
 
 	virtual void OnStep() final override {
@@ -3025,4 +3036,8 @@ private:
 
 	Point2D Pylon1, Pylon2, Pylon3, Pylon4, Gate1, Core1, Star1, Batt1, Batt2, Batt3, Batt4, Batt5, Center;
 
+	uint32_t myid;
+	Race enemyrace;
+	int ReadStats();
+	void WriteStats();
 };

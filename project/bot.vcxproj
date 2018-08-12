@@ -143,6 +143,7 @@
     <ClCompile Include="managerush.cpp" />
     <ClCompile Include="manageworkers.cpp" />
     <ClCompile Include="scout.cpp" />
+    <ClCompile Include="statistics.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="flag.h" />
