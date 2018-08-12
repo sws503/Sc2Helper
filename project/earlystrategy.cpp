@@ -186,7 +186,8 @@ bool MEMIBot::EarlyStrategy() {
                 TryBuildStructure(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
             }
             TryBuildCannonNexus();
-            }
+            TooMuchMineralBranch6();
+        }
 	}
 	else if (branch==7) {
 	    if (stage_number>725) {
@@ -858,6 +859,7 @@ bool MEMIBot::EarlyStrategy() {
         }
 		return false;
 	case 603:
+	    work_probe_forward = false;
 	    TryChronoboost(base);
 	    Actions()->UnitCommand(probe_forward, ABILITY_ID::MOVE, Pylon2);
 		if (assimilator_count>=2) {
