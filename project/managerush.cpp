@@ -1395,9 +1395,44 @@ void MEMIBot::AdeptPhaseToLocation(const Unit* unit, Point2D Location , bool & T
 
 void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 {
+	if (unit == nullptr) return;
 	Units NearbyArmies = FindUnitsNear(unit, 30, Unit::Alliance::Enemy, IsArmy(Observation()));
 	Units NearMyArmies = FindUnitsNear(unit, 15, Unit::Alliance::Self, IsArmy(Observation()));
+	Units NearEnemyWorkers = FindUnitsNear(unit, 15, Unit::Alliance::Enemy, IsWorker());
+	size_t nearenemyworkers_size = NearEnemyWorkers.size();
+	size_t nearenemyarmies_size = NearbyArmies.size();
 
+	const Unit* nearestenemy = FindNearestUnit(unit->pos, Unit::Alliance::Enemy, IsArmy(Observation()), 6.0f);
+
+	int stalkers = 0;
+	int immortals = 0;
+	int marines = 0;
+	int marauders = 0;
+	int siegetanks = 0;
+	int medivacs = 0;
+	int vikings = 0;
+	int cyclones = 0;
+	int battlecruisers = 0;
+	int enemysum = 0;
+
+	for (const Unit* u : NearbyArmies) {
+		stalkers += IsUnit(UNIT_TYPEID::PROTOSS_STALKER)(*u);
+		immortals += IsUnit(UNIT_TYPEID::PROTOSS_IMMORTAL)(*u);
+	}
+	for (const Unit* u : NearMyArmies) {
+		marines += IsUnits({ UNIT_TYPEID::TERRAN_MARINE })(*u);
+		marauders += IsUnit(UNIT_TYPEID::TERRAN_MARAUDER)(*u);
+		siegetanks += IsUnits({ UNIT_TYPEID::TERRAN_SIEGETANK, UNIT_TYPEID::TERRAN_SIEGETANKSIEGED })(*u);
+		medivacs += IsUnit(UNIT_TYPEID::TERRAN_MEDIVAC)(*u);
+		vikings += IsUnits({ UNIT_TYPEID::TERRAN_VIKINGASSAULT, UNIT_TYPEID::TERRAN_VIKINGFIGHTER })(*u);
+		cyclones += IsUnit(UNIT_TYPEID::TERRAN_CYCLONE)(*u);
+		battlecruisers += IsUnit(UNIT_TYPEID::TERRAN_BATTLECRUISER)(*u);
+	}
+	marines += nearenemyworkers_size;
+	enemysum = marines + marauders + siegetanks + medivacs + vikings + cyclones + battlecruisers;
+
+	// 0에 가까울수록 이길것같음
+	float winrate = PredictWinrate(stalkers, immortals, marines, marauders, siegetanks, medivacs, vikings, cyclones, battlecruisers);
 
 	//Units NearbyArmies = Observation()->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(Observation(), unit->pos, 30));
 	//Units NearMyArmies = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), unit->pos, 15));
@@ -1407,10 +1442,18 @@ void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 	if (UnitHealth < 60)
 	{
 		StalkerBlinkEscape(unit, target);
+		return;
 	}
-	if (getunitsDpsGROUND(NearbyArmies) < 6.0f + NearMyArmies.size() * 3.0f)
+	if (nearenemyarmies_size + nearenemyworkers_size - enemysum == 0) {
+		if (winrate < 0.3f && nearestenemy != nullptr) {
+			StalkerBlinkForward(unit, target);
+			return;
+		}
+	}
+	if (getunitsDpsGROUND(NearbyArmies) < 6.0f + NearMyArmies.size() * 3.0f && nearestenemy != nullptr)
 	{
 		StalkerBlinkForward(unit, target);
+		return;
 	}
 }
 
