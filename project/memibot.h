@@ -2520,6 +2520,23 @@ private:
         }
     }
 
+    bool TooMuchMineralBranch6(){
+        const ObservationInterface* observation = Observation();
+        Units pylons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
+
+        if (observation->GetMinerals()<200 || observation->GetVespene()>100) {
+            return false;
+        }
+        switch (GetRandomInteger(0, 3)) {
+        case 0:
+            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, FindNearestUnit(Pylon4, pylons));
+        case 4:
+            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY, FindNearestUnit(Pylon3, pylons));
+        default:
+            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, FindNearestUnit(Pylon3, pylons));
+        }
+    }
+
     /*bool TryBuildArmyBalance(){
         const ObservationInterface* observation = Observation();
         Units enemy_army = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
