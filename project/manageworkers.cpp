@@ -41,7 +41,6 @@ void MEMIBot::MakeBaseResourceMap() {
 	}
 }
 
-// todo: pathingdistance
 void MEMIBot::MineIdleWorkers(const Unit* worker) {
 	const ObservationInterface* observation = Observation();
 
@@ -531,11 +530,20 @@ void MEMIBot::DefendWorkers() {
 		}
 		
 		// attack
-		for (const auto& killerworker : emergency_killerworkers)
+		for (const auto& u : workers)
 		{
+			if (EvadeEffect(u)) {}
+			else if (EvadeExplosiveUnits(u)) {}
+			else
 			{
-				const Unit* target = GetTarget(killerworker, enemy_units_killing_workers);
-				SmartAttackUnit(killerworker, target);
+				if (!emergency_killerworkers.count(u))
+				{
+					const Unit* killerworker = u;
+					const Unit* target = GetTarget(killerworker, enemy_units_killing_workers);
+					SmartAttackUnit(killerworker, target);
+				}
+				else {
+				}
 			}
 		}
 	}
@@ -553,5 +561,29 @@ void MEMIBot::DefendWorkers() {
 			Actions()->UnitCommand(tmp_killerworkers, ABILITY_ID::STOP);
 			emergency_killerworkers.clear();
 		}
+
+		for (const auto& u : workers) {
+			if (EvadeEffect(u)) {}
+			else if (EvadeExplosiveUnits(u)){}
+			else{}
+		}
 	}
+}
+
+bool MEMIBot::EvadeExplosiveUnits(const Unit* unit) {
+	const ObservationInterface* observation = Observation();
+	Units explodingunits = observation->GetUnits(Unit::Alliance::Enemy,
+		IsUnits({ UNIT_TYPEID::TERRAN_WIDOWMINE, UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED, UNIT_TYPEID::PROTOSS_DISRUPTORPHASED, UNIT_TYPEID::ZERG_BANELING, UNIT_TYPEID::ZERG_BANELINGBURROWED }));
+	const Unit* nearestu = FindNearestUnit(unit->pos, explodingunits, 5.0);
+	if (nearestu != nullptr) {
+		Point2D pos = nearestu->pos;
+		Vector2D diff = unit->pos - pos; // 7.3 적 유닛과의 반대 방향으로 도망
+		Normalize2D(diff);
+		Vector2D mul_diff = diff * (1.0f /*+ radius + unit->radius - dist*/);
+		Point2D fleeingPos = unit->pos + mul_diff;
+		SmartMove(unit, fleeingPos);
+		Chat("Enemy Skill Run~");
+		return true;
+	}
+	return false;
 }
