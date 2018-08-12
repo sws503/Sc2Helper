@@ -166,6 +166,16 @@ bool MEMIBot::EarlyStrategy() {
         }
 	}
 	else if (branch==6) {
+        if (stage_number>613) {
+            TryBuildPylonIfNeeded();
+            if (gateway_count == 0) {
+                stage_number = 602;
+                return false;
+            }
+            if (gateways.front()->orders.empty() && num_adept<4) {
+                TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
+            }
+        }
         if (stage_number>616) {
             for (const auto& stargate : stargates) {
                 TryChronoboost(stargate);
@@ -174,7 +184,7 @@ bool MEMIBot::EarlyStrategy() {
         if (stage_number>620) {
             TryBuildUnit(ABILITY_ID::TRAIN_VOIDRAY, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_VOIDRAY);
 
-            TryBuildPylonIfNeeded(1);
+            TryBuildPylonIfNeeded(2);
 
             if (forge_count==0) {
                 TryBuildStructureNearPylonInBase(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_FORGE);
@@ -904,7 +914,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=610;
             return false;
         }
-        return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
+        return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
     case 610:
         if (battery_count>0) {
             stage_number=611;
@@ -922,11 +932,11 @@ bool MEMIBot::EarlyStrategy() {
 			stage_number = 602;
 			return false;
 		}
-        if (!gateways.front()->orders.empty() && num_stalker>0) {
+        if (!gateways.front()->orders.empty() && num_adept>0) {
             stage_number=613;
             return false;
         }
-        return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
+        return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
     case 613:
 		if (stargate_count == 0) {
 			stage_number = 607;

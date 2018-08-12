@@ -70,6 +70,7 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 
 	MakeBaseResourceMap();
 
+	bool noreassign = EnemyRush && !(branch == 6);
 	bool has_space_for_half_mineral = true;
 	bool has_space_for_gas = false;
 	bool has_space_for_mineral = false;
@@ -106,7 +107,7 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 	std::vector<Vector2D> aux_vectors({ Vector2D(3,0), Vector2D(-3,0), Vector2D(0,3), Vector2D(0,-3) });
 
 	// Search for a base that is missing mineral workers.
-	if (has_space_for_half_mineral && !EnemyRush) {
+	if (has_space_for_half_mineral && !noreassign) {
 		float min_distance = std::numeric_limits<float>::max();
 		const Unit* target_resource = nullptr;
 		const Unit* target_base = nullptr;
@@ -145,7 +146,7 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 	}
 
 	// Search for a base that does not have full of gas workers.
-	if (has_space_for_gas && !EnemyRush) {
+	if (has_space_for_gas && !noreassign) {
 		float min_distance = std::numeric_limits<float>::max();
 		const Unit* target_resource = nullptr;
 		const Unit* target_base = nullptr;
@@ -184,7 +185,7 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 	}
 
 	// Search for a base that does not have full of mineral workers.
-	if (has_space_for_mineral && !EnemyRush) {
+	if (has_space_for_mineral && !noreassign) {
 		float min_distance = std::numeric_limits<float>::max();
 		const Unit* target_resource = nullptr;
 		const Unit* target_base = nullptr;
@@ -288,6 +289,7 @@ void MEMIBot::ManageWorkers() {
 
 	MakeBaseResourceMap();
 
+	bool noreassign = EnemyRush && !(branch == 6);
 	bool has_space_for_half_mineral = true;
 	bool has_space_for_gas = false;
 	bool has_space_for_mineral = false;
@@ -361,7 +363,7 @@ void MEMIBot::ManageWorkers() {
 	}
 
 	// if few workers are mining minerals, then mine mineral rather than gas
-	if (has_space_for_half_mineral && !EnemyRush) {
+	if (has_space_for_half_mineral && !noreassign) {
 		for (const auto& geyser : geysers) {
 			if (geyser->assigned_harvesters == 0) continue;
 
@@ -382,7 +384,7 @@ void MEMIBot::ManageWorkers() {
 	}
 
 	// mine gas.
-	if (has_space_for_gas && !EnemyRush) {
+	if (has_space_for_gas && !noreassign) {
 		// sort by distance
 		Point2D gas_base_pos = gas_base->pos;
 		std::function<bool(const Unit*, const Unit*)> f =
