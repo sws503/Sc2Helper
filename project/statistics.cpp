@@ -5,7 +5,8 @@ int fileread(Race enemyrace, std::string mapname);
 void filewrite(Race enemyrace, std::string mapname, GameResult result);
 
 int MEMIBot::ReadStats() {
-
+	enemyrace = Race::Random;
+	myid = 0;
 	for (const auto& info : Observation()->GetGameInfo().player_info) {
 		std::cout << "pid:" << info.player_id << std::endl;
 		if (info.race_actual == Race::Random) {
@@ -30,7 +31,7 @@ void MEMIBot::WriteStats() {
 
 using namespace std;
 
-//todo: 랜덤종족, 맵추가
+//todo: 랜덤종족 감지, 맵추가
 int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리턴
 	int win, lose;
 	string tmp;
@@ -43,11 +44,11 @@ int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리
 			knFile.close();
 			cout << "파일이없어요.P" << endl;
 			ofstream outFile("Protoss.txt");
-
+			
 			outFile << "Backwater LE" << endl;
 			for (int b = 0; b < 4; b++)
 				outFile << 1 << endl;
-			outFile << "Bel'Shir Vestige LE (Void) LE" << endl;
+			outFile << "Bel'Shir Vestige LE (Void)" << endl;
 			for (int b = 0; b < 4; b++)
 				outFile << 1 << endl;
 			outFile << "Blackpink LE" << endl;
@@ -69,6 +70,7 @@ int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리
 			for (int b = 0; b < 4; b++)
 				outFile << 1 << endl;
 			outFile.close();
+			cout << "파일생성완료" << endl;
 
 		}
 		ifstream inFile("Protoss.txt");
@@ -114,7 +116,7 @@ int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리
 			outFile << "Backwater LE" << endl;
 			for (int b = 0; b < 4; b++)
 				outFile << 1 << endl;
-			outFile << "Bel'Shir Vestige LE (Void) LE" << endl;
+			outFile << "Bel'Shir Vestige LE (Void)" << endl;
 			for (int b = 0; b < 4; b++)
 				outFile << 1 << endl;
 			outFile << "Blackpink LE" << endl;
@@ -136,7 +138,7 @@ int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리
 			for (int b = 0; b < 4; b++)
 				outFile << 1 << endl;
 			outFile.close();
-
+			cout << "파일생성완료" << endl;
 		}
 		ifstream inFile("Terran.txt");
 
@@ -180,7 +182,7 @@ int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리
 			outFile << "Backwater LE" << endl;
 			for (int b = 0; b < 4; b++)
 				outFile << 1 << endl;
-			outFile << "Bel'Shir Vestige LE (Void) LE" << endl;
+			outFile << "Bel'Shir Vestige LE (Void)" << endl;
 			for (int b = 0; b < 4; b++)
 				outFile << 1 << endl;
 			outFile << "Blackpink LE" << endl;
@@ -202,6 +204,7 @@ int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리
 			for (int b = 0; b < 4; b++)
 				outFile << 1 << endl;
 			outFile.close();
+			cout << "파일생성완료" << endl;
 		}
 		ifstream inFile("Zerg.txt");
 		while (1) {
@@ -235,7 +238,7 @@ int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리
 
 }
 
-//todo : 랜덤종족, 맵추가
+//todo : 랜덤종족 감지, 맵추가
 void filewrite(Race enemyrace, string mapname, GameResult result) {
 	string tmp, map;
 	int win, win1, lose, lose1;

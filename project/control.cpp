@@ -266,7 +266,7 @@ bool MEMIBot::CanHitMeGROUND(const Unit* unit)
 }
 
 
-bool MEMIBot::CanHitMe(const Unit* unit)
+bool MEMIBot::CanHitMe(const Unit* unit, float distance)
 {
 	Units NearbyArmies = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, AirAttacker());
 
@@ -287,7 +287,7 @@ bool MEMIBot::CanHitMe(const Unit* unit)
 		}
 		else
 		{
-			if (DIST <= targetattackrange * 1.5 + 1.0f)
+			if (DIST <= targetattackrange * 1.5 + distance)
 			{
 				hitme = true;
 			}
