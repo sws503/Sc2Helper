@@ -445,24 +445,31 @@ void MEMIBot::ManageTimingAttack()
 
 	
 
-	if(num_colossus >= 4)
+	if (branch == 0 || branch == 1)
 	{
-		if (CurrentColossus >= 4)
+		if (num_colossus >= 4)
 		{
-			timing_attack = true;
-			num_colossus -= 2;
-		}
-		else
-		{
-			num_colossus-- ;
+			if (CurrentColossus >= 4)
+			{
+				timing_attack = true;
+				num_colossus -= 2;
+			}
+			else
+			{
+				num_colossus--;
+			}
 		}
 	}
 
-	if (num_carrier >= 6)
+	if (branch == 7)
 	{
-		timing_attack = true;
-		num_carrier--;
+		if (num_carrier >= 6)
+		{
+			timing_attack = true;
+			num_carrier--;
+		}
 	}
+
 
 	if (observation->GetFoodUsed() <= 190)
 	{
@@ -545,7 +552,16 @@ void MEMIBot::ManageRush() {
 
 	for (const auto& unit : Zealots)
 	{
-		ScoutWithUnit(unit, Observation());
+		Units NearbyEnemies = FindUnitsNear(unit, 20, Unit::Alliance::Enemy);
+		const Unit* target = GetZealotTarget(unit, NearbyEnemies);
+		if (target != nullptr)
+		{
+			SmartAttackUnit(unit, target);
+		}
+		else
+		{
+			ScoutWithUnit(unit, Observation());
+		}
 	}
 
 	for (const auto& unit : Observers)
@@ -600,14 +616,23 @@ void MEMIBot::ManageRush() {
 		//const Unit * NearestEnemybase = FindNearestUnit(unit->pos, enemy_townhalls_scouter_seen);
 		Point2D NearestEnemybase = EnemyBaseLocation;
 
-		if ((num_zealot >= 5 || CanHitMe(unit)) && !Summoning)
+		//bool TimeToDrop;
+
+		if (Attackers.size() > 5)
+		{
+			TimeToDrop = true;
+		}
+
+		if ((num_zealot >= 5 && !Summoning )|| CanHitMe(unit) || num_zealot >= 7)
 		{
 			std::cout << num_zealot << " 은 질럿 생산 횟수 " << std::endl;
 			Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMTRANSPORTMODE);
 			num_zealot = 0;
+			TimeToDrop = false;
 		}
 
 		const Unit * nearenemy = GetNearTarget(unit, Airattackers);
+		Point2D MyPosition = unit->pos;
 
 		if (EvadeEffect(unit)) {}
 		else if (CanHitMe(unit) && nearenemy != nullptr) //적 공중공격 유닛이 있을 경우
@@ -618,10 +643,10 @@ void MEMIBot::ManageRush() {
 		{
 			SmartMove(unit, startLocation_);
 		}
-		else if (NearestEnemybase != Point2D(0, 0) && Query()->PathingDistance(unit->pos, Point2D(NearestEnemybase.x + 3, NearestEnemybase.y)) < 20 && Query()->PathingDistance(unit->pos, Point2D(NearestEnemybase.x + 3, NearestEnemybase.y)) > 0.01f) {
+		else if (NearestEnemybase != Point2D(0, 0) && Query()->PathingDistance(MyPosition, Point2D(NearestEnemybase.x + 3, NearestEnemybase.y)) < 20 && Query()->PathingDistance(MyPosition, Point2D(NearestEnemybase.x + 3, NearestEnemybase.y)) > 0.01f) {
 			Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
 		}
-		else if (Attackers.size() > 5)
+		else if (TimeToDrop)
 		{
 			SmartMove(unit, NearestEnemybase);
 		}
@@ -706,15 +731,29 @@ void MEMIBot::ManageRush() {
 		meeting_spot = startLocation_;
 	}
 	
+
+
 	if (timing_attack)
 	{
 		if (AttackersRecruiting.empty()) {
 			for (const auto& unit : rangedunits) 
 			{
-				if (Distance2D(startLocation_, unit->pos) < 50)
+				if (!unit->is_alive)
 				{
-					AttackersRecruiting.push_back(unit);
-					std::cout << " 소집되었습니다 *^^*" << std::endl;
+					continue;
+				}
+				if (branch == 7)
+				{
+					if (unit->unit_type == UNIT_TYPEID::PROTOSS_ADEPT) continue;
+				}
+
+				for (const auto& base : bases)
+				{
+					if (Distance2D(base->pos, unit->pos) < 30 && !IsUnitInUnits(unit, Attackers))
+					{
+						AttackersRecruiting.push_back(unit);
+						break;
+					}
 				}
 			}
 		}
@@ -726,9 +765,10 @@ void MEMIBot::ManageRush() {
 			const Unit * closestTarget = nullptr;
 			closestTarget = FindNearestUnit(attackers_avg_pos, AttackersRecruiting);
 
-			std::cout << closestTarget->pos.x << " , "  <<closestTarget->pos.y << std::endl;
+			std::cout << closestTarget->pos.x << " , "  <<closestTarget->pos.y << " 의 위치를 중심으로 유닛이 잘 모였는지 확인하겠습니다." << std::endl;
 
-			Units MergedUnits = FindUnitsNear(closestTarget, 8, AttackersRecruiting);
+			Units MergedUnits = FindUnitsNear(closestTarget->pos, 10, AttackersRecruiting);
+			std::cout << MergedUnits.size() << " >= " << AttackersRecruiting.size() * 0.7 << "이 만족을 못했습니다." <<std::endl;
 			if (MergedUnits.size() < AttackersRecruiting.size() * 0.7f)
 			{
 				std::cout << " 아직 덜 뭉쳤다~~~ 이 말이야!~!! " << std::endl;
@@ -762,6 +802,7 @@ void MEMIBot::ManageRush() {
 		// 타겟을 받아옵니다 *^^*
 		const Unit * target = GetTarget(unit, NearbyEnemies);
 		const Unit * targetGROUND = GetTarget(unit, NearbyGroundEnemies);
+		const Unit * targetAIR = GetTarget(unit, AirAttackers);
 		
 
 		// 스킬은 알아서 피하시구요 *^^*
@@ -872,7 +913,7 @@ void MEMIBot::ManageRush() {
 			}
 			if (branch == 7)
 			{
-				if (725 == stage_number && !EnemyRush)
+				if (725 <= stage_number && stage_number<= 726 && !EnemyRush)
 				{
 					if (the_pylon_pos != nullptr) {
 						the_pylon = FindNearestUnit(*the_pylon_pos, IsPylon(), 1);
@@ -1660,6 +1701,50 @@ const Unit * MEMIBot::GetOracleTarget(const Unit * rangedUnit, Units & targets)
 	}
 	return weakestTargetInsideRange && highPriorityNear>1 ? weakestTargetInsideRange : closestTargetOutsideRange;
 }
+
+ const Unit * MEMIBot::GetZealotTarget(const Unit * rangedUnit, Units & targets)
+ {
+	 double closestWorkerDist = std::numeric_limits<double>::max();
+	 double closestDist = std::numeric_limits<double>::max();
+
+	 const Unit * closestTarget = nullptr;
+	 const Unit * WorkerTarget = nullptr;
+
+	 for (const auto & targetUnit : targets)
+	 {
+		 if (!targetUnit->is_alive)
+		 {
+			 continue;
+		 }
+
+		 const float distance = Distance2D(rangedUnit->pos, targetUnit->pos);
+		 float DIST = distance - rangedUnit->radius - targetUnit->radius;
+		 const Unit& TARGETUNIT = *targetUnit;
+
+		 
+		 if (IsWorker()(TARGETUNIT))
+		 {
+			 if (DIST <= 4)
+			 {
+				 if (!WorkerTarget || DIST < closestWorkerDist) // 건물을 때리고 싶을 때는
+				 {
+					 closestWorkerDist = DIST;
+					 WorkerTarget = targetUnit;
+				 }
+			 }
+
+		 }
+		 else
+		 {
+			 if (!closestTarget || DIST < closestDist) // 건물을 때리고 싶을 때는
+			 {
+				 closestDist = DIST;
+				 closestTarget = targetUnit;
+			 }
+		 }
+	 }
+	 return closestWorkerDist ? WorkerTarget : closestTarget;
+ }
 
  const Unit * MEMIBot::GetNearTarget(const Unit * rangedUnit, Units & targets)
  {

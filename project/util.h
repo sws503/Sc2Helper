@@ -148,6 +148,13 @@ struct IsRanged {
 	IsRanged(const ObservationInterface* obs) : observation_(obs) {}
 
 	bool operator()(const Unit& unit) {
+		auto attributes = observation_->GetUnitTypeData().at(unit.unit_type).attributes;
+		for (const auto& attribute : attributes) {
+			if (attribute == Attribute::Structure) {
+				return false;
+			}
+		}
+
 		if (unit.unit_type == UNIT_TYPEID::PROTOSS_ORACLE || unit.unit_type == UNIT_TYPEID::PROTOSS_CARRIER)
 			return true;
 

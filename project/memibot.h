@@ -76,7 +76,7 @@ public:
                 branch = 5;
             }
 		}
-        //branch = 6;
+        branch = 7;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
@@ -834,6 +834,8 @@ private:
 	void ManageWarpBlink(const Unit * unit, const Unit * shuttle);
 
 	const Unit * GetTarget(const Unit * rangedUnit, Units & targets);
+
+	const Unit * GetZealotTarget(const Unit * rangedUnit, Units & targets);
 
 	const Unit * GetNearTarget(const Unit * rangedUnit, Units & targets);
 
@@ -3023,6 +3025,7 @@ private:
 
 	uint16_t num_adept;
 	int num_zealot;
+	bool TimeToDrop = false;
 	uint16_t num_stalker;
 	uint16_t num_warpprism;
 	uint16_t num_colossus;

@@ -367,24 +367,40 @@ void MEMIBot::CarrierKiting(const Unit* unit, const Unit* enemyarmy)
 		} 
 	}
 
-
-	if (!enemiesnear || unit->weapon_cooldown == 0.0f)
+	if (enemyattackrange < 1)
 	{
-		SmartAttackUnit(unit, enemyarmy);
-	}
-	else if (IsStructure(Observation())(ENEMYARMY))
-	{
-		sc2::Point2D FrontKitingLocation = unit->pos;
-		FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 7.0f;
+		if (unit->weapon_cooldown == 0.0f)
+		{
+			SmartAttackUnit(unit, enemyarmy);
+		}
+		else
+		{
+			sc2::Point2D FrontKitingLocation = unit->pos;
+			FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 7.0f;
 
-		SmartMove(unit, FrontKitingLocation);
+			SmartMove(unit, FrontKitingLocation);
+		}
 	}
 	else
 	{
-		sc2::Point2D KitingLocation = unit->pos;
-		KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 7.0f;
+		if (!enemiesnear || unit->weapon_cooldown == 0.0f)
+		{
+			SmartAttackUnit(unit, enemyarmy);
+		}
+		else if (IsStructure(Observation())(ENEMYARMY))
+		{
+			sc2::Point2D FrontKitingLocation = unit->pos;
+			FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 7.0f;
 
-		SmartMove(unit, KitingLocation);
+			SmartMove(unit, FrontKitingLocation);
+		}
+		else
+		{
+			sc2::Point2D KitingLocation = unit->pos;
+			KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 7.0f;
+
+			SmartMove(unit, KitingLocation);
+		}
 	}
 }
 
@@ -466,7 +482,9 @@ void MEMIBot::OracleKiting(const Unit* unit, const Unit* enemyarmy)
 	{
 		sc2::Point2D FrontKitingLocation = unit->pos;
 		FrontKitingLocation -= CalcKitingPosition(unit->pos, Workertarget->pos) * 4.0f;
-		SmartMove(unit, FrontKitingLocation);
+		
+		//TEST 움직이면서 떄리는게 효과적인지 아닌게 효과적인지 테스트
+		//SmartMove(unit, FrontKitingLocation);
 	}
 }
 
