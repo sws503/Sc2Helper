@@ -2770,9 +2770,9 @@ private:
                 return;
             case 17://lost and found
                 Pylon1 = Point2D(133.0f, 121.0f);
-                Gate1 = Point2D(132.5f, 118.5f);
+                Gate1 = Point2D(135.5f, 121.5f);
                 Pylon2 = Point2D(62.0f, 33.0f);
-                Core1 = Point2D(135.5f, 121.5f);
+                Core1 = Point2D(132.5f, 118.5f);
                 Star1 = Point2D(64.5f, 34.5f);
                 Pylon3 = Point2D(67.0f, 34.0f);
                 Batt1 = Point2D(131.0f, 121.0f);
