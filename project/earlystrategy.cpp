@@ -71,6 +71,10 @@ bool MEMIBot::EarlyStrategy() {
         if (observation->GetFoodWorkers()<23) {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
         }
+
+        if (branch==6 && observation->GetFoodWorkers()<24) {
+            TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+        }
 	}
 	else{
         for (const auto& b : bases) {
