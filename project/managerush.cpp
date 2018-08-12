@@ -902,7 +902,15 @@ void MEMIBot::ManageRush() {
 					target = GetRushTarget(unit, AirAttackers);
 				}
 
+				Units ArmiesNearStar1 = FindUnitsNear(Star1, 10, Unit::Alliance::Enemy, [](const Unit& unit) {return !unit.is_flying; });
+
 				if (EvadeEffect(unit)) {}
+				else if (ArmiesNearStar1.size() > 0)
+				{
+					const Unit * EmergencyTarget = GetRushTarget(unit, ArmiesNearStar1);
+					VoidRayKiting(unit, EmergencyTarget);
+					//OracleKiting(unit, groundtarget);
+				}
 				else if (ChargeShield(unit)) {}
 				else if (target != nullptr) // 카이팅은 항상하자
 				{
@@ -975,14 +983,7 @@ void MEMIBot::ManageRush() {
 				}
 			}
 			
-			if (Workertarget != nullptr)
-			{
-				ManageOracleBeam(unit, Workertarget);
-			}
-			else
-			{
-				Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);
-			}
+			
 
 			Units ArmiesNearStar1 = FindUnitsNear(Star1, 10, Unit::Alliance::Enemy, [](const Unit& unit) {return !unit.is_flying; });
 
@@ -990,7 +991,6 @@ void MEMIBot::ManageRush() {
 			else if (ArmiesNearStar1.size() > 0)
 			{
 				const Unit * EmergencyTarget = GetOracleTarget(unit, ArmiesNearStar1);
-				
 				if (EmergencyTarget != nullptr)
 				{
 					ManageOracleBeam(unit, EmergencyTarget);
@@ -1002,12 +1002,14 @@ void MEMIBot::ManageRush() {
 			{
 				if (Workertarget != nullptr) // 일꾼이 있으면
 				{
+					ManageOracleBeam(unit, Workertarget);
 					std::cout << " 적 일꾼 어택땅 했어요 " << std::endl;
 					SmartAttackMove(unit, Workertarget->pos);
 					//OracleKiting(unit, Workertarget);
 				}
 				else // 없으면
 				{
+					//Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);
 					//ScoutWithUnit(unit, Observation());
 					if (unit->orders.empty())
 					{
