@@ -647,7 +647,7 @@ private:
 		return moving;
 	}
 
-	// Todo: baneling, disrupterphased etc ÇÇÇÏ±â
+	// Todo: ±Ë¸êÃæ ´ãÁó ¸Ö¸® ÇÇÇÏ±â
 	bool EvadeEffect(const Unit* unit)
 	{
 		const ObservationInterface* observation = Observation();
@@ -707,7 +707,7 @@ private:
 				Point2D pos = nearestu->pos;
 				Vector2D diff = unit->pos - pos; // 7.3 Àû À¯´Ö°úÀÇ ¹Ý´ë ¹æÇâÀ¸·Î µµ¸Á
 				Normalize2D(diff);
-				mul_diff += diff * (1.0f /*+ radius + unit->radius - dist*/);
+				mul_diff += diff * (2.0f /*+ radius + unit->radius - dist*/);
 				moving = true;
 			}
 		}
