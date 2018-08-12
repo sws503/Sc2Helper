@@ -226,6 +226,15 @@ void MEMIBot::scoutprobe() {
 	const ObservationInterface* observation = Observation();
 	if (probe_scout == nullptr) return;
 
+	// 브랜치 6에서 거르기
+	if (branch == 6) {
+		if (stage_number < 620) {
+			if (probe_scout != probe_forward) {
+				SmartMove(probe_scout, startLocation_);
+			}
+			return;
+		}
+	}
 	if (!determine_scout_location(probe_scout)) {
 		if (probe_scout->unit_type == UNIT_TYPEID::PROTOSS_PROBE) {
 			MineIdleWorkers(probe_scout);
@@ -281,8 +290,8 @@ bool MEMIBot::determine_scout_location(const Unit* u) {
 
 		for (int i = 0; i < expansion_size; i++) {
 
-			Point2D pos = query_vector[i].end_;
-			float d = results[i];
+			Point2D pos = query_vector.at(i).end_;
+			float d = results.at(i);
 			if (FindNearestUnit(pos, f_structure, 15) != nullptr) {
 				continue;
 			}

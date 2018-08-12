@@ -534,6 +534,8 @@ void MEMIBot::DefendWorkers() {
 		// attack
 		for (const auto& u : workers)
 		{
+			if (probe_forward != nullptr && !work_probe_forward && u->tag == probe_forward->tag) continue;
+			if (probe_scout != nullptr && probe_scout->tag == u->tag) continue;
 			if (EvadeEffect(u)) {}
 			else if (EvadeExplosiveUnits(u)) {}
 			else
@@ -565,6 +567,8 @@ void MEMIBot::DefendWorkers() {
 		}
 
 		for (const auto& u : workers) {
+			if (probe_forward != nullptr && !work_probe_forward && u->tag == probe_forward->tag) continue;
+			if (probe_scout != nullptr && probe_scout->tag == u->tag) continue;
 			if (EvadeEffect(u)) {}
 			else if (EvadeExplosiveUnits(u)){}
 			else{}
@@ -584,7 +588,7 @@ bool MEMIBot::EvadeExplosiveUnits(const Unit* unit) {
 		Vector2D mul_diff = diff * (1.0f /*+ radius + unit->radius - dist*/);
 		Point2D fleeingPos = unit->pos + mul_diff;
 		SmartMove(unit, fleeingPos);
-		Chat("Enemy Skill Run~");
+		Print("Enemy exploding units Run~");
 		return true;
 	}
 	return false;
