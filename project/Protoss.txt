@@ -1,5 +1,10 @@
-Blackpink LE
+Newkirk Precinct TE (Void)
 2
+1
+1
+1
+Bel'Shir Vestige LE (Void)
+3
 1
 1
 1
@@ -8,7 +13,7 @@ Backwater LE
 1
 1
 1
-Bel'Shir Vestige LE (Void) LE
+Blackpink LE
 1
 1
 1
@@ -19,11 +24,6 @@ Lost and Found LE
 1
 1
 Neon Violet Square LE
-1
-1
-1
-1
-Newkirk Precinct TE (Void)
 1
 1
 1

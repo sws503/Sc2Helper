@@ -484,7 +484,7 @@ void MEMIBot::OracleKiting(const Unit* unit, const Unit* enemyarmy)
 		FrontKitingLocation -= CalcKitingPosition(unit->pos, Workertarget->pos) * 4.0f;
 		
 		//TEST 움직이면서 떄리는게 효과적인지 아닌게 효과적인지 테스트
-		//SmartMove(unit, FrontKitingLocation);
+		SmartMove(unit, FrontKitingLocation);
 	}
 }
 

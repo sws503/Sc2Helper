@@ -51,6 +51,20 @@ bool MEMIBot::DefendDuty(const Unit * unit)
 	return false;
 }
 
+bool MEMIBot::DefendDutyAttack(const Unit * unit)
+{
+	const Unit * target = GetTarget(unit, enemyUnitsInRegion);
+	Units bases = Observation()->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+
+	if (target != nullptr && IsUnitInUnits(target, enemyUnitsInRegion) && Distance2D(unit->pos, target->pos) < 20)
+	{
+		SmartAttackUnit(unit, target);
+		return true;
+	}
+
+	return false;
+}
+
 void MEMIBot::Defend() {
 	const ObservationInterface* observation = Observation();
 	Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());

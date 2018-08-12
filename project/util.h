@@ -56,15 +56,15 @@ struct AirAttacker { // 공중 공격 가능한 적들 (폭풍함이 우선 공격하는 적) //시간
 	bool operator()(const Unit& unit) {
 		switch (unit.unit_type.ToType()) {
 
-		case UNIT_TYPEID::PROTOSS_STALKER: return true;
-		case UNIT_TYPEID::PROTOSS_PHOTONCANNON: return true;
+		case UNIT_TYPEID::PROTOSS_STALKER:
+		case UNIT_TYPEID::PROTOSS_PHOTONCANNON: 
 
-		case UNIT_TYPEID::TERRAN_MARINE: return true;
-		case UNIT_TYPEID::TERRAN_MISSILETURRET: return true;
-		case UNIT_TYPEID::TERRAN_BUNKER: return true;
+		case UNIT_TYPEID::TERRAN_MARINE: 
+		case UNIT_TYPEID::TERRAN_MISSILETURRET: 
+		case UNIT_TYPEID::TERRAN_BUNKER:
 
-		case UNIT_TYPEID::ZERG_SPORECRAWLER: return true;
-		case UNIT_TYPEID::ZERG_QUEEN: return true;
+		case UNIT_TYPEID::ZERG_SPORECRAWLER:
+		case UNIT_TYPEID::ZERG_QUEEN: 
 
 		case UNIT_TYPEID::TERRAN_BATTLECRUISER:
 		case UNIT_TYPEID::TERRAN_CYCLONE:
@@ -87,7 +87,7 @@ struct AirAttacker { // 공중 공격 가능한 적들 (폭풍함이 우선 공격하는 적) //시간
 		case UNIT_TYPEID::PROTOSS_PHOENIX:
 		case UNIT_TYPEID::PROTOSS_CARRIER:
 		case UNIT_TYPEID::PROTOSS_SENTRY:
-		case UNIT_TYPEID::PROTOSS_ARCHON: return true;
+		case UNIT_TYPEID::PROTOSS_ARCHON: return build_progress == 1.0f;
 
 		default: return false;
 		}

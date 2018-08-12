@@ -981,13 +981,15 @@ void MEMIBot::ManageRush() {
 			else if (ArmiesNearStar1.size() > 0)
 			{
 				const Unit * groundtarget = FindNearestUnit(unit->pos, ArmiesNearStar1);
-				OracleKiting(unit, groundtarget);
+				SmartAttackMove(unit, groundtarget->pos);
+				//OracleKiting(unit, groundtarget);
 			}
 			else if (!CanHitMe(unit)) //적 공중공격 유닛이 없을 경우
 			{
 				if (Workertarget != nullptr) // 일꾼이 있으면
 				{
-					OracleKiting(unit, Workertarget);
+					SmartAttackMove(unit, Workertarget->pos);
+					//OracleKiting(unit, Workertarget);
 				}
 				else // 없으면
 				{
@@ -1002,7 +1004,6 @@ void MEMIBot::ManageRush() {
 			{
 				if (Workertarget != nullptr) // 적 일꾼이 있으면
 				{
-
 					if (OracleCanAttack == 1) // 내가 공격을 할 수 있다
 					{
 						OracleBackKiting(unit, Workertarget, Armytarget);
@@ -1024,28 +1025,41 @@ void MEMIBot::ManageRush() {
 		{
 			//ManageWarpBlink(unit);
 
-			if (EvadeEffect(unit)) {}
-			else if (target != nullptr) // 카이팅은 항상하자
+			if (branch == 6)
 			{
-				if (BlinkResearched)
+				if (EvadeEffect(unit)) {}
+				else if (DefendDuty(unit)) {}
+				else if (unit->orders.empty())
 				{
-					ManageBlink(unit, target);
+					Roam_randombase(unit);
 				}
-				Kiting(unit, target);
 			}
-			else if (DefendDuty(unit)) {}
-			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+			else
 			{
-				ScoutWithUnit(unit, observation);
+				if (EvadeEffect(unit)) {}
+				else if (target != nullptr) // 카이팅은 항상하자
+				{
+					if (BlinkResearched)
+					{
+						ManageBlink(unit, target);
+					}
+					Kiting(unit, target);
+				}
+				else if (DefendDuty(unit)) {}
+				else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+				{
+					ScoutWithUnit(unit, observation);
+				}
+				else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
+				{
+					RetreatSmart(unit, meeting_spot);
+				}
+				else if (unit->orders.empty())
+				{
+					Roam_randombase(unit);
+				}
 			}
-			else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
-			{
-				RetreatSmart(unit, meeting_spot);
-			}
-			else if (unit->orders.empty())
-			{
-				Roam_randombase(unit);
-			}
+			
 		}
 
 
