@@ -1458,7 +1458,7 @@ void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 		return;
 	}
 	if (nearenemyarmies_size + nearenemyworkers_size - enemysum == 0) {
-		if (winrate < 0.3f && nearestenemy != nullptr) {
+		if (winrate < 0.2f && nearestenemy != nullptr) {
 			StalkerBlinkForward(unit, target);
 			return;
 		}

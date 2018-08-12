@@ -587,7 +587,7 @@ bool MEMIBot::EvadeExplosiveUnits(const Unit* unit) {
 		Point2D pos = nearestu->pos;
 		Vector2D diff = unit->pos - pos; // 7.3 적 유닛과의 반대 방향으로 도망
 		Normalize2D(diff);
-		Vector2D mul_diff = diff * (1.0f /*+ radius + unit->radius - dist*/);
+		Vector2D mul_diff = diff * (2.5f /*+ radius + unit->radius - dist*/);
 		Point2D fleeingPos = unit->pos + mul_diff;
 		SmartMove(unit, fleeingPos);
 		Print("Enemy exploding units Run~");
