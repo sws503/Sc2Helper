@@ -596,7 +596,9 @@ void MEMIBot::ManageRush() {
 		GetPosition(NearbyArmies, Unit::Alliance::Enemy, enemy_position);
 		GetPosition(my_army, Unit::Alliance::Self, retreat_position); // TODO : 러쉬하는 유닛들로만 지정
 		
-		const Unit * NearestEnemybase = FindNearestUnit(unit->pos, enemy_townhalls_scouter_seen);
+		// 둘 중 하나를 골라서 쓰세요~
+		//const Unit * NearestEnemybase = FindNearestUnit(unit->pos, enemy_townhalls_scouter_seen);
+		Point2D NearestEnemybase = EnemyBaseLocation;
 
 		if ((num_zealot >= 5 || CanHitMe(unit)) && !Summoning)
 		{
@@ -616,12 +618,12 @@ void MEMIBot::ManageRush() {
 		{
 			SmartMove(unit, startLocation_);
 		}
-		else if (NearestEnemybase !=nullptr && Query()->PathingDistance(unit->pos, Point2D(NearestEnemybase->pos.x + 3, NearestEnemybase->pos.y)) < 20) {
+		else if (NearestEnemybase != Point2D(0,0) && Query()->PathingDistance(unit->pos, Point2D(NearestEnemybase.x + 3, NearestEnemybase.y)) < 20) {
 			Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
 		}
 		else if (Attackers.size() > 5)
 		{
-			SmartMove(unit, NearestEnemybase->pos);
+			SmartMove(unit, NearestEnemybase);
 		}
 		else if (unit->orders.empty())
 		{

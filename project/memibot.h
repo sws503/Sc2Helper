@@ -262,7 +262,7 @@ public:
 			switch (upgrade.ToType()) {
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1: {
 				std::cout << "attack1";
-				timing_attack = true;
+				//timing_attack = true;
 				return;
 			}
 			case UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2: {
