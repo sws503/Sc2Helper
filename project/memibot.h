@@ -215,7 +215,7 @@ public:
 #ifdef DEBUG
 		//TEST 하려고 송우석이 주석처리함
 		//발견시 주석 제거 추천
-		//PrintCursor();
+		PrintCursor();
 #endif
 
 		if (observation->GetGameLoop()%10==0) {
@@ -240,31 +240,6 @@ public:
 				return;
 			}
 			if (probe_forward != nullptr && probe_forward->tag == unit->tag && !work_probe_forward) {
-				if (EnemyRush) {
-					SmartMove(unit, startLocation_);
-				}
-				// goto near base or center of mass
-				else {
-					const ObservationInterface* observation = Observation();
-					Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
-					Units mystructures = observation->GetUnits(Unit::Alliance::Self, IsStructure(observation));
-					size_t mystructures_size = mystructures.size();
-					bool nearbase = false;
-					for (const auto& e : bases) {
-						if (nearbase |= (DistanceSquared2D(e->pos, unit->pos) < 200)) break;
-					}
-					if (nearbase) return;
-					Point2D avg(0, 0);
-					if (mystructures_size) {
-						for (const auto& e : mystructures) {
-							avg += e->pos;
-						}
-						avg /= static_cast<float>(mystructures_size);
-					}
-					if (DistanceSquared2D(probe_forward->pos, avg) > 200 && advance_pylon != nullptr) {
-						SmartMove(unit, avg);
-					}
-				}
 				return;
 			}
 			if (IsCarryingMinerals(*unit) || IsCarryingVespene(*unit)) {
