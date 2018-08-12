@@ -320,7 +320,7 @@ void MEMIBot::manageobserver() {
 		// 본진에 가깝다: 항상 보내기
 		// 본진과의 거리가 30보다 작고 적 건물이 없다: 보내기
 
-		if (nearbase || (Distance2D(startLocation_, pos) < 30 && FindNearestUnit(pos, enemystructures, 10) == nullptr) ) {
+		if (nearbase || (Distance2D(startLocation_, pos) < 30 && nearenemystructure) ) {
 			dead_probe_cleared = false;
 		}
 		else {
@@ -452,8 +452,17 @@ void MEMIBot::manageobserver() {
 				return IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER)(u) && (!attackers_probe_is_doing || attack_obs_tag != u.tag);
 			};
 			const Unit* nearest_observer = FindNearestUnit(pos, Unit::Alliance::Self, f);
-			if (nearest_observer)
-				SmartMove(nearest_observer, pos);
+			if (nearest_observer) {
+				if (EvadeEffect(nearest_observer)) {}
+				else if (CanHitMe(nearest_observer))
+				{
+					const Unit * target = GetTarget(nearest_observer, enemyarmies);
+					FleeKiting(nearest_observer, target);
+				}
+				else {
+					SmartMove(nearest_observer, pos);
+				}
+			}
 		}
 	}
 
@@ -477,7 +486,13 @@ void MEMIBot::manageobserver() {
 			nearenemy = GetPosition(cloakeddetected_units, avg_pos);
 		}
 		// check if observer found some hidden enemy unit
-		if (nearbase && nearenemy) {
+		if (EvadeEffect(observer)) {}
+		else if (CanHitMe(observer))
+		{
+			const Unit * target = GetTarget(observer, enemyarmies);
+			FleeKiting(observer, target);
+		}
+		else if (nearbase && nearenemy) {
 			SmartMove(observer, avg_pos);
 		}
 		else {
