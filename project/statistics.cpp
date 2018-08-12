@@ -5,7 +5,8 @@ int fileread(Race enemyrace, std::string mapname);
 void filewrite(Race enemyrace, std::string mapname, GameResult result);
 
 int MEMIBot::ReadStats() {
-
+	enemyrace = Race::Random;
+	myid = 0;
 	for (const auto& info : Observation()->GetGameInfo().player_info) {
 		std::cout << "pid:" << info.player_id << std::endl;
 		if (info.race_actual == Race::Random) {
@@ -30,7 +31,7 @@ void MEMIBot::WriteStats() {
 
 using namespace std;
 
-//todo: ·£´ýÁ¾Á·, ¸ÊÃß°¡
+//todo: ·£´ýÁ¾Á· °¨Áö, ¸ÊÃß°¡
 int fileread(Race enemyrace, string mapname) { //race´Â 1-P 2-T 3-Z ºôµå ³Ñ¹ö ¸®ÅÏ
 	int win, lose;
 	string tmp;
@@ -235,7 +236,7 @@ int fileread(Race enemyrace, string mapname) { //race´Â 1-P 2-T 3-Z ºôµå ³Ñ¹ö ¸®
 
 }
 
-//todo : ·£´ýÁ¾Á·, ¸ÊÃß°¡
+//todo : ·£´ýÁ¾Á· °¨Áö, ¸ÊÃß°¡
 void filewrite(Race enemyrace, string mapname, GameResult result) {
 	string tmp, map;
 	int win, win1, lose, lose1;

@@ -82,7 +82,8 @@ public:
 		initial_location_building(game_info_.map_name);
 
 		stage_number = 0;
-		iter_exp = expansions_.end();
+		scout_candidates.clear();
+		iter_exp = scout_candidates.end();
 		Enemy_front_expansion = Point3D(0, 0, 0);
 		recent_probe_scout_location = Point2D(0, 0);
 		recent_probe_scout_loop = 0;
@@ -127,7 +128,6 @@ public:
 		AttackersRecruiting.clear();
 
 		emergency_killerworkers.clear();
-		scout_candidates.clear();
 
 		try_initialbalance = false;
 		the_pylon = nullptr;
@@ -710,8 +710,8 @@ private:
 		}
 		if (!moving) {
 			Units explodingunits = observation->GetUnits(Unit::Alliance::Enemy,
-				IsUnits({ UNIT_TYPEID::TERRAN_WIDOWMINE, UNIT_TYPEID::TERRAN_WIDOWMINEBURROWED, UNIT_TYPEID::PROTOSS_DISRUPTORPHASED, UNIT_TYPEID::ZERG_BANELING, UNIT_TYPEID::ZERG_BANELINGBURROWED }));
-			const Unit* nearestu = FindNearestUnit(unit->pos, explodingunits, 5.5);
+				IsUnits({UNIT_TYPEID::PROTOSS_DISRUPTORPHASED}));
+			const Unit* nearestu = FindNearestUnit(unit->pos, explodingunits, 4.0f);
 			if (nearestu != nullptr) {
 				Point2D pos = nearestu->pos;
 				Vector2D diff = unit->pos - pos; // 7.3 적 유닛과의 반대 방향으로 도망
@@ -778,7 +778,7 @@ private:
 
 	bool CanHitMeGROUND(const Unit * unit);
 
-	bool CanHitMe(const Unit * unit);
+	bool CanHitMe(const Unit * unit, float distance = 1.0f);
 
 	void ComeOnKiting(const Unit * unit, const Unit * enemyarmy);
 
@@ -1709,7 +1709,7 @@ private:
 			float d = distances.at(i);
 
 			// Check to see if unit can make it there
-			if (d < 0.01f) {
+			if (d < 0.01f && DistanceSquared2D(query_vector.at(i).start_, location) > 0.5f) {
 				continue;
 			}
 
@@ -1792,7 +1792,7 @@ private:
 			float d = distances.at(i);
 
 			// Check to see if unit can make it there
-			if (d < 0.01f) {
+			if (d < 0.01f && DistanceSquared2D(query_vector.at(i).start_, location) > 0.5f) {
 				continue;
 			}
 
@@ -2082,6 +2082,8 @@ private:
 
 	void DefendWorkers();
 
+	bool EvadeExplosiveUnits(const Unit * unit);
+
 	void ManageUpgrades() {
 		const ObservationInterface* observation = Observation();
 		Units forges = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FORGE));
@@ -2257,7 +2259,9 @@ private:
 
 	void scoutprobe();
 
-	void determine_scout_location();
+	bool determine_scout_location(const Unit* u);
+
+	void find_next_scout_location();
 
 	void determine_enemy_expansion();
 
@@ -2984,7 +2988,7 @@ private:
 	Point2D recent_probe_scout_location;
 	uint32_t recent_probe_scout_loop;
 	std::list<Point2D> last_dead_probe_pos;
-	std::vector<Point3D> scout_candidates;
+	std::vector<Point2D> scout_candidates;
 
 	Point2D advance_pylon_location;
 
@@ -3013,7 +3017,7 @@ private:
 
 	bool work_probe_forward;
 	bool find_enemy_location;
-	std::vector<Point3D>::iterator iter_exp;
+	std::vector<Point2D>::iterator iter_exp;
 	Point3D enemy_expansion;
 
 	uint16_t stage_number;
