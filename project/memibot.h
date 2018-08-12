@@ -3118,4 +3118,5 @@ private:
 	Race enemyrace;
 	int ReadStats();
 	void WriteStats();
+	float PredictWinrate(int stalker, int immortal, int marine, int marauder, int siegetank, int medivac, int viking, int cyclone, int battlecruiser);
 };
