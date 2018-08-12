@@ -58,7 +58,14 @@ bool MEMIBot::DefendDutyAttack(const Unit * unit)
 
 	if (target != nullptr && IsUnitInUnits(target, enemyUnitsInRegion) && Distance2D(unit->pos, target->pos) < 20)
 	{
-		SmartAttackUnit(unit, target);
+		if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
+		{
+			//가만히 있도록 합시다
+		}
+		else
+		{
+			SmartAttackUnit(unit, target);
+		}
 		return true;
 	}
 
