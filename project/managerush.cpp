@@ -511,7 +511,7 @@ void MEMIBot::ManageRush() {
 
 	///////////////////////////////////////
 
-	
+
 	////////////////////////////////////////////
 
 	for (const auto& battery : Batteries)
@@ -526,7 +526,7 @@ void MEMIBot::ManageRush() {
 				Actions()->UnitCommand(battery, ABILITY_ID::EFFECT_RESTORE, unit);
 			}
 		}
-		
+
 		if (725 <= stage_number && stage_number <= 726 && !EnemyRush)
 		{
 
@@ -550,7 +550,7 @@ void MEMIBot::ManageRush() {
 
 	for (const auto& unit : Observers)
 	{
-		
+
 		/*Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
 
 		Point2D enemy_position;
@@ -573,14 +573,14 @@ void MEMIBot::ManageRush() {
 		}*/
 	}
 
-	
+
 
 	for (const auto& unit : WarpPrisms)
 	{
 		Units NearbyArmies = FindUnitsNear(unit, 25, Unit::Alliance::Enemy, IsArmy(observation));
 		Units Airattackers = FindUnitsNear(unit, 16, Unit::Alliance::Enemy, AirAttacker());
 		//Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
-		
+
 		bool Summoning = false;
 		for (const Unit * zealot : Zealots)
 		{
@@ -595,7 +595,7 @@ void MEMIBot::ManageRush() {
 
 		GetPosition(NearbyArmies, Unit::Alliance::Enemy, enemy_position);
 		GetPosition(my_army, Unit::Alliance::Self, retreat_position); // TODO : 러쉬하는 유닛들로만 지정
-		
+
 		// 둘 중 하나를 골라서 쓰세요~
 		//const Unit * NearestEnemybase = FindNearestUnit(unit->pos, enemy_townhalls_scouter_seen);
 		Point2D NearestEnemybase = EnemyBaseLocation;
@@ -606,7 +606,7 @@ void MEMIBot::ManageRush() {
 			Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMTRANSPORTMODE);
 			num_zealot = 0;
 		}
-		
+
 		const Unit * nearenemy = GetNearTarget(unit, Airattackers);
 
 		if (EvadeEffect(unit)) {}
@@ -618,7 +618,7 @@ void MEMIBot::ManageRush() {
 		{
 			SmartMove(unit, startLocation_);
 		}
-		else if (NearestEnemybase != Point2D(0,0) && Query()->PathingDistance(unit->pos, Point2D(NearestEnemybase.x + 3, NearestEnemybase.y)) < 20) {
+		else if (NearestEnemybase != Point2D(0, 0) && Query()->PathingDistance(unit->pos, Point2D(NearestEnemybase.x + 3, NearestEnemybase.y)) < 20 && Query()->PathingDistance(unit->pos, Point2D(NearestEnemybase.x + 3, NearestEnemybase.y)) > 0.01f) {
 			Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
 		}
 		else if (Attackers.size() > 5)
@@ -695,9 +695,17 @@ void MEMIBot::ManageRush() {
 			}*/
 		}
 	}
-
-	Point2D meeting_spot = Pylon1;
-
+	Point2D meeting_spot;
+	if (!bases.empty())
+	{
+		const Unit* CenterBase = FindNearestUnit(Center, bases);
+		meeting_spot = CenterBase->pos;
+	}
+	else
+	{
+		meeting_spot = startLocation_;
+	}
+	
 	if (timing_attack)
 	{
 		if (AttackersRecruiting.empty()) {
@@ -723,11 +731,11 @@ void MEMIBot::ManageRush() {
 			Units MergedUnits = FindUnitsNear(closestTarget, 8, AttackersRecruiting);
 			if (MergedUnits.size() < AttackersRecruiting.size() * 0.7f)
 			{
-				//std::cout << " 아직 덜 뭉쳤다~~~ 이 말이야!~!! " << std::endl;
+				std::cout << " 아직 덜 뭉쳤다~~~ 이 말이야!~!! " << std::endl;
 			}
 			else
 			{
-				//std::cout << " 이제 다 뭉쳤다~~~ 이 말이야!~!! " << std::endl;
+				std::cout << " 이제 다 뭉쳤다~~~ 이 말이야!~!! " << std::endl;
 				for (const auto& unit : AttackersRecruiting)
 				{
 					Attackers.push_back(unit);
@@ -737,8 +745,6 @@ void MEMIBot::ManageRush() {
 			}
 		}
 	}
-	
-
 
 	//유닛이라면 기본적으로 해야할 행동 강령
 	for (const auto& unit : rangedunits) {
