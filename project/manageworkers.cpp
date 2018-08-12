@@ -536,7 +536,7 @@ void MEMIBot::DefendWorkers() {
 			else if (EvadeExplosiveUnits(u)) {}
 			else
 			{
-				if (!emergency_killerworkers.count(u))
+				if (emergency_killerworkers.count(u))
 				{
 					const Unit* killerworker = u;
 					const Unit* target = GetTarget(killerworker, enemy_units_killing_workers);
