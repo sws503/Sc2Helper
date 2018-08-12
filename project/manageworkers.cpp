@@ -521,6 +521,8 @@ void MEMIBot::DefendWorkers() {
 		if (workers_short > 0) {
 			for (const auto& worker : workers) {
 				if (emergency_killerworkers.count(worker)) continue;
+				if (probe_forward != nullptr && !work_probe_forward && worker->tag == probe_forward->tag) continue;
+				if (probe_scout != nullptr && probe_scout->tag == worker->tag) continue;
 				const Unit* target = GetTarget(worker, enemy_units_killing_workers);
 				if (target == nullptr) continue;
 				emergency_killerworkers.insert(worker);
