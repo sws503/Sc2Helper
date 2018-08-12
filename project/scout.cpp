@@ -49,6 +49,12 @@ void MEMIBot::scout_all() {
 				flags.set("search_branch", 1);
 				flags.set("search_result", 1);
 
+				find_enemy_location = true;
+				EnemyBaseLocation = game_info_.enemy_start_locations.front();
+				determine_enemy_expansion();
+
+				//todo: 재정찰
+				/*
 				if (DistanceSquared2D(probe_scout->pos, EnemyBaseLocation) < 400) {
 					find_enemy_location = true;
 					EnemyBaseLocation = game_info_.enemy_start_locations.front();
@@ -58,15 +64,12 @@ void MEMIBot::scout_all() {
 					std::random_shuffle(game_info_.enemy_start_locations.begin(),
 						game_info_.enemy_start_locations.end());
 				}
+				*/
 			}
 			// 멀티 정찰 때 사망
 			else {
 				// 다음 확장으로 스킵
-				if (iter_exp == expansions_.end()) {
-					std::random_shuffle(expansions_.begin(), expansions_.end());
-					iter_exp = expansions_.begin();
-				}
-				iter_exp++;
+				find_next_scout_location();
 			}
 
 			probe_scout = p;
@@ -221,13 +224,16 @@ void MEMIBot::scoutenemylocation() {
 // todo: 정찰 위치 주변에 건물이 있으면 거르기
 void MEMIBot::scoutprobe() {
 	const ObservationInterface* observation = Observation();
+	if (probe_scout == nullptr) return;
 
-	if (iter_exp == expansions_.end()) {
-		std::random_shuffle(expansions_.begin(), expansions_.end());
-		iter_exp = expansions_.begin();
+	if (!determine_scout_location(probe_scout)) {
+		if (probe_scout->unit_type == UNIT_TYPEID::PROTOSS_PROBE) {
+			MineIdleWorkers(probe_scout);
+			return;
+		}
 	}
-
 	const Unit* mineralp = FindNearestMineralPatch(*iter_exp);
+	const Unit* structurep = FindNearestUnit(*iter_exp, IsStructure(observation), 15);
 	if (mineralp == nullptr) {
 		return;
 	}
@@ -238,20 +244,70 @@ void MEMIBot::scoutprobe() {
 		DistanceSquared2D(enemy_expansion, tag_pos)<200 ||
 		DistanceSquared2D(front_expansion, tag_pos)<200 ||
 		DistanceSquared2D(startLocation_, tag_pos)<200) {
-		iter_exp++;
+		find_next_scout_location();
 		return;
 	}
 	SmartMove(probe_scout, tag_pos);
 	// 도착하면 다음 확장으로
 	if (DistanceSquared2D(probe_scout->pos, tag_pos)<4 || Query()->PathingDistance(probe_scout->pos, *iter_exp)<0.1f) {
-		iter_exp++;
+		find_next_scout_location();
 		return;
 	}
 }
 
-// todo: 만들어주기
-void MEMIBot::determine_scout_location() {
+bool MEMIBot::determine_scout_location(const Unit* u) {
+	if (u == nullptr) return false;
 
+	
+	Filter f_structure = [this](const Unit& u) {
+		return (u.alliance == Unit::Alliance::Self || u.alliance == Unit::Alliance::Enemy) && IsStructure(Observation())(u);
+	};
+
+	if (iter_exp == scout_candidates.end()) {
+		size_t expansion_size;
+		std::vector<QueryInterface::PathingQuery> query_vector;
+		for (const auto& pos : expansions_) {
+			
+			QueryInterface::PathingQuery query;
+			query.start_unit_tag_ = u->tag;
+			query.start_ = u->pos;
+			query.end_ = pos;
+			query_vector.push_back(query);
+		}
+		std::vector<float> results = Query()->PathingDistance(query_vector);
+		expansion_size = query_vector.size();
+		scout_candidates.clear();
+		scout_candidates.reserve(expansion_size);
+
+		for (int i = 0; i < expansion_size; i++) {
+
+			Point2D pos = query_vector[i].end_;
+			float d = results[i];
+			if (FindNearestUnit(pos, f_structure, 15) != nullptr) {
+				continue;
+			}
+			if (DistanceSquared2D(EnemyBaseLocation, pos)<200 ||
+				DistanceSquared2D(enemy_expansion, pos)<200 ||
+				DistanceSquared2D(front_expansion, pos)<200 ||
+				DistanceSquared2D(startLocation_, pos)<200) {
+				continue;
+			}
+			if (d < 5.0f) {
+				continue;
+			}
+			scout_candidates.push_back(pos);
+		}
+
+		std::random_shuffle(scout_candidates.begin(), scout_candidates.end());
+		iter_exp = scout_candidates.begin();
+	}
+	return iter_exp != scout_candidates.end();
+}
+
+void MEMIBot::find_next_scout_location() {
+	if (determine_scout_location(probe_scout)) {
+		iter_exp++;
+	}
 }
 
 void MEMIBot::determine_enemy_expansion() {
@@ -291,11 +347,16 @@ void MEMIBot::manageobserver() {
 	};
 
 	// attacker_s_probe_tag 지정
-	if (attacker_s_observer_tag == NullTag && !observers_not_sieged.empty()) {
-		attacker_s_observer_tag = observers_not_sieged.front()->tag;
+	if (attacker_s_observer_tag == NullTag) {
+		for (const auto& o : observers_not_sieged) {
+			if (probe_scout != nullptr && probe_scout->tag == o->tag) continue;
+			attacker_s_observer_tag = o->tag;
+			break;
+		}
 	}
 
 	const Unit* attacker_s_observer = observation->GetUnit(attacker_s_observer_tag);
+	float safedistance = 3.0f;
 
 	// 판단
 	bool do_siege_mode = false;
@@ -371,7 +432,7 @@ void MEMIBot::manageobserver() {
 		Point2D avg_pos(0, 0);
 		if (attacker_s_observer != nullptr) {
 			if (EvadeEffect(attacker_s_observer)) {}
-			else if (CanHitMe(attacker_s_observer)) 
+			else if (CanHitMe(attacker_s_observer, safedistance))
 			{
 				const Unit * target = GetTarget(attacker_s_observer, enemyarmies);
 				FleeKiting(attacker_s_observer, target);
@@ -454,7 +515,7 @@ void MEMIBot::manageobserver() {
 			const Unit* nearest_observer = FindNearestUnit(pos, Unit::Alliance::Self, f);
 			if (nearest_observer) {
 				if (EvadeEffect(nearest_observer)) {}
-				else if (CanHitMe(nearest_observer))
+				else if (CanHitMe(nearest_observer, safedistance))
 				{
 					const Unit * target = GetTarget(nearest_observer, enemyarmies);
 					FleeKiting(nearest_observer, target);
@@ -487,7 +548,7 @@ void MEMIBot::manageobserver() {
 		}
 		// check if observer found some hidden enemy unit
 		if (EvadeEffect(observer)) {}
-		else if (CanHitMe(observer))
+		else if (CanHitMe(observer, safedistance))
 		{
 			const Unit * target = GetTarget(observer, enemyarmies);
 			FleeKiting(observer, target);
