@@ -833,7 +833,12 @@ private:
 
 	bool GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D & position);
 
+	int getRushPriority(const Unit * u);
+
 	int getAttackPriority(const Unit * u);
+
+	int getOraclePriority(const Unit * u);
+
 
 	bool IsBonusType(const Unit * rangedUnit, const Unit * target);
 
@@ -849,8 +854,12 @@ private:
 
 	void ManageWarpBlink(const Unit * unit, const Unit * shuttle);
 
+	const Unit * GetRushTarget(const Unit * rangedUnit, Units & targets);
+	
 	const Unit * GetTarget(const Unit * rangedUnit, Units & targets);
 
+	const Unit * GetOracleRushTarget(const Unit * rangedUnit, Units & targets);
+	
 	const Unit * GetZealotTarget(const Unit * rangedUnit, Units & targets);
 
 	const Unit * GetNearTarget(const Unit * rangedUnit, Units & targets);
