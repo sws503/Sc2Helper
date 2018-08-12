@@ -976,6 +976,10 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon4);
     case 619:
+		if (stargate_count == 0) {
+			stage_number = 607;
+			return false;
+		}
         if (stargates.front()->orders.empty()) {
             return TryBuildUnit(ABILITY_ID::TRAIN_VOIDRAY, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_VOIDRAY);
         }
