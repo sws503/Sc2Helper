@@ -917,73 +917,84 @@ void MEMIBot::ManageRush() {
 			Units NearbyWorkers = FindUnitsNear(unit, 6, Unit::Alliance::Enemy, IsWorker());
 
 			
-
-			if (EvadeEffect(unit)) {}
-			else if (26 <= stage_number && stage_number <= 35)
+			if (branch == 6)
 			{
-				bool ComeOn = false;
-
-				if (target != nullptr)
-				{
-					if (getunitsDpsGROUND(NearbyArmies) > 6.0f)
-					{
-						AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
-					}
-
-					const Unit * Armytarget = GetTarget(unit, NearbyArmies);
-
-					if (NearbyWorkers.size() > 0) // 근처에 적 일꾼이 있는데
-					{
-						const Unit * Workertarget = GetTarget(unit, NearbyWorkers);
-
-						if (!NearbyArmies.empty()) // 수비유닛도 같이 있으면
-						{
-							const Unit * Armytarget = GetTarget(unit, NearbyArmies);
-							DistanceKiting(unit, Workertarget, Armytarget);
-						}
-						else //일꾼만 있으면
-						{
-							FrontKiting(unit, Workertarget);
-						}
-					}
-					else if (ComeOn && Armytarget != nullptr) //분신이 있으며 근처에 적 유닛이 있는 경우
-					{
-						ComeOnKiting(unit, Armytarget);
-					}
-					else //적의 DPS가 높지 않을 때
-					{
-						Kiting(unit, targetGROUND);
-					}
-				}
-				else if (DefendDuty(unit)) {}
-				else if (32 <= stage_number) // target이 없음
-				{
-					ScoutWithUnit(unit, observation);
-				}
+				if (EvadeEffect(unit)) {}
+				else if (DefendDutyAttack(unit)) {}
 				else if (unit->orders.empty())
 				{
-					RetreatSmart(unit, advance_pylon_location);
-					//Roam_randombase(unit);
+					Roam_randombase(unit);
 				}
 			}
 			else
 			{
-				if (targetGROUND != nullptr) // 카이팅은 항상하자
+				if (EvadeEffect(unit)) {}
+				else if (26 <= stage_number && stage_number <= 35)
 				{
-					Kiting(unit, targetGROUND);
+					bool ComeOn = false;
+
+					if (target != nullptr)
+					{
+						if (getunitsDpsGROUND(NearbyArmies) > 6.0f)
+						{
+							AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
+						}
+
+						const Unit * Armytarget = GetTarget(unit, NearbyArmies);
+
+						if (NearbyWorkers.size() > 0) // 근처에 적 일꾼이 있는데
+						{
+							const Unit * Workertarget = GetTarget(unit, NearbyWorkers);
+
+							if (!NearbyArmies.empty()) // 수비유닛도 같이 있으면
+							{
+								const Unit * Armytarget = GetTarget(unit, NearbyArmies);
+								DistanceKiting(unit, Workertarget, Armytarget);
+							}
+							else //일꾼만 있으면
+							{
+								FrontKiting(unit, Workertarget);
+							}
+						}
+						else if (ComeOn && Armytarget != nullptr) //분신이 있으며 근처에 적 유닛이 있는 경우
+						{
+							ComeOnKiting(unit, Armytarget);
+						}
+						else //적의 DPS가 높지 않을 때
+						{
+							Kiting(unit, targetGROUND);
+						}
+					}
+					else if (DefendDuty(unit)) {}
+					else if (32 <= stage_number) //AdeptMustAttack) // target이 없음
+					{
+						ScoutWithUnit(unit, observation);
+					}
+					else if (unit->orders.empty())
+					{
+						RetreatSmart(unit, advance_pylon_location);
+						//Roam_randombase(unit);
+					}
 				}
-				else if (DefendDuty(unit)) {}
-				else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+				else
 				{
-					ScoutWithUnit(unit, observation);
-				}
-				else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
-				{
-					RetreatSmart(unit, meeting_spot);
-				}
-				else if (unit->orders.empty())
-				{
-					Roam_randombase(unit);
+					if (targetGROUND != nullptr) // 카이팅은 항상하자
+					{
+						Kiting(unit, targetGROUND);
+					}
+					else if (DefendDuty(unit)) {}
+					else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+					{
+						ScoutWithUnit(unit, observation);
+					}
+					else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
+					{
+						RetreatSmart(unit, meeting_spot);
+					}
+					else if (unit->orders.empty())
+					{
+						Roam_randombase(unit);
+					}
 				}
 			}
 		}
