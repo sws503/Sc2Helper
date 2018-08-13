@@ -176,7 +176,7 @@ bool MEMIBot::EarlyStrategy() {
                 stage_number = 602;
                 return false;
             }
-            if (gateways.front()->orders.empty() && num_adept<4) {
+            if (tryadeptbranch6 && gateways.front()->orders.empty() && num_adept<4) {
                 TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
             }
         }
@@ -910,15 +910,28 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return TryBuildStructureAtLocation(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE, Star1);
     case 608:
-		if (gateway_count == 0) {
-			stage_number = 602;
-			return false;
-		}
-        if (!gateways.front()->orders.empty()) {
-            stage_number=610;
-            return false;
+        if (tryadeptbranch6) {
+            if (gateway_count == 0) {
+                stage_number = 602;
+                return false;
+            }
+            if (!gateways.front()->orders.empty()) {
+                stage_number=610;
+                return false;
+            }
+            return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
         }
-        return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
+        else {
+            if (gateway_count == 0) {
+                stage_number = 602;
+                return false;
+            }
+            if (!gateways.front()->orders.empty()) {
+                stage_number=610;
+                return false;
+            }
+            return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
+        }
     case 610:
         if (battery_count>0) {
             stage_number=611;
@@ -932,15 +945,28 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY, Batt2);
     case 612:
-		if (gateway_count == 0) {
-			stage_number = 602;
-			return false;
-		}
-        if (!gateways.front()->orders.empty() && num_adept>0) {
-            stage_number=613;
-            return false;
+        if (tryadeptbranch6) {
+            if (gateway_count == 0) {
+                stage_number = 602;
+                return false;
+            }
+            if (!gateways.front()->orders.empty() && num_adept>0) {
+                stage_number=613;
+                return false;
+            }
+            return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
         }
-        return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
+        else {
+            if (gateway_count == 0) {
+                stage_number = 602;
+                return false;
+            }
+            if (!gateways.front()->orders.empty() && num_stalker>0) {
+                stage_number=613;
+                return false;
+            }
+            return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
+        }
     case 613:
 		if (stargate_count == 0) {
 			stage_number = 607;

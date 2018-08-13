@@ -10,6 +10,94 @@ Point2D MEMIBot::CalcKitingPosition(Point2D Mypos, Point2D EnemyPos) {
 	//return KitingLocation;
 }
 
+void MEMIBot::PredictKiting(const Unit* unit, const Unit* enemyarmy)
+{
+	if (unit == nullptr) return;
+	Units NearbyArmies = FindUnitsNear(unit, 30, Unit::Alliance::Enemy, IsArmy(Observation()));
+	Units NearMyArmies = FindUnitsNear(unit, 15, Unit::Alliance::Self, IsArmy(Observation()));
+	Units NearEnemyWorkers = FindUnitsNear(unit, 15, Unit::Alliance::Enemy, IsWorker());
+	size_t nearenemyworkers_size = NearEnemyWorkers.size();
+	size_t nearenemyarmies_size = NearbyArmies.size();
+
+	const Unit* nearestenemy = FindNearestUnit(unit->pos, Unit::Alliance::Enemy, IsArmy(Observation()), 6.0f);
+
+	int stalkers = 0;
+	int immortals = 0;
+	int marines = 0;
+	int marauders = 0;
+	int siegetanks = 0;
+	int medivacs = 0;
+	int vikings = 0;
+	int cyclones = 0;
+	int battlecruisers = 0;
+	int enemysum = 0;
+
+	for (const Unit* u : NearMyArmies) {
+		stalkers += IsUnit(UNIT_TYPEID::PROTOSS_STALKER)(*u);
+		immortals += IsUnit(UNIT_TYPEID::PROTOSS_IMMORTAL)(*u);
+	}
+	for (const Unit* u : NearbyArmies) {
+		marines += IsUnits({ UNIT_TYPEID::TERRAN_MARINE })(*u);
+		marauders += IsUnit(UNIT_TYPEID::TERRAN_MARAUDER)(*u);
+		siegetanks += IsUnits({ UNIT_TYPEID::TERRAN_SIEGETANK, UNIT_TYPEID::TERRAN_SIEGETANKSIEGED })(*u);
+		medivacs += IsUnit(UNIT_TYPEID::TERRAN_MEDIVAC)(*u);
+		vikings += IsUnits({ UNIT_TYPEID::TERRAN_VIKINGASSAULT, UNIT_TYPEID::TERRAN_VIKINGFIGHTER })(*u);
+		cyclones += IsUnit(UNIT_TYPEID::TERRAN_CYCLONE)(*u);
+		battlecruisers += IsUnit(UNIT_TYPEID::TERRAN_BATTLECRUISER)(*u);
+	}
+	marines += nearenemyworkers_size;
+	enemysum = marines + marauders + siegetanks + medivacs + vikings + cyclones + battlecruisers;
+
+	// 0에 가까울수록 이길것같음
+	float winrate = PredictWinrate(stalkers, immortals, marines, marauders, siegetanks, medivacs, vikings, cyclones, battlecruisers);
+
+	float dist = Distance2D(unit->pos, enemyarmy->pos);
+	float DIST = dist - unit->radius - enemyarmy->radius;
+
+	//Our range
+	float unitattackrange = getAttackRangeGROUND(unit);
+
+	const Unit& ENEMYARMY = *enemyarmy;
+
+	if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f) // 현재 공격이 선딜상황임
+	{
+		//가만히 있도록 합시다
+	}
+	else if (unit->weapon_cooldown == 0.0f || DIST > unitattackrange + 2.0f)
+	{
+		SmartAttackUnit(unit, enemyarmy);
+	}
+	else if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::MOVE) // 움직이고 있는 상황일 때도
+	{
+
+	}
+	else
+	{
+		sc2::Point2D KitingLocation = unit->pos;
+		KitingLocation += CalcKitingPosition(unit->pos, enemyarmy->pos) * 10.0f;
+		sc2::Point2D FrontKitingLocation = unit->pos;
+		FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 8.0f;
+
+		if (IsStructure(Observation())(ENEMYARMY)) // 건물이면
+		{
+			SmartMove(unit, FrontKitingLocation);
+		}
+		else if (getAttackRangeGROUND(enemyarmy) > unitattackrange) // 날 때릴 수 있는 적의 사정거리가 내 사정거리보다 길면
+		{
+			SmartMove(unit, FrontKitingLocation);
+		}
+		// 압도적이면 앞으로 가서 싸워라
+		else if (branch == 5 && nearenemyarmies_size + nearenemyworkers_size - enemysum == 0 && winrate < 0.3f) 
+		{
+			SmartMove(unit, FrontKitingLocation);
+		}
+		else // 적 사정거리가 나랑 같거나 짧으면
+		{
+			SmartMoveEfficient(unit, KitingLocation, enemyarmy);
+		}
+	}
+}
+
 void MEMIBot::Kiting(const Unit* unit, const Unit* enemyarmy)
 {
 	float dist = Distance2D(unit->pos, enemyarmy->pos);
