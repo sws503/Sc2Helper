@@ -23,19 +23,14 @@ enum class EFFECT_ID
 typedef SC2Type<EFFECT_ID>  EffectID;
 // Control ³¡
 
-struct Rusher {
-	Rusher(Point2D startLocation_) : sl(startLocation_) {
-	}
+struct CompletedRusher {
 	bool operator()(const Unit& unit) {
-		return (unit.unit_type.ToType() == UNIT_TYPEID::PROTOSS_PHOTONCANNON ||
-			unit.unit_type.ToType() == UNIT_TYPEID::PROTOSS_PYLON ||
-			unit.unit_type.ToType() == UNIT_TYPEID::ZERG_HATCHERY ||
-			unit.unit_type.ToType() == UNIT_TYPEID::TERRAN_BUNKER ||
-			unit.unit_type.ToType() == UNIT_TYPEID::TERRAN_BARRACKS)
-			&& Distance2D(sl, unit.pos) < 20;
+		UnitTypeID type = unit.unit_type;
+		return unit.build_progress == 1.0 &&
+			(type == UNIT_TYPEID::PROTOSS_PHOTONCANNON ||
+			type == UNIT_TYPEID::TERRAN_BUNKER ||
+			type == UNIT_TYPEID::ZERG_SPINECRAWLER);
 	}
-private:
-	Point2D sl;
 };
 
 struct IsTurretType {

@@ -9,7 +9,20 @@ int MEMIBot::ReadStats() {
 	myid = 0;
 	for (const auto& info : Observation()->GetGameInfo().player_info) {
 		std::cout << "pid:" << info.player_id << std::endl;
-		if (info.race_actual == Race::Random) {
+
+	
+		if (info.race_actual == 1) {
+			enemyrace = Race::Zerg;
+			
+		}
+		else if (info.race_actual == 2)
+		{
+			enemyrace = Race::Protoss;
+		}
+		else
+			enemyrace = Race::Terran;
+		if (info.race_actual == Race::Random)
+		{
 			enemyrace = info.race_requested;
 		}
 		if (info.race_actual != Race::Random) {
@@ -36,7 +49,7 @@ using namespace std;
 int fileread(Race enemyrace, string mapname) { //race´Â 1-P 2-T 3-Z ºôµå ³Ñ¹ö ¸®ÅÏ
 	int win, lose;
 	string tmp;
-	double winratio1, winratio2;
+	double winratio1, winratio2,winratio3;
 	string inputString;
 	if (enemyrace == Race::Protoss)
 	{
@@ -181,28 +194,28 @@ int fileread(Race enemyrace, string mapname) { //race´Â 1-P 2-T 3-Z ºôµå ³Ñ¹ö ¸®
 			ofstream outFile("Zerg.txt");
 
 			outFile << "Backwater LE" << endl;
-			for (int b = 0; b < 4; b++)
+			for (int b = 0; b < 6; b++)
 				outFile << 1 << endl;
 			outFile << "Bel'Shir Vestige LE (Void)" << endl;
-			for (int b = 0; b < 4; b++)
+			for (int b = 0; b < 6; b++)
 				outFile << 1 << endl;
 			outFile << "Blackpink LE" << endl;
-			for (int b = 0; b < 4; b++)
+			for (int b = 0; b < 6; b++)
 				outFile << 1 << endl;
 			outFile << "Lost and Found LE" << endl;
-			for (int b = 0; b < 4; b++)
+			for (int b = 0; b < 6; b++)
 				outFile << 1 << endl;
 			outFile << "Neon Violet Square LE" << endl;
-			for (int b = 0; b < 4; b++)
+			for (int b = 0; b < 6; b++)
 				outFile << 1 << endl;
 			outFile << "Newkirk Precinct TE (Void)" << endl;
-			for (int b = 0; b < 4; b++)
+			for (int b = 0; b < 6; b++)
 				outFile << 1 << endl;
 			outFile << "Proxima Station LE" << endl;
-			for (int b = 0; b < 4; b++)
+			for (int b = 0; b < 6; b++)
 				outFile << 1 << endl;
 			outFile << "Interloper LE" << endl;
-			for (int b = 0; b < 4; b++)
+			for (int b = 0; b < 6; b++)
 				outFile << 1 << endl;
 			outFile.close();
 			cout << "ÆÄÀÏ»ý¼º¿Ï·á" << endl;
@@ -224,14 +237,24 @@ int fileread(Race enemyrace, string mapname) { //race´Â 1-P 2-T 3-Z ºôµå ³Ñ¹ö ¸®
 				lose = std::stoi(tmp);
 				winratio2 = (float)win / (float)lose;//2ºôµå ½Â·ü
 
-				if (winratio1 >= winratio2)
+				getline(inFile, tmp);
+				win = std::stoi(tmp);
+				getline(inFile, tmp);
+				lose = std::stoi(tmp);
+				winratio3 = (float)win / (float)lose;//3ºôµå ½Â·ü
+
+				if (winratio1 >= winratio2&&winratio1>=winratio3)
 				{
 					inFile.close();
 					return 5;
 				}
-				else {
+				else if(winratio2>=winratio1&&winratio2>=winratio3){
 					inFile.close();
 					return 6;
+				}
+				else {
+					inFile.close();
+					return 7;
 				}
 			}
 		}
@@ -242,8 +265,9 @@ int fileread(Race enemyrace, string mapname) { //race´Â 1-P 2-T 3-Z ºôµå ³Ñ¹ö ¸®
 //todo : ·£´ýÁ¾Á· °¨Áö, ¸ÊÃß°¡
 void filewrite(Race enemyrace, string mapname, GameResult result) {
 	string tmp, map;
-	int win, win1, lose, lose1;
+	int win, win1, lose, lose1,zwin,zlose;
 	string s_arr[35];
+	string z_arr[49];
 	int count = 0, i = 0;
 	if (enemyrace == Race::Protoss)
 	{
@@ -399,7 +423,7 @@ void filewrite(Race enemyrace, string mapname, GameResult result) {
 	{
 		ifstream inFile("Zerg.txt");
 
-		while (i<40) {
+		while (i<56) {
 			getline(inFile, tmp);
 			if (mapname == tmp)
 			{
@@ -412,12 +436,19 @@ void filewrite(Race enemyrace, string mapname, GameResult result) {
 					win1 = std::stoi(tmp);
 					getline(inFile, tmp);
 					lose1 = std::stoi(tmp);
-					if (((float)win / (float)lose) >= ((float)win1 / (float)lose1))
+					getline(inFile, tmp);
+					zwin = std::stoi(tmp);
+					getline(inFile, tmp);
+					zlose = std::stoi(tmp);
+
+					if (((float)win / (float)lose) >= ((float)win1 / (float)lose1) && ((float)win / (float)lose) >= ((float)zwin / (float)zlose))
 					{
 						win++;
 					}
-					else
+					else if (((float)win / (float)lose) >= ((float)win1 / (float)lose1) && ((float)win / (float)lose) >= ((float)zwin / (float)zlose))
 						win1++;
+					else
+						zwin++;
 				}
 				else if (result == Loss) {
 					getline(inFile, tmp);
@@ -428,32 +459,42 @@ void filewrite(Race enemyrace, string mapname, GameResult result) {
 					win1 = std::stoi(tmp);
 					getline(inFile, tmp);
 					lose1 = std::stoi(tmp);
-					if (((float)win / (float)lose) >= ((float)win1 / (float)lose1))
+					getline(inFile, tmp);
+					zwin = std::stoi(tmp);
+					getline(inFile, tmp);
+					zlose = std::stoi(tmp);
+					if (((float)win / (float)lose) >= ((float)win1 / (float)lose1) && ((float)win / (float)lose) >= ((float)zwin / (float)zlose))
 					{
 						lose++;
 					}
-					else
+					else if (((float)win / (float)lose) >= ((float)win1 / (float)lose1) && ((float)win / (float)lose) >= ((float)zwin / (float)zlose))
 						lose1++;
+					else
+						zlose++;
 
 				}
 
-				i = i + 5;
+				i = i + 7;
 
 			}
 			else {
-				s_arr[count] = tmp;
+				z_arr[count] = tmp;
 				count++;
-				getline(inFile, s_arr[count]);
+				getline(inFile, z_arr[count]);
 				count++;
-				getline(inFile, s_arr[count]);
+				getline(inFile, z_arr[count]);
 				count++;
-				getline(inFile, s_arr[count]);
+				getline(inFile, z_arr[count]);
 				count++;
-				getline(inFile, s_arr[count]);
+				getline(inFile, z_arr[count]);
+				count++;
+				getline(inFile, z_arr[count]);
+				count++;
+				getline(inFile, z_arr[count]);
 				count++;
 				//inFile.close();
 
-				i = i + 5;
+				i = i + 7;
 			}
 
 		}
@@ -463,9 +504,9 @@ void filewrite(Race enemyrace, string mapname, GameResult result) {
 		outFile << mapname << endl << win << endl << lose << endl << win1 << endl << lose1 << endl;
 
 
-		for (int a = 0; a < 35; a++)
+		for (int a = 0; a < 49; a++)
 		{
-			outFile << s_arr[a] << endl;
+			outFile << z_arr[a] << endl;
 		}
 		outFile.close();
 	}

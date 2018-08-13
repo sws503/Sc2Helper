@@ -41,11 +41,9 @@ void MEMIBot::Defend() {
 	Units workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
 	Units my_armies = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
 	Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
-	Units EnemyCannon = observation->GetUnits(Unit::Alliance::Enemy, Rusher(startLocation_));
-	size_t cannon_count = EnemyCannon.size();
 
 	enemyUnitsInRegion.clear();
-	const float base_range = 10;
+	const float base_range = 20;
 
 	for (const auto & unit : enemy_units)
 	{
@@ -53,7 +51,7 @@ void MEMIBot::Defend() {
 		{
 			if (Distance2D(base->pos, startLocation_) < 15)
 			{
-				if (Distance2D(base->pos, unit->pos) < base_range + 10)
+				if (Distance2D(base->pos, unit->pos) < 30)
 				{
 					enemyUnitsInRegion.push_back(unit);
 					break;
@@ -69,7 +67,7 @@ void MEMIBot::Defend() {
 	EnemyRush = !enemyUnitsInRegion.empty();
 	ManyEnemyRush = (enemyUnitsInRegion.size() >= 3);
 
-	DefendWorkers();
+	ControlWorkers();
 	cancelnexus();
 }
 

@@ -840,6 +840,9 @@ void MEMIBot::ManageRush() {
 					SmartAttackMove(unit, Workertarget->pos);
 					//OracleKiting(unit, Workertarget);
 				}
+				else if (probe_scout != nullptr && unit->tag == probe_scout->tag) {
+					// 프로브 대신 정찰
+				}
 				else // 없으면
 				{
 					Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);

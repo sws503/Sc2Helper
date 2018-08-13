@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 
 	if (VsHuman) {
 		coordinator.SetParticipants({
-			CreateParticipant(sc2::Race::Protoss, &human_bot),
+			CreateParticipant(sc2::Race::Zerg, &human_bot),
 			CreateParticipant(sc2::Race::Protoss, &bot),
 			});
 	}
