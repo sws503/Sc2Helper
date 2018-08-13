@@ -987,31 +987,34 @@ private:
 
 	void ScoutWithUnit(const Unit* unit, const ObservationInterface* observation) {
 		Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy, IsAttackable());
-		/*if (!unit->orders.empty()) {
-			return;
-		}*/
+		
 		Point2D target_pos;
 
+		// 가장 마지막으로 본 적의 위치를 target_pos 로 리턴
 		// last_destroyed_enemy_structure_pos : 마지막으로 터진 건물
 		if (FindEnemyPosition(target_pos)) { //적 기지를 알고있는 상황이면
-			if (Distance2D(unit->pos, target_pos) < 20 && enemy_units.empty()) { //적 유닛이 없는 상황에서 적 기지가 근처에 있으면
-				if (TryFindRandomPathableLocation(unit, target_pos)) { //유닛별로 맵 전체적으로 퍼지는 위치를 배정받고
-					SmartAttackMove(unit, target_pos); //그 위치로 간다
-					return;
-				}
-			}
-			else if (!enemy_units.empty()) // 적 유닛이 있는 상황이면 또는 이 유닛이 적 기지 근처에 없는상황이면
+			if (!enemy_units.empty()) // 적 유닛이 있는 상황이면 또는 이 유닛이 적 기지 근처에 없는상황이면
 			{
 				const Unit * closest_enemy = FindNearestUnit(unit->pos, enemy_units);
 				SmartAttackUnit(unit, closest_enemy);
 				return;
 			}
-			// TODO : 가장 마지막으로 본 적의 위치를 target_pos 로 리턴하는 함수를 만들자
-
-			SmartAttackMove(unit, target_pos); //위 작업이 끝나면 적 기지를 다시한번 간다
+			else if (!unit->orders.empty()) {
+				return;
+			}
+			else if (Distance2D(unit->pos, target_pos) < 20) { //적 유닛이 없는 상황에서 적 기지가 근처에 있으면
+				if (TryFindRandomPathableLocation(unit, target_pos)) { //유닛별로 맵 전체적으로 퍼지는 위치를 배정받고
+					SmartAttackMove(unit, target_pos); //그 위치로 간다
+					return;
+				}
+			}
+			SmartAttackMove(unit, EnemyBaseLocation); //위 작업이 끝나면 적 기지를 다시한번 간다
 		}
 		else { //적 기지도 모르면 막 돌아다녀라
-			if (TryFindRandomPathableLocation(unit, target_pos)) {
+			if (!unit->orders.empty()) {
+				return;
+			}
+			else if (TryFindRandomPathableLocation(unit, target_pos)) {
 				SmartAttackMove(unit, target_pos);
 			}
 		}
