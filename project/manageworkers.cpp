@@ -462,47 +462,118 @@ void MEMIBot::FleeWorkers(const Unit* unit) {
 	return;
 }
 
-// todo: 적절한 수의 프로브 보내기
-// todo: 포톤캐논, 해처리, 배럭 등등 처리하기
-void MEMIBot::DefendWorkers() {
+// 우선순위:
+// 1. 병력이 1일 때 적 질럿, 저글링이 건물 주변이나 본진 내부 왔다: 프로브 적당히 끌고 와서 수비.
+// 병력 수비 시작 범위: d 40 이내이고 건물 근처, 또는 본진 내부.
+// 2. 병력이 0일 때 적 질럿, 저글링이 막을 수 있을 만큼 본진 안으로 왔다: 프로브 전부 끌고 와서 수비 (마중 ㄴㄴ 본진에서만 수비).
+// 병력 수비 시작 범위: 본진 내부.
+// 3. 병력이 1 이하일 때 일꾼러시가 왔다: 프로브 끌고 와서 수비
+// 초반 적 프로브, 적 건물 부수러 가는 범위: d 40 이내
+// 4. 병력이 1 또는 0이고 적 러시가 없고 건물 수비 범위 내에 적 건물이 있을 때 건물 터뜨리러 감
+// 초반 적 프로브, 적 건물 부수러 가는 범위: d 40 이내
+// 본진 범위: 본진 건물 높이 +-1 인 지형이고 d 40 이내
+// 공식 : (일꾼 * 1 + 질럿 * 6 + 저글링 * 3 + 건물 * 6 + 벙커 * 3 + 1)
+
+// todo : 0. 일꾼 피하기 (다 지어진 캐논하고 벙커하고 콜로니 피하기)
+// 일꾼이 캐논 깨는 범위: 본진 15 이내. 다 달려 나와야됨.
+// 일꾼이 캐논 깨는 범위: 본진 15 이내가 아니면 피하기.
+void MEMIBot::ControlWorkers() {
 	const ObservationInterface* observation = Observation();
 	Units bases = observation->GetUnits(Unit::Alliance::Self, IsTownHall());
 	Units workers = observation->GetUnits(Unit::Alliance::Self, IsWorker());
 	Units my_armies = observation->GetUnits(Unit::Alliance::Self, IsArmy(observation));
-	Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy);
+	Units my_structures = observation->GetUnits(Unit::Alliance::Self, IsStructure(observation));
+	Units enemy_units = FindUnitsNear(startLocation_, 40, Unit::Alliance::Enemy);
+	Units enemy_structures = FindUnitsNear(startLocation_, 40, Unit::Alliance::Enemy, IsStructure(observation));
+	Units enemy_rushers = FindUnitsNear(startLocation_, 15, Unit::Alliance::Enemy, CompletedRusher());
 	size_t workers_size = workers.size();
-	size_t enemy_units_size = enemy_units.size();
 	size_t my_armies_size = my_armies.size();
-
 	Units enemy_units_killing_workers;
 
-	size_t probes_needed = 0;
-	bool defend_now = false;
-	const float base_range = 10;
-	for (const auto & eu : enemy_units)
-	{
-		if (Distance2D(startLocation_, eu->pos) < base_range)
-		{
-			enemy_units_killing_workers.push_back(eu);
-			continue;
+	Point3D mainbase_location = startLocation_;
+
+	Filter filter_inbase = [mainbase_location](const Unit& u) {
+		float diff = mainbase_location.z - u.pos.z;
+		return -1.0f <= diff && diff <= 1.0f;
+	};
+
+	Filter filter_nearstructure = [my_structures](const Unit& u) {
+		const float limit = 4.5;
+		for (const auto& s : my_structures) {
+			if (DistanceSquared2D(s->pos, u.pos) <= limit * limit)
+				return true;
 		}
-		for (const auto & b : bases) //기지별로
-		{
-			if (Distance2D(b->pos, eu->pos) < base_range)
-			{
-				enemy_units_killing_workers.push_back(eu);
-				break;
+		return false;
+	};
+
+	Filter filter_nearbase = [bases](const Unit& u) {
+		const float limit = 10;
+		for (const auto& b : bases) {
+			if (DistanceSquared2D(b->pos, u.pos) <= limit * limit)
+				return true;
+		}
+		return false;
+	};
+	
+	int probecount = 1;
+	bool situation_1 = false;
+	bool situation_2 = false;
+	bool situation_3 = false;
+	bool situation_4 = false;
+
+	for (const Unit*& i_eu : enemy_units) {
+		const Unit& eu = *i_eu;
+		bool inbase = filter_inbase(eu);
+		bool nearbase = filter_nearbase(eu);
+		bool nearstructure = filter_nearstructure(eu);
+
+		// 공식 : (일꾼 * 1 + 질럿 * 6 + 저글링 * 3 + 건물 * 6 + 벙커 * 3 + 1)
+		if (nearstructure || nearbase) {
+			if (IsWorker()(eu)) {
+				probecount += 1;
+			}
+			if (IsUnit(UNIT_TYPEID::PROTOSS_ZEALOT)(eu)) {
+				probecount += 6;
+			}
+			if (IsUnit(UNIT_TYPEID::ZERG_ZERGLING)(eu)) {
+				probecount += 3;
+			}
+			if (IsUnit(UNIT_TYPEID::TERRAN_BUNKER)(eu)) {
+				probecount += 3;
+			}
+			if (IsStructure(observation)(eu)) {
+				probecount += 6;
 			}
 		}
+		// 1. 병력이 1일 때 적 질럿, 저글링이 건물 주변이나 본진 내부 왔다: 프로브 적당히 끌고 와서 수비.
+		situation_1 |= (nearstructure || inbase) &&
+			IsUnits({ UNIT_TYPEID::PROTOSS_ZEALOT, UNIT_TYPEID::ZERG_ZERGLING })(eu);
+
+		// 2. 병력이 0일 때 적 질럿, 저글링이 막을 수 있을 만큼 본진 안으로 왔다: 프로브 전부 끌고 와서 수비 (본진에서만 수비).
+		situation_2 |= inbase &&
+			IsUnits({ UNIT_TYPEID::PROTOSS_ZEALOT, UNIT_TYPEID::ZERG_ZERGLING })(eu);
+
+		// 3. 병력이 1 이하일 때 일꾼러시가 왔다: 프로브 끌고 와서 수비
+		situation_3 |= nearbase && IsWorker()(eu);
+
+		// 4. 병력이 1 또는 0이고 적 러시가 없고 건물 수비 범위 내에 적 건물이 있을 때 건물 터뜨리러 감
+		situation_4 |= nearbase && IsStructure(observation)(eu);
 	}
 
-	defend_now = (enemy_units_killing_workers.size() >= 1)
-		&& (my_armies_size < 2);
+	if (my_armies_size == 0) {
+		situation_1 = false;
+	}
+	if (my_armies_size > 1) {
+		situation_1 = false;
+		situation_2 = false;
+		situation_3 = false;
+		situation_4 = false;
+	}
 
-	size_t workers_needed = enemy_units_killing_workers.size() + 1;
+	bool should_defend = (situation_1 || situation_2 || situation_3 || situation_4);
 
 	// push
-	if (defend_now)
+	if (should_defend)
 	{
 		// remove dead
 		for (auto& it = emergency_killerworkers.begin(); it != emergency_killerworkers.end();)
@@ -517,10 +588,11 @@ void MEMIBot::DefendWorkers() {
 			}
 		}
 
-		int32_t workers_short = static_cast<int32_t>(workers_needed - emergency_killerworkers.size());
+		bool need_all_probes = !situation_1 && situation_2;
+		int32_t workers_short = static_cast<int32_t>(probecount - emergency_killerworkers.size());
 
 		// push alive
-		if (workers_short > 0) {
+		if (workers_short > 0 || need_all_probes) {
 			for (const auto& worker : workers) {
 				if (emergency_killerworkers.count(worker)) continue;
 				if (probe_forward != nullptr && !work_probe_forward && worker->tag == probe_forward->tag) continue;
@@ -529,10 +601,11 @@ void MEMIBot::DefendWorkers() {
 				if (target == nullptr) continue;
 				emergency_killerworkers.insert(worker);
 				workers_short--;
-				if (workers_short <= 0) break;
+				if (workers_short <= 0 && !need_all_probes) break;
 			}
 		}
 		
+		// todo: priority 지정
 		// attack
 		for (const auto& u : workers)
 		{
@@ -549,6 +622,7 @@ void MEMIBot::DefendWorkers() {
 					SmartAttackUnit(killerworker, target);
 				}
 				else {
+					// harvest
 				}
 			}
 		}
@@ -573,7 +647,9 @@ void MEMIBot::DefendWorkers() {
 			if (probe_scout != nullptr && probe_scout->tag == u->tag) continue;
 			if (EvadeEffect(u)) {}
 			else if (EvadeExplosiveUnits(u)){}
-			else{}
+			else {
+				// harvest
+			}
 		}
 	}
 }

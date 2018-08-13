@@ -85,7 +85,8 @@ void MEMIBot::scout_all() {
 	if (observers_not_sieged.size() >= 3) {
 		if (probe_scout == nullptr || probe_scout->unit_type != UNIT_TYPEID::PROTOSS_OBSERVER) {
 			for (const auto& observer : observers_not_sieged) {
-				if (observer->tag != attacker_s_observer_tag) {
+				if (observer->tag != attacker_s_observer_tag 
+					&& observer->tag != escort_observer_tag) {
 					probe_scout = observer;
 				}
 			}
@@ -263,7 +264,14 @@ void MEMIBot::scoutprobe() {
 		find_next_scout_location();
 		return;
 	}
-	SmartMove(probe_scout, tag_pos);
+	if (probe_scout->unit_type != UNIT_TYPEID::PROTOSS_ORACLE) {
+		SmartMove(probe_scout, tag_pos);
+	}
+	else { // scouter is oracle
+		if (probe_scout->orders.empty()) {
+			SmartMove(probe_scout, tag_pos);
+		}
+	}
 	// 도착하면 다음 확장으로
 	if (DistanceSquared2D(probe_scout->pos, tag_pos)<4 || Query()->PathingDistance(probe_scout->pos, *iter_exp)<0.1f) {
 		find_next_scout_location();
@@ -362,11 +370,26 @@ void MEMIBot::manageobserver() {
 		return u.display_type == Unit::CloakState::CloakedDetected || u.is_burrowed;
 	};
 
+	if (observation->GetUnit(attacker_s_observer_tag) == nullptr) {
+		attacker_s_observer_tag = NullTag;
+	}
+	if (observation->GetUnit(escort_observer_tag) == nullptr) {
+		escort_observer_tag = NullTag;
+	}
 	// attacker_s_probe_tag 지정
 	if (attacker_s_observer_tag == NullTag) {
 		for (const auto& o : observers_not_sieged) {
 			if (probe_scout != nullptr && probe_scout->tag == o->tag) continue;
+			if (escort_observer_tag == o->tag) continue;
 			attacker_s_observer_tag = o->tag;
+			break;
+		}
+	}
+	if (escort_observer_tag == NullTag) {
+		for (const auto& o : observers_not_sieged) {
+			if (probe_scout != nullptr && probe_scout->tag == o->tag) continue;
+			if (attacker_s_observer_tag == o->tag) continue;
+			escort_observer_tag = o->tag;
 			break;
 		}
 	}
@@ -474,6 +497,38 @@ void MEMIBot::manageobserver() {
 		}
 	}
 
+	if (EscortProbeExpansionPoint != Point2D(0, 0)) {
+		const Unit* escort_observer = observation->GetUnit(escort_observer_tag);
+		if (escort_observer != nullptr) {
+			if (DistanceSquared2D(escort_observer->pos, EscortProbeExpansionPoint) > 3) {
+				// if observer is in surveilance mode
+				if (escort_observer->unit_type == UNIT_TYPEID(1911)) {
+					// change to observer mode
+					Actions()->UnitCommand(escort_observer, ABILITY_ID(3739));
+				}
+				if (EvadeEffect(escort_observer)) {}
+				else if (CanHitMe(escort_observer, safedistance))
+				{
+					const Unit * target = GetTarget(escort_observer, enemyarmies);
+					FleeKiting(escort_observer, target);
+				}
+				else {
+					SmartMove(escort_observer, EscortProbeExpansionPoint);
+				}
+			}
+			// 가까이 있으면 감시모드
+			else {
+				if (escort_observer->unit_type == UNIT_TYPEID::PROTOSS_OBSERVER) {
+					// change to surveilance mode
+					Actions()->UnitCommand(escort_observer, ABILITY_ID(3741));
+				}
+			}
+		}
+		if (FindNearestUnit(EscortProbeExpansionPoint, bases, 15) != nullptr) {
+			EscortProbeExpansionPoint = Point2D(0, 0);
+		}
+	}
+
 	// 감시모드
 	// 옵저버 넥서스 위로 올려서 sentry mode로 하기
 	if (do_siege_mode) {
@@ -500,7 +555,15 @@ void MEMIBot::manageobserver() {
 					// change to observer mode
 					Actions()->UnitCommand(observer, ABILITY_ID(3739));
 				}
-				SmartMove(observer, base->pos);
+				if (EvadeEffect(observer)) {}
+				else if (CanHitMe(observer, safedistance))
+				{
+					const Unit * target = GetTarget(observer, enemyarmies);
+					FleeKiting(observer, target);
+				}
+				else {
+					SmartMove(observer, base->pos);
+				}
 			}
 			// 가까이 있으면 감시모드
 			else {
@@ -604,4 +667,3 @@ void MEMIBot::roamobserver(const Unit* observer) {
 	Point2D RoamPosition = Point2D(mp.x + rx * roam_radius, mp.y + ry * roam_radius);
 	SmartMove(observer, RoamPosition);
 }
-

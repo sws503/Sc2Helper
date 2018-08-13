@@ -107,6 +107,8 @@ public:
 		recent_probe_scout_loop = 0;
 		last_dead_probe_pos.clear();
 		attacker_s_observer_tag = NullTag;
+		escort_observer_tag = NullTag;
+		EscortProbeExpansionPoint = Point2D(0,0);
 
 		early_strategy = false;
 		warpgate_researched = false;
@@ -2152,7 +2154,7 @@ private:
 
 	void FleeWorkers(const Unit * unit);
 
-	void DefendWorkers();
+	void ControlWorkers();
 
 	bool EvadeExplosiveUnits(const Unit * unit);
 
@@ -2269,6 +2271,7 @@ private:
 		if (TryBuildStructure(build_ability, UNIT_TYPEID::PROTOSS_NEXUS,worker_type, closest_expansion, true) && observation->GetUnits(Unit::Self, IsTownHall()).size() < 4) {
 			staging_location_ = Point3D(((staging_location_.x + closest_expansion.x) / 2), ((staging_location_.y + closest_expansion.y) / 2),
 				((staging_location_.z + closest_expansion.z) / 2));
+			EscortProbeExpansionPoint = closest_expansion;
 			return true;
 		}
 		return false;
@@ -3090,6 +3093,8 @@ private:
 
 	std::unordered_map<Tag, Tag> observer_nexus_match;
 	Tag attacker_s_observer_tag;
+	Tag escort_observer_tag;
+	Point2D EscortProbeExpansionPoint;
 
 	uint32_t last_map_renewal;
 	std::unordered_map<Tag, Tag> resources_to_nearest_base;
