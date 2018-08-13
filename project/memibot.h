@@ -93,7 +93,7 @@ public:
             branch = 0;
             break;
 		}
-		branch = 7;
+		branch = 5;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
@@ -988,7 +988,7 @@ private:
 
 	void ScoutWithUnit(const Unit* unit, const ObservationInterface* observation) {
 		Units enemy_units = observation->GetUnits(Unit::Alliance::Enemy, IsAttackable());
-		
+
 		Point2D target_pos;
 
 		// 가장 마지막으로 본 적의 위치를 target_pos 로 리턴
@@ -2517,7 +2517,7 @@ private:
             return TryBuildUnit(ABILITY_ID::TRAIN_WARPPRISM, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_WARPPRISM);
         }
         else {
-            if (try_colossus>=try_immortal-1 || roboticsbay.empty()) {
+            if (try_colossus>=try_immortal+1 || roboticsbay.empty()) {
                 return TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
             }
             if (roboticsbay.front()->build_progress<1.0f) {
