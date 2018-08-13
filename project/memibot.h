@@ -402,6 +402,12 @@ public:
 						Attackers.push_back(u);
 					}
 				}
+				// attackersrecruiting 있으면 거기로 편입
+				else if (!AttackersRecruiting.empty()){
+					for (const auto& u : TempAttackers) {
+						AttackersRecruiting.push_back(u);
+					}
+				}
 			}
 			else if (IsUnitInUnits(u, AttackersRecruiting)) {
 				std::unordered_set<const Unit*> TempAttackers;
