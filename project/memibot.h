@@ -96,11 +96,6 @@ public:
             branch = 0;
             break;
 		}
-<<<<<<< HEAD
-		branch = 7;
-=======
-		//branch = 0;
->>>>>>> master
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
@@ -116,6 +111,7 @@ public:
 		attacker_s_observer_tag = NullTag;
 		escort_observer_tag = NullTag;
 		EscortProbeExpansionPoint = Point2D(0,0);
+		next_expansion = Point2D(0,0);
 
 		early_strategy = false;
 		warpgate_researched = false;
@@ -2273,6 +2269,7 @@ private:
                 }
             }
 		}
+		next_expansion = closest_expansion;
 		//only update staging location up till 3 bases.
 		if (TryBuildStructure(build_ability, UNIT_TYPEID::PROTOSS_NEXUS,worker_type, closest_expansion, true) && observation->GetUnits(Unit::Self, IsTownHall()).size() < 4) {
 			staging_location_ = Point3D(((staging_location_.x + closest_expansion.x) / 2), ((staging_location_.y + closest_expansion.y) / 2),
@@ -3220,6 +3217,7 @@ private:
 	bool tryadeptbranch6;
 
 	Point2D Pylon1, Pylon2, Pylon3, Pylon4, Gate1, Core1, Star1, Batt1, Batt2, Batt3, Batt4, Batt5, Center;
+    Point2D next_expansion;
 
 	uint32_t myid;
 	Race enemyrace;

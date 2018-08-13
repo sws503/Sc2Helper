@@ -80,6 +80,7 @@ bool MEMIBot::EarlyStrategy() {
 	else{
         for (const auto& b : bases) {
             if (b->build_progress < 1.0f) {
+                next_expansion = Point2D(0,0);
                 if(GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR)+10 >= observation->GetFoodWorkers() && observation->GetFoodWorkers() < max_worker_count_) {
                     TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
                 }
