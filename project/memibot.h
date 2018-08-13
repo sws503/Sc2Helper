@@ -743,7 +743,7 @@ private:
 
 	void Defend();
 
-	void cancelbuilding();
+	void cancelnexus();
 
 	void ManageWarpBlink(const Unit * unit);
 

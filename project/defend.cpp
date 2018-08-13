@@ -70,18 +70,18 @@ void MEMIBot::Defend() {
 	ManyEnemyRush = (enemyUnitsInRegion.size() >= 3);
 
 	DefendWorkers();
-	cancelbuilding();
+	cancelnexus();
 }
 
-void MEMIBot::cancelbuilding() {
+void MEMIBot::cancelnexus() {
 	const ObservationInterface* observation = Observation();
 
-	for (const auto& u : observation->GetUnits(Unit::Alliance::Self, IsStructure(observation))) {
-		if (u->build_progress != 1.0f) continue;
+	for (const auto& u : observation->GetUnits(Unit::Alliance::Self, IsTownHall())) {
+		if (u->build_progress == 1.0f) continue;
 		float hp_max = u->shield_max + u->health_max;
 		float hp = u->shield + u->health;
 		if ((hp / hp_max < 0.1f) && (u->build_progress > hp / hp_max)) {
-			Actions()->UnitCommand(u, ABILITY_ID::CANCEL);
+			Actions()->UnitCommand(u, ABILITY_ID::CANCEL_BUILDINPROGRESS);
 		}
 	}
 }
