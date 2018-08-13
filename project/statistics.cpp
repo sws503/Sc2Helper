@@ -16,6 +16,7 @@ int MEMIBot::ReadStats() {
 			myid = info.player_id;
 		}
 	}
+	std::cout << "EnemyRace" <<enemyrace<< std::endl;
 	return fileread(enemyrace, Observation()->GetGameInfo().map_name);
 }
 

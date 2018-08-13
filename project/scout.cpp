@@ -38,6 +38,7 @@ void MEMIBot::scout_all() {
 
 	Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PROBE));
 	Units observers_not_sieged = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER));
+	Units oracles = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ORACLE));
 	//정찰 프로브 재지정
 	if (workers.size() > 2 && (probe_scout != nullptr && !probe_scout->is_alive)) {
 		for (const auto& p : workers) {
@@ -90,7 +91,13 @@ void MEMIBot::scout_all() {
 			}
 		}
 	}
-	else {
+	else if (!oracles.empty() && enemy_townhalls_scouter_seen.size() == 0) {
+		if (probe_scout == nullptr || probe_scout->unit_type != UNIT_TYPEID::PROTOSS_ORACLE) {
+			probe_scout = oracles.front();
+		}
+	}
+	else
+	{
 		if (probe_scout == nullptr || probe_scout->unit_type != UNIT_TYPEID::PROTOSS_PROBE) {
 			for (const auto& p : workers) {
 				if (probe_forward != nullptr && p->tag == probe_forward->tag) continue;

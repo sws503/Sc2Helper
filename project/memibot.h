@@ -93,6 +93,7 @@ public:
             branch = 0;
             break;
 		}
+		branch = 7;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);

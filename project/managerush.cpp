@@ -576,7 +576,10 @@ void MEMIBot::ManageRush() {
 				{
 					if (unit->unit_type == UNIT_TYPEID::PROTOSS_ADEPT) continue;
 				}
-
+				if (IsUnitInUnits(unit, Attackers))
+				{
+					continue;
+				}
 				for (const auto& base : bases)
 				{
 					if (Distance2D(base->pos, unit->pos) < 30 && !IsUnitInUnits(unit, Attackers))
@@ -839,7 +842,7 @@ void MEMIBot::ManageRush() {
 				}
 				else // ¾øÀ¸¸é
 				{
-					//Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);
+					Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);
 					//ScoutWithUnit(unit, Observation());
 					if (unit->orders.empty())
 					{
@@ -1096,7 +1099,7 @@ void MEMIBot::ManageOracleBeam(const Unit* unit, const Unit* target)
 		if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && DIST <= 4 && unit->energy >= EnergyNeeded) {
 			Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMON);
 		}
-		else if (DIST > 12) {
+		else if (DIST > 9.5) {
 			Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);
 		}
 	}
@@ -1110,7 +1113,11 @@ void  MEMIBot::Roam_enemybase(const Unit* unit)
 	}
 
 	determine_enemy_expansion();
-	if (enemy_townhalls_scouter_seen.size() <= 1)
+	if (enemy_townhalls_scouter_seen.size() == 0)
+	{
+
+	}
+	if (enemy_townhalls_scouter_seen.size() == 1)
 	{
 		//const Unit * EnemyExpansionMineral = FindNearestMineralPatch(enemy_expansion);
 		
