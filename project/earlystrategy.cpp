@@ -45,6 +45,7 @@ bool MEMIBot::EarlyStrategy() {
 		}
 	}
 
+	size_t observer_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_OBSERVER);
 	size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
 	size_t cannon_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_PHOTONCANNON);
 	size_t gateway_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_GATEWAY) + CountUnitType(observation, UNIT_TYPEID::PROTOSS_WARPGATE);
@@ -122,8 +123,11 @@ bool MEMIBot::EarlyStrategy() {
         }
     }
 	else if (branch == 5) {
+        if (observer_count<3 && stage_number>220 && stage_number<233) {
+            TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
+        }
         if (!BlinkResearched && stage_number>211 && !twilights.front()->orders.empty()) {
-            if (twilights.front()->orders.front().progress<0.75f) {
+            if (twilights.front()->orders.front().progress<0.6f) {
                 TryChronoboost(observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front());
             }
         }
@@ -133,6 +137,9 @@ bool MEMIBot::EarlyStrategy() {
         if (stage_number>232) {
             if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() || bases.size()<3) {
                 bool expand = true;
+                if (ManyEnemyRush) {
+                    expand = false;
+                }
                 if (bases.size()>=num_expand) {
                     expand = false;
                 }
@@ -768,7 +775,7 @@ bool MEMIBot::EarlyStrategy() {
             return false;
         }
         return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
-    case 221:
+    /*case 221:
         if (robotics.empty()) {
 			stage_number = 214;
 			return false;
@@ -779,7 +786,7 @@ bool MEMIBot::EarlyStrategy() {
                 return false;
             }
 	    }
-        return TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
+        return TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);*/
     case 222:
         if (stalkers.size()>=7) {
             stage_number=225;
@@ -818,7 +825,7 @@ bool MEMIBot::EarlyStrategy() {
             }
         }
         return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
-    case 229:
+    /*case 229:
 		if (robotics_facility_count == 0) {
 			stage_number = 214;
 			return false;
@@ -834,7 +841,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=230;
             return false;
         }
-        return false;
+        return false;*/
     case 230:
         if (gateway_count>4) {
 			stage_number=231;

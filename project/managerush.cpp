@@ -840,6 +840,9 @@ void MEMIBot::ManageRush() {
 					SmartAttackMove(unit, Workertarget->pos);
 					//OracleKiting(unit, Workertarget);
 				}
+				else if (probe_scout != nullptr && unit->tag == probe_scout->tag) {
+					// 프로브 대신 정찰
+				}
 				else // 없으면
 				{
 					Actions()->UnitCommand(unit, ABILITY_ID::BEHAVIOR_PULSARBEAMOFF);
@@ -1136,7 +1139,7 @@ void  MEMIBot::Roam_enemybase(const Unit* unit)
 	else
 	{
 		const Unit * second_nearbase = FindSecondNearestUnit(unit->pos, enemy_townhalls_scouter_seen);
-		if (EnemyBaseMineral == nullptr) {
+		if (second_nearbase == nullptr) {
 			return;
 		}
 		std::cout << " 두번째로 가까운 위치가  " << second_nearbase->pos.x << " , " << second_nearbase->pos.y << std::endl;
