@@ -71,7 +71,7 @@ public:
 		tryadeptbranch6 = false;
 		switch (strategy) {
         case 1:
-            branch = 0;
+            branch = 6;
             break;
         case 2:
             branch = 7;
@@ -83,17 +83,20 @@ public:
             branch = 6;
             break;
         case 5:
-            branch = 6;
+            branch = 0;
             tryadeptbranch6 = true;
             break;
         case 6:
-            branch = 7;
+            branch = 6;
             break;
+		case 7:
+			branch = 7;
+			break;
         default:
             branch = 0;
             break;
 		}
-		branch = 7;
+		//branch = 0;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
