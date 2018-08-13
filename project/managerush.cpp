@@ -77,176 +77,6 @@
 		}
 		TotalDPS += dps;
 	}*/
-struct IsPylon {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_PYLON: return true;
-		default: return false;
-		}
-	}
-};
-struct IsBattery {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_SHIELDBATTERY: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsZealot {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_ZEALOT: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsObserver {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_OBSERVER: return true;
-		default: return false;
-		}
-	}
-};
-struct IsAdept {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_ADEPT: return true;
-		default: return false;
-		}
-	}
-};
-struct IsStalker {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_STALKER: return true;
-		default: return false;
-		}
-	}
-};
-struct IsAdeptShade {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsMotherShip {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_MOTHERSHIP: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsWarpPrism {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_WARPPRISM: return true;
-		case UNIT_TYPEID::PROTOSS_WARPPRISMPHASING: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsColossus {
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::PROTOSS_COLOSSUS: return true;
-		default: return false;
-		}
-	}
-};
-
-struct IsNearbyWorker {
-	IsNearbyWorker(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
-		observation_(obs), mp(MyPosition), radius(Radius) {}
-
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::ZERG_DRONE:
-		case UNIT_TYPEID::TERRAN_SCV:
-		case UNIT_TYPEID::TERRAN_MULE:
-		case UNIT_TYPEID::PROTOSS_PROBE:return Distance2D(mp, unit.pos) < radius;
-
-
-		default: return false;
-		}
-	}
-private:
-	const ObservationInterface* observation_;
-	Point2D mp;
-	int radius;
-};
-
-struct IsNearbyArmies {
-	IsNearbyArmies(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
-		observation_(obs), mp(MyPosition), radius(Radius) {}
-
-	bool operator()(const Unit& unit) {
-		auto attributes = observation_->GetUnitTypeData().at(unit.unit_type).attributes;
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::ZERG_OVERLORD: return false;
-		case UNIT_TYPEID::ZERG_LARVA: return false;
-		case UNIT_TYPEID::ZERG_EGG: return false;
-		case UNIT_TYPEID::TERRAN_MULE: return false;
-		case UNIT_TYPEID::TERRAN_NUKE: return false;
-		case UNIT_TYPEID::ZERG_DRONE:
-		case UNIT_TYPEID::TERRAN_SCV:
-		case UNIT_TYPEID::PROTOSS_PROBE:return false;
-
-		case UNIT_TYPEID::PROTOSS_PHOTONCANNON:
-		case UNIT_TYPEID::TERRAN_BUNKER:
-		case UNIT_TYPEID::ZERG_SPINECRAWLER:
-		case UNIT_TYPEID::TERRAN_PLANETARYFORTRESS: return Distance2D(mp, unit.pos) < radius;
-
-
-		default:
-			for (const auto& attribute : attributes) {
-				if (attribute == Attribute::Structure) {
-					return false;
-				}
-			}
-			return Distance2D(mp, unit.pos) < radius;
-		}
-	}
-private:
-	const ObservationInterface* observation_;
-	Point2D mp;
-	int radius;
-};
-
-struct IsNearbyEnemies {
-	IsNearbyEnemies(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
-		observation_(obs), mp(MyPosition), radius(Radius) {}
-
-	bool operator()(const Unit& unit) {
-		switch (unit.unit_type.ToType()) {
-		case UNIT_TYPEID::ZERG_OVERLORD: return false;
-		case UNIT_TYPEID::ZERG_LARVA: return false;
-		case UNIT_TYPEID::ZERG_EGG: return false;
-		case UNIT_TYPEID::TERRAN_MULE: return false;
-		case UNIT_TYPEID::TERRAN_NUKE: return false;
-
-		default:
-			return Distance2D(mp, unit.pos) < radius;
-		}
-	}
-private:
-	const ObservationInterface* observation_;
-	Point2D mp;
-	int radius;
-};
-
-bool MustAttack = false;
-bool StalkerMustAttack = false;
-bool AdeptMustAttack = false;
 
 ////////////////////////////////
 /*void shuttle::loadPassangers()
@@ -840,7 +670,7 @@ void MEMIBot::ManageRush() {
 			if (EvadeEffect(unit)) {}
 			else if (targetGROUND != nullptr) // 카이팅은 항상하자
 			{
-				Kiting(unit, targetGROUND);
+				PredictKiting(unit, targetGROUND);
 			}
 			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
@@ -1060,7 +890,7 @@ void MEMIBot::ManageRush() {
 					{
 						ManageBlink(unit, target);
 					}
-					Kiting(unit, target);
+					PredictKiting(unit, target);
 				}
 				else if (DefendDuty(unit)) {}
 				else if (IsUnitInUnits(unit, Attackers)) // target이 없음
@@ -1126,7 +956,7 @@ void MEMIBot::ManageRush() {
 					}
 				}
 				else if (DefendDuty(unit)) {}
-				else if (32 <= stage_number) //AdeptMustAttack) // target이 없음
+				else if (32 <= stage_number) // target이 없음
 				{
 					ScoutWithUnit(unit, observation);
 				}
@@ -1398,6 +1228,15 @@ void MEMIBot::AdeptPhaseToLocation(const Unit* unit, Point2D Location , bool & T
 void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 {
 	if (unit == nullptr) return;
+
+	float UnitHealth = unit->health + unit->shield;
+
+	if (UnitHealth < 60)
+	{
+		StalkerBlinkEscape(unit, target);
+		return;
+	}
+
 	Units NearbyArmies = FindUnitsNear(unit, 30, Unit::Alliance::Enemy, IsArmy(Observation()));
 	Units NearMyArmies = FindUnitsNear(unit, 15, Unit::Alliance::Self, IsArmy(Observation()));
 	Units NearEnemyWorkers = FindUnitsNear(unit, 15, Unit::Alliance::Enemy, IsWorker());
@@ -1417,11 +1256,11 @@ void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 	int battlecruisers = 0;
 	int enemysum = 0;
 
-	for (const Unit* u : NearbyArmies) {
+	for (const Unit* u : NearMyArmies) {
 		stalkers += IsUnit(UNIT_TYPEID::PROTOSS_STALKER)(*u);
 		immortals += IsUnit(UNIT_TYPEID::PROTOSS_IMMORTAL)(*u);
 	}
-	for (const Unit* u : NearMyArmies) {
+	for (const Unit* u : NearbyArmies) {
 		marines += IsUnits({ UNIT_TYPEID::TERRAN_MARINE })(*u);
 		marauders += IsUnit(UNIT_TYPEID::TERRAN_MARAUDER)(*u);
 		siegetanks += IsUnits({ UNIT_TYPEID::TERRAN_SIEGETANK, UNIT_TYPEID::TERRAN_SIEGETANKSIEGED })(*u);
@@ -1436,18 +1275,8 @@ void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 	// 0에 가까울수록 이길것같음
 	float winrate = PredictWinrate(stalkers, immortals, marines, marauders, siegetanks, medivacs, vikings, cyclones, battlecruisers);
 
-	//Units NearbyArmies = Observation()->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(Observation(), unit->pos, 30));
-	//Units NearMyArmies = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), unit->pos, 15));
-
-	float UnitHealth = unit->health + unit->shield;
-
-	if (UnitHealth < 60)
-	{
-		StalkerBlinkEscape(unit, target);
-		return;
-	}
 	if (nearenemyarmies_size + nearenemyworkers_size - enemysum == 0) {
-		if (winrate < 0.2f && nearestenemy != nullptr) {
+		if (winrate < 0.25f && nearestenemy != nullptr) {
 			StalkerBlinkForward(unit, target);
 			return;
 		}

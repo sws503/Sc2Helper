@@ -338,3 +338,170 @@ struct IsUnpowered {
 		}
 	}
 };
+
+struct IsNearbyArmies {
+	IsNearbyArmies(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
+		observation_(obs), mp(MyPosition), radius(Radius) {}
+
+	bool operator()(const Unit& unit) {
+		auto attributes = observation_->GetUnitTypeData().at(unit.unit_type).attributes;
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::ZERG_OVERLORD: return false;
+		case UNIT_TYPEID::ZERG_LARVA: return false;
+		case UNIT_TYPEID::ZERG_EGG: return false;
+		case UNIT_TYPEID::TERRAN_MULE: return false;
+		case UNIT_TYPEID::TERRAN_NUKE: return false;
+		case UNIT_TYPEID::ZERG_DRONE:
+		case UNIT_TYPEID::TERRAN_SCV:
+		case UNIT_TYPEID::PROTOSS_PROBE:return false;
+
+		case UNIT_TYPEID::PROTOSS_PHOTONCANNON:
+		case UNIT_TYPEID::TERRAN_BUNKER:
+		case UNIT_TYPEID::ZERG_SPINECRAWLER:
+		case UNIT_TYPEID::TERRAN_PLANETARYFORTRESS: return Distance2D(mp, unit.pos) < radius;
+
+
+		default:
+			for (const auto& attribute : attributes) {
+				if (attribute == Attribute::Structure) {
+					return false;
+				}
+			}
+			return Distance2D(mp, unit.pos) < radius;
+		}
+	}
+private:
+	const ObservationInterface* observation_;
+	Point2D mp;
+	int radius;
+};
+
+struct IsPylon {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_PYLON: return true;
+		default: return false;
+		}
+	}
+};
+struct IsBattery {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_SHIELDBATTERY: return true;
+		default: return false;
+		}
+	}
+};
+
+struct IsZealot {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_ZEALOT: return true;
+		default: return false;
+		}
+	}
+};
+
+struct IsObserver {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_OBSERVER: return true;
+		default: return false;
+		}
+	}
+};
+struct IsAdept {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_ADEPT: return true;
+		default: return false;
+		}
+	}
+};
+struct IsStalker {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_STALKER: return true;
+		default: return false;
+		}
+	}
+};
+struct IsAdeptShade {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_ADEPTPHASESHIFT: return true;
+		default: return false;
+		}
+	}
+};
+
+struct IsMotherShip {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_MOTHERSHIP: return true;
+		default: return false;
+		}
+	}
+};
+
+struct IsWarpPrism {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_WARPPRISM: return true;
+		case UNIT_TYPEID::PROTOSS_WARPPRISMPHASING: return true;
+		default: return false;
+		}
+	}
+};
+
+struct IsColossus {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_COLOSSUS: return true;
+		default: return false;
+		}
+	}
+};
+
+struct IsNearbyWorker {
+	IsNearbyWorker(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
+		observation_(obs), mp(MyPosition), radius(Radius) {}
+
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::ZERG_DRONE:
+		case UNIT_TYPEID::TERRAN_SCV:
+		case UNIT_TYPEID::TERRAN_MULE:
+		case UNIT_TYPEID::PROTOSS_PROBE:return Distance2D(mp, unit.pos) < radius;
+
+
+		default: return false;
+		}
+	}
+private:
+	const ObservationInterface* observation_;
+	Point2D mp;
+	int radius;
+};
+
+struct IsNearbyEnemies {
+	IsNearbyEnemies(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
+		observation_(obs), mp(MyPosition), radius(Radius) {}
+
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::ZERG_OVERLORD: return false;
+		case UNIT_TYPEID::ZERG_LARVA: return false;
+		case UNIT_TYPEID::ZERG_EGG: return false;
+		case UNIT_TYPEID::TERRAN_MULE: return false;
+		case UNIT_TYPEID::TERRAN_NUKE: return false;
+
+		default:
+			return Distance2D(mp, unit.pos) < radius;
+		}
+	}
+private:
+	const ObservationInterface* observation_;
+	Point2D mp;
+	int radius;
+};

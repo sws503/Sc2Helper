@@ -385,15 +385,22 @@ public:
 		if (u->alliance == Unit::Alliance::Self) {
 			// Attackers에서 죽은 유닛 제거
 			if (IsUnitInUnits(u, Attackers)) {
+				int num_attackers = 0;
+				int num_colossusssss = 0;
 				std::unordered_set<const Unit*> TempAttackers;
 				for (const auto& u : Attackers) {
 					if (u->is_alive && !TempAttackers.count(u)) {
 						TempAttackers.insert(u);
+						num_attackers++;
+						num_colossusssss += IsUnit(UNIT_TYPEID::PROTOSS_COLOSSUS)(*u);
 					}
 				}
 				Attackers.clear();
-				for (const auto& u : TempAttackers) {
-					Attackers.push_back(u);
+				// colossus만 남아 있으면 attackers 해산
+				if (num_attackers > num_colossusssss * 2) {
+					for (const auto& u : TempAttackers) {
+						Attackers.push_back(u);
+					}
 				}
 			}
 			else if (IsUnitInUnits(u, AttackersRecruiting)) {
@@ -731,6 +738,8 @@ private:
 
 	void Defend();
 
+	void cancelbuilding();
+
 	void ManageWarpBlink(const Unit * unit);
 
 	bool IsUnitInUnits(const Unit * unit, Units & units);
@@ -805,6 +814,8 @@ private:
 
 
 	Point2D CalcKitingPosition(Point2D Mypos, Point2D EnemyPos);
+
+	void PredictKiting(const Unit * unit, const Unit * enemyarmy);
 
 	bool GetPosition(Units Enemyunits, Unit::Alliance alliace, Point2D & position);
 
