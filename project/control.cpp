@@ -45,7 +45,7 @@ void MEMIBot::PredictKiting(const Unit* unit, const Unit* enemyarmy)
 		cyclones += IsUnit(UNIT_TYPEID::TERRAN_CYCLONE)(*u);
 		battlecruisers += IsUnit(UNIT_TYPEID::TERRAN_BATTLECRUISER)(*u);
 	}
-	marines += nearenemyworkers_size;
+	marines += (int)nearenemyworkers_size;
 	enemysum = marines + marauders + siegetanks + medivacs + vikings + cyclones + battlecruisers;
 
 	// 0에 가까울수록 이길것같음

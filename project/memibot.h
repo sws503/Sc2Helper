@@ -55,17 +55,18 @@ public:
 
         Observation()->GetUnitTypeData();
 
+		int strategy = 0;
+
 		// 테스트맵용
 		if (game_info_.enemy_start_locations.empty()) {
 			game_info_.enemy_start_locations.push_back(Point2D());
 		}
-
-        initial_location_building(game_info_.map_name);
-
+		else {
 		// protoss : 1, 2 (기록 없으면 1)
 		// terran : 3, 4 (기록 없으면 3)
 		// zerg : 5, 6 (기록 없으면 5)
-		int strategy = ReadStats();
+			strategy = ReadStats();
+		}
 
 		tryadeptbranch6 = false;
 		switch (strategy) {
@@ -97,6 +98,7 @@ public:
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
 
+		last_destroyed_enemy_structure_pos = Point2D(0, 0);
 		stage_number = 0;
 		scout_candidates.clear();
 		iter_exp = scout_candidates.end();
@@ -215,9 +217,8 @@ public:
 		scout_all();
 
 #ifdef DEBUG
-		//TEST 하려고 송우석이 주석처리함
-		//발견시 주석 제거 추천
-		PrintCursor();
+		// 주석 풀면 느려짐
+		// PrintCursor();
 #endif
 
 		if (observation->GetGameLoop()%10==0) {
@@ -427,14 +428,19 @@ public:
 			}
 		}
 		if (u->alliance == Unit::Alliance::Enemy) {
+			bool removed = false;
 			for (auto& it = enemy_units_scouter_seen.begin(); it != enemy_units_scouter_seen.end();) {
 				if ((*it)->tag == u->tag) {
+					removed = true;
 					it = enemy_units_scouter_seen.erase(it);
 					break;
 				}
 				else {
 					++it;
 				}
+			}
+			if (removed && enemy_units_scouter_seen.empty()) {
+				last_destroyed_enemy_structure_pos = u->pos;
 			}
 			for (auto& it = enemy_townhalls_scouter_seen.begin(); it != enemy_townhalls_scouter_seen.end();) {
 				if ((*it)->tag == u->tag) {
@@ -987,6 +993,7 @@ private:
 		}*/
 		Point2D target_pos;
 
+		// last_destroyed_enemy_structure_pos : 마지막으로 터진 건물
 		if (FindEnemyPosition(target_pos)) { //적 기지를 알고있는 상황이면
 			if (Distance2D(unit->pos, target_pos) < 20 && enemy_units.empty()) { //적 유닛이 없는 상황에서 적 기지가 근처에 있으면
 				if (TryFindRandomPathableLocation(unit, target_pos)) { //유닛별로 맵 전체적으로 퍼지는 위치를 배정받고
@@ -1092,7 +1099,7 @@ private:
 		if (game_info_.enemy_start_locations.empty()) {
 			return false;
 		}
-		target_pos = game_info_.enemy_start_locations.front();
+		target_pos = last_destroyed_enemy_structure_pos == Point2D(0,0)? game_info_.enemy_start_locations.front(): last_destroyed_enemy_structure_pos;
 		EnemyBaseLocation = game_info_.enemy_start_locations.front();
 		return find_enemy_location;
 	}
@@ -3085,6 +3092,7 @@ private:
 	std::vector<Point2D> scout_candidates;
 
 	Point2D advance_pylon_location;
+	Point2D last_destroyed_enemy_structure_pos;
 
 	std::unordered_map<Tag, uint32_t> adept_map;
 	Flags flags;
