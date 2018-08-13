@@ -808,6 +808,8 @@ private:
 
 	Point2D CalcKitingPosition(Point2D Mypos, Point2D EnemyPos);
 
+	void PredictKiting(const Unit * unit, const Unit * enemyarmy);
+
 	bool GetPosition(Units Enemyunits, Unit::Alliance alliace, Point2D & position);
 
 	bool GetPosition(UNIT_TYPEID unit_type, Unit::Alliance alliace, Point2D & position);

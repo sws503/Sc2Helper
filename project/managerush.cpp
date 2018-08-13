@@ -840,7 +840,7 @@ void MEMIBot::ManageRush() {
 			if (EvadeEffect(unit)) {}
 			else if (targetGROUND != nullptr) // 카이팅은 항상하자
 			{
-				Kiting(unit, targetGROUND);
+				PredictKiting(unit, targetGROUND);
 			}
 			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
@@ -1060,7 +1060,7 @@ void MEMIBot::ManageRush() {
 					{
 						ManageBlink(unit, target);
 					}
-					Kiting(unit, target);
+					PredictKiting(unit, target);
 				}
 				else if (DefendDuty(unit)) {}
 				else if (IsUnitInUnits(unit, Attackers)) // target이 없음
@@ -1398,6 +1398,15 @@ void MEMIBot::AdeptPhaseToLocation(const Unit* unit, Point2D Location , bool & T
 void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 {
 	if (unit == nullptr) return;
+
+	float UnitHealth = unit->health + unit->shield;
+
+	if (UnitHealth < 60)
+	{
+		StalkerBlinkEscape(unit, target);
+		return;
+	}
+
 	Units NearbyArmies = FindUnitsNear(unit, 30, Unit::Alliance::Enemy, IsArmy(Observation()));
 	Units NearMyArmies = FindUnitsNear(unit, 15, Unit::Alliance::Self, IsArmy(Observation()));
 	Units NearEnemyWorkers = FindUnitsNear(unit, 15, Unit::Alliance::Enemy, IsWorker());
@@ -1436,18 +1445,8 @@ void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 	// 0에 가까울수록 이길것같음
 	float winrate = PredictWinrate(stalkers, immortals, marines, marauders, siegetanks, medivacs, vikings, cyclones, battlecruisers);
 
-	//Units NearbyArmies = Observation()->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(Observation(), unit->pos, 30));
-	//Units NearMyArmies = Observation()->GetUnits(Unit::Alliance::Self, IsNearbyArmies(Observation(), unit->pos, 15));
-
-	float UnitHealth = unit->health + unit->shield;
-
-	if (UnitHealth < 60)
-	{
-		StalkerBlinkEscape(unit, target);
-		return;
-	}
 	if (nearenemyarmies_size + nearenemyworkers_size - enemysum == 0) {
-		if (winrate < 0.2f && nearestenemy != nullptr) {
+		if (winrate < 0.25f && nearestenemy != nullptr) {
 			StalkerBlinkForward(unit, target);
 			return;
 		}
