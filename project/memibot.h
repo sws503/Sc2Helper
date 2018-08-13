@@ -731,6 +731,8 @@ private:
 
 	void Defend();
 
+	void cancelbuilding();
+
 	void ManageWarpBlink(const Unit * unit);
 
 	bool IsUnitInUnits(const Unit * unit, Units & units);

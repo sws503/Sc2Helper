@@ -1417,11 +1417,11 @@ void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 	int battlecruisers = 0;
 	int enemysum = 0;
 
-	for (const Unit* u : NearbyArmies) {
+	for (const Unit* u : NearMyArmies) {
 		stalkers += IsUnit(UNIT_TYPEID::PROTOSS_STALKER)(*u);
 		immortals += IsUnit(UNIT_TYPEID::PROTOSS_IMMORTAL)(*u);
 	}
-	for (const Unit* u : NearMyArmies) {
+	for (const Unit* u : NearbyArmies) {
 		marines += IsUnits({ UNIT_TYPEID::TERRAN_MARINE })(*u);
 		marauders += IsUnit(UNIT_TYPEID::TERRAN_MARAUDER)(*u);
 		siegetanks += IsUnits({ UNIT_TYPEID::TERRAN_SIEGETANK, UNIT_TYPEID::TERRAN_SIEGETANKSIEGED })(*u);

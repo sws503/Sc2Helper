@@ -338,3 +338,40 @@ struct IsUnpowered {
 		}
 	}
 };
+
+struct IsNearbyArmies {
+	IsNearbyArmies(const ObservationInterface* obs, Point2D MyPosition, int Radius) :
+		observation_(obs), mp(MyPosition), radius(Radius) {}
+
+	bool operator()(const Unit& unit) {
+		auto attributes = observation_->GetUnitTypeData().at(unit.unit_type).attributes;
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::ZERG_OVERLORD: return false;
+		case UNIT_TYPEID::ZERG_LARVA: return false;
+		case UNIT_TYPEID::ZERG_EGG: return false;
+		case UNIT_TYPEID::TERRAN_MULE: return false;
+		case UNIT_TYPEID::TERRAN_NUKE: return false;
+		case UNIT_TYPEID::ZERG_DRONE:
+		case UNIT_TYPEID::TERRAN_SCV:
+		case UNIT_TYPEID::PROTOSS_PROBE:return false;
+
+		case UNIT_TYPEID::PROTOSS_PHOTONCANNON:
+		case UNIT_TYPEID::TERRAN_BUNKER:
+		case UNIT_TYPEID::ZERG_SPINECRAWLER:
+		case UNIT_TYPEID::TERRAN_PLANETARYFORTRESS: return Distance2D(mp, unit.pos) < radius;
+
+
+		default:
+			for (const auto& attribute : attributes) {
+				if (attribute == Attribute::Structure) {
+					return false;
+				}
+			}
+			return Distance2D(mp, unit.pos) < radius;
+		}
+	}
+private:
+	const ObservationInterface* observation_;
+	Point2D mp;
+	int radius;
+};
