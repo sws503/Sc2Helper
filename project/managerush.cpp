@@ -1136,7 +1136,7 @@ void  MEMIBot::Roam_enemybase(const Unit* unit)
 	else
 	{
 		const Unit * second_nearbase = FindSecondNearestUnit(unit->pos, enemy_townhalls_scouter_seen);
-		if (EnemyBaseMineral == nullptr) {
+		if (second_nearbase == nullptr) {
 			return;
 		}
 		std::cout << " 두번째로 가까운 위치가  " << second_nearbase->pos.x << " , " << second_nearbase->pos.y << std::endl;

@@ -80,7 +80,7 @@ bool MEMIBot::EarlyStrategy() {
 	else{
         for (const auto& b : bases) {
             if (b->build_progress < 1.0f) {
-                if(observation->GetFoodWorkers() < max_worker_count_) {
+                if(GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR)+10 >= observation->GetFoodWorkers() && observation->GetFoodWorkers() < max_worker_count_) {
                     TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
                 }
             }
@@ -211,8 +211,11 @@ bool MEMIBot::EarlyStrategy() {
         }
 	}
 	else if (branch==7) {
+        /*if (stage_number>718 && stage_number<726) {
+            TryBuildPylonIfNeeded();
+        }*/
 	    if (stage_number>725) {
-            TryBuildPylonIfNeeded(2);
+            TryBuildPylonIfNeeded(stargate_count);
             for (const auto& stargate : stargates) {
                 TryChronoboost(stargate);
             }
@@ -220,12 +223,18 @@ bool MEMIBot::EarlyStrategy() {
 	    if (stage_number>728) {
             TryBuildCannonNexus(2);
 	    }
-        if (stage_number>730) {
+        if (stage_number>732) {
+            if (cores.empty()) {
+                TryBuildStructureAtLocation(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, Core1);
+            }
+            if (stargates.size()<4) {
+                TryBuildStructureNearPylonInBase(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE);
+            }
             for (const auto& b : bases){
                 TryBuildBatteryNexus(b);
             }
             TryBuildUnit(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_CARRIER);
-            if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() || bases.size()<3) {
+            if (bases.size()<3 || (num_carrier>5 && GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers())) {
                 bool expand = 1;
                 if (ManyEnemyRush) {
                     expand = false;
@@ -239,11 +248,10 @@ bool MEMIBot::EarlyStrategy() {
                     return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
                 }
             }
+            TryBuildCannonPylonBranch7();
+
             if (bases.size()*2>assimilator_count) {
                 TryBuildAssimilator();
-            }
-            if (bases.size()>stargates.size()) {
-                TryBuildStructureNearPylon(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE);
             }
             if (bases.size()>3) {
                 if (twilight_council_count==0) {
@@ -1152,7 +1160,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=713;
             return false;
         }
-        return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon3);
+        return TryBuildPylon(staging_location_,7.0);
     case 713:
 		if (stargate_count == 0) {
 			stage_number = 709;
@@ -1177,49 +1185,51 @@ bool MEMIBot::EarlyStrategy() {
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY, Batt2);
     case 716:
+        if (pylons.size()>3) {
+            stage_number=717;
+            return false;
+        }
+        return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon3);
+    case 717:
 		if (stargate_count == 0) {
 			stage_number = 709;
 			return false;
 		}
         if (!stargates.front()->orders.empty()) {
-            if (stargates.front()->orders.front().progress>0.2f) {
+            if (stargates.front()->orders.front().ability_id!=ABILITY_ID::TRAIN_VOIDRAY) {
                 return false;
             }
-            stage_number=717;
+            stage_number=718;
             return false;
         }
         return TryBuildUnit(ABILITY_ID::TRAIN_VOIDRAY, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_VOIDRAY);
-     case 717:
+     case 718:
         if (assimilator_count>=4) {
-			stage_number=718;
+			stage_number=719;
 			return false;
 		}
 		for (const auto& b : bases) {
             TryBuildGas(b->pos);
 		}
 		return false;
-     case 718:
-        if (pylons.size()>3) {
-            stage_number=719;
+     case 720:
+        if (stargate_count == 0) {
+            stage_number = 709;
             return false;
         }
-        return TryBuildPylon(startLocation_,15.0);
-     case 719:
-		 if (stargate_count == 0) {
-			 stage_number = 709;
-			 return false;
-		 }
-        if (!stargates.front()->orders.empty()) {
-            if (stargates.front()->orders.front().progress>0.4f) {
+        for (const auto& stargate : stargates) {
+            if (stargate->build_progress<1.0f) {
+                continue;
+            }
+            if (!stargate->orders.empty() && num_voidray>0) {
+                stage_number=721;
                 return false;
             }
-            stage_number=720;
-            return false;
         }
         return TryBuildUnit(ABILITY_ID::TRAIN_VOIDRAY, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_VOIDRAY);
-     case 720:
+     case 719:
         if (stargate_count > 1) {
-			stage_number=721;
+			stage_number=720;
 			return false;
 		}
 		return TryBuildStructureNearPylonInBase(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE);
@@ -1228,16 +1238,19 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=722;
             return false;
         }
-        return TryBuildPylon(staging_location_,15.0);
+        TryBuildPylon(staging_location_,15.0,3);
+        TryBuildPylon(front_expansion,8.0,3);
+        return TryBuildPylon(startLocation_,15.0,3);
      case 722:
-        for (const auto& b : bases) {
-            if (b==base) continue;
-
-            if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_SHIELDBATTERY, b->pos, 8)>0) {
-                stage_number=723;
-                return false;
+        if (battery_count>2) {
+            stage_number=723;
+            return false;
+        }
+        for (const auto& p : pylons) {
+            if (p->build_progress<1.0f) continue;
+            if (Distance2D(p->pos, front_expansion)<12) {
+                return TryBuildStructureNearPylon(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY, p);
             }
-            return TryBuildBatteryNexus(b);
         }
         return false;
      case 723:
@@ -1245,22 +1258,21 @@ bool MEMIBot::EarlyStrategy() {
 			stage_number=724;
 			return false;
 		}
-
 		return TryBuildStructureNearPylonInBase(ABILITY_ID::BUILD_FLEETBEACON, UNIT_TYPEID::PROTOSS_FLEETBEACON);
     case 724:
         if (pylons.size()>6) {
             stage_number=725;
             return false;
         }
-        return TryBuildPylon(staging_location_,5.0);
+        return TryBuildPylon(staging_location_,10.0);
      case 725:
         for (const auto& stargate : stargates) {
             if (stargate->orders.empty()) {
                 return TryBuildUnit(ABILITY_ID::TRAIN_VOIDRAY, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_VOIDRAY);
             }
-            if (stargate->orders.front().progress>0.7f) {
-                return false;
-            }
+        }
+        if (num_voidray<2) {
+            return false;
         }
         stage_number=726;
         return false;

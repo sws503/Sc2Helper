@@ -93,7 +93,7 @@ public:
             branch = 0;
             break;
 		}
-		branch = 5;
+		branch = 7;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
@@ -116,6 +116,7 @@ public:
 		probe_scout = nullptr;
 		pylon_first = nullptr;
 		probe_forward = nullptr;
+		pylon_cannon = nullptr;
 		base = nullptr;
 		find_enemy_location = false;
 		work_probe_forward = true;
@@ -223,6 +224,7 @@ public:
 
 		if (observation->GetGameLoop()%10==0) {
             ManageUpgrades();
+            UnpoweredBuilding();
 		}
 
 		// Control 시작
@@ -230,10 +232,6 @@ public:
 		ManageTimingAttack();
 		ManageRush();
 
-		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
-		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
-		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
-		//TryChronoboost(IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 	}
 
 	virtual void OnUnitIdle(const Unit* unit) final override {
@@ -1387,7 +1385,7 @@ private:
 		// is structure?
 		if (!IsStructure(observation)(*unit)) return false;
 		// is completely built?
-		if (unit->build_progress != 1.0f) return false;
+		if (unit->build_progress < 1.0f) return false;
 		// is doing something?
 		if (unit->orders.empty()) return false;
 		// is powered?
@@ -1992,9 +1990,10 @@ private:
 		}
 
 		const PowerSource& random_power_source = GetRandomEntry(power_sources);
-		if (Distance2D(random_power_source.position,base->pos)>20) {
+		if (Distance2D(random_power_source.position,base->pos)>30) {
             return false;
 		}
+
 		if (advance_pylon !=nullptr && Distance2D(random_power_source.position,advance_pylon->pos)<10) {
             return false;
 		}
@@ -2430,6 +2429,21 @@ private:
 		}
         return false;
     }
+
+    bool UnpoweredBuilding(){
+        const ObservationInterface* observation = Observation();
+        Units buildings = observation->GetUnits(Unit::Alliance::Self, IsStructure(observation));
+        for (const auto& b : buildings) {
+            if (IsUnpowered()(*b)) {
+                if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, b->pos, 6.0f)>0) continue;
+                return TryBuildPylon(b->pos, 6.0f);
+            }
+        }
+        return false;
+
+
+    }
+
     bool TryBuildArmyBranch0(){
         const ObservationInterface* observation = Observation();
         Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
@@ -2477,6 +2491,7 @@ private:
         Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
         Units observers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER));
         Units roboticsbay = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSBAY));
+        Units warpprisms_phasing = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPPRISMPHASING));
 
         size_t sentry_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_SENTRY);
 
@@ -2503,7 +2518,10 @@ private:
         }
 
         if (robotics_empty==0) {
-            if (sentry_count<2) {
+            if (!warpprisms_phasing.empty()) {
+                return TryWarpUnitPrism(ABILITY_ID::TRAINWARP_ZEALOT);
+            }
+            else if (sentry_count<2) {
                 return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_SENTRY, front_expansion);
             }
             else {
@@ -2633,7 +2651,7 @@ private:
         if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_SHIELDBATTERY, base_->pos, 8)>0) {
             return true;
         }
-        if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, base_->pos, 6)==0) {
+        if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, base_->pos, 12)==0) {
             TryBuildPylon(base_->pos,6,3);
             return false;;
         }
@@ -2647,6 +2665,42 @@ private:
             }
             return TryBuildStructure(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_PROBE, build_location);
         }
+    }
+
+    void TryBuildCannonPylonBranch7(){
+        const ObservationInterface* observation = Observation();
+        Units pylons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
+        Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
+        Units stargates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
+
+        for (const auto& stargate : stargates) {
+            if (stargate->build_progress<1.0f) continue;
+            if (stargate->orders.empty() && observation->GetFoodUsed()<190 && observation->GetVespene()>250) {
+                return;
+            }
+        }
+
+        if (observation->GetMinerals()<600) {
+            return;
+        }
+
+        if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PHOTONCANNON, Pylon1, 10)<4) {
+            const auto& random_pylon = GetRandomEntry(pylons);
+            if (Distance2D(Pylon1, random_pylon->pos)>10) {
+                return;
+            }
+            TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, random_pylon);
+        }
+        else {
+            const auto& random_base = GetRandomEntry(bases);
+            if (random_base == base) {
+                return;
+            }
+            TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, FindNearestUnit(random_base->pos, pylons));
+        }
+
+
+
     }
 
     void initial_location_building(std::string map_name) {
@@ -2925,7 +2979,7 @@ private:
                 Batt2 = Point2D(47.0f, 113.0f);
                 Pylon3 = Point2D(42.0f, 106.0f);
                 Batt3 = Point2D(44.0f, 109.0f);
-				the_pylon_pos = &Pylon2;
+				the_pylon_pos = &Pylon1;
                 return;
             case 17://lost and found
                 Pylon1 = Point2D(136.0f, 101.0f);
@@ -3119,6 +3173,7 @@ private:
 	const Unit* probe_scout;
 	const Unit* pylon_first;
 	const Unit* probe_forward;
+	const Unit* pylon_cannon;
 
 	bool work_probe_forward;
 	bool find_enemy_location;
