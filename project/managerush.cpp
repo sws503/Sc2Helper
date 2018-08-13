@@ -1291,6 +1291,11 @@ void MEMIBot::ManageBlink(const Unit* unit, const Unit* target)
 			StalkerBlinkForward(unit, target);
 			return;
 		}
+
+		if (winrate > 0.7f && nearestenemy != nullptr) {
+			StalkerBlinkEscape(unit, target);
+			return;
+		}
 	}
 	if (getunitsDpsGROUND(NearbyArmies) < 6.0f + NearMyArmies.size() * 3.0f && nearestenemy != nullptr)
 	{

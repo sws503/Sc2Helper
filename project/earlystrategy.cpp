@@ -762,7 +762,7 @@ bool MEMIBot::EarlyStrategy() {
 	    }
         return TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
     case 220:
-        TryChronoboost(robotics.front());
+		if (robotics.size() > 0) { TryChronoboost(robotics.front()); }
         if (bases.size()>=3) {
             stage_number=222;
             return false;
