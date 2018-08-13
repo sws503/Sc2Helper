@@ -70,32 +70,7 @@ void MEMIBot::Defend() {
 	ManyEnemyRush = (enemyUnitsInRegion.size() >= 3);
 
 	DefendWorkers();
-
-	/*for (const auto & enemyunit : enemyUnitsInRegion)
-	{
-		if (enemyunit->unit_type == UNIT_TYPEID::PROTOSS_PYLON || enemyunit->unit_type == UNIT_TYPEID::PROTOSS_PHOTONCANNON)
-		{
-			Units fighters = FindUnitsNear(enemyunit->pos, 15.0f, Workers);
-			for (const auto & fighter : fighters)
-			{
-				SmartAttackUnit(fighter, enemyunit);
-			}
-		}
-		else
-		{
-			Units fighters = FindUnitsNear(enemyunit->pos, 15.0f, Workers);
-			for (const auto & fighter : fighters)
-			{
-				SmartAttackUnit(fighter, enemyunit);
-			}
-
-
-			//const Unit * fighter = FindNearestUnit(enemyunit->pos, Workers);
-			//SmartAttackUnit(fighter, enemyunit);
-		}
-		
-		
-	}*/
+	cancelbuilding();
 }
 
 void MEMIBot::cancelbuilding() {
