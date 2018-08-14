@@ -2,7 +2,6 @@
 #include "sc2api/sc2_api.h"
 #include "sc2lib/sc2_lib.h"
 #include "sc2utils/sc2_manage_process.h"
-
 #include <iostream>
 #include <string>
 #include <algorithm>
@@ -12,7 +11,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <stack>
-
+#include <fstream>
 #include "util.h"
 #include "flag.h"
 //#include "balance_unit.h"
@@ -96,7 +95,7 @@ public:
             branch = 0;
             break;
 		}
-		branch = 6;
+		//branch = 6;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
@@ -154,7 +153,7 @@ public:
 		AttackersRecruiting.clear();
 
 		emergency_killerworkers.clear();
-
+		void wirte();
 		try_initialbalance = false;
 		the_pylon = nullptr;
 
@@ -220,6 +219,9 @@ public:
 			EarlyStrategy();
 		}
 
+		WriteStats();
+		//write(observation,enemyrace);
+		
 
 
 		scout_all();
@@ -587,7 +589,6 @@ public:
 	Units enemyUnitsInRegion;
 	Units Attackers;
 	Units AttackersRecruiting;
-
 	const Unit * the_pylon;
 	Point2D* the_pylon_pos;
 private:
@@ -3146,6 +3147,8 @@ private:
             }
         }
     }
+
+	
 
 	void scout_all();
 

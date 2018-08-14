@@ -311,7 +311,6 @@ void MEMIBot::ManageTimingAttack()
 }
 
 
-
 void MEMIBot::ManageRush() {
 
 
@@ -720,6 +719,10 @@ void MEMIBot::ManageRush() {
 		}
 
 		Units NearbyTurrets = observation->GetUnits(Unit::Alliance::Enemy, IsAIRTurretType());
+
+		Units EnemyGateways = Observation()->GetUnits(Unit::Alliance::Enemy, [](const Unit& unit) {return unit.unit_type == UNIT_TYPEID::PROTOSS_GATEWAY; });
+		
+
 		for (const auto & turret : NearbyTurrets)
 		{
 			if (turret->build_progress != 1)
@@ -732,14 +735,17 @@ void MEMIBot::ManageRush() {
 				turret_exist = true;
 			}
 		}
+		if (EnemyGateways.size() > 1)
+		{
+			std::cout << " 헉.. 관문이 여러개 있잖아? " << std::endl;
+			turret_exist = true;
+		}
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
 		{
-			
-
+			size_t CurrentVoidrays = CountUnitType(observation, UNIT_TYPEID::PROTOSS_VOIDRAY);
 			if (branch == 6)
 			{
-
 				if (AirAttackers.empty())
 				{
 					target = GetRushTarget(unit, NearbyEnemies);
@@ -758,12 +764,14 @@ void MEMIBot::ManageRush() {
 					VoidRayKiting(unit, EmergencyTarget);
 					//OracleKiting(unit, groundtarget);
 				}
-				else if (ChargeShield(unit)) {}
+				else if (ChargeShield(unit)) {
+					std::cout << " 쉴드를 충전중입니다" << std::endl;
+				}
 				else if (target != nullptr) // 카이팅은 항상하자
 				{
 					VoidRayKiting(unit, target);
 				}
-				else if (turret_exist && num_voidray < 4)
+				else if (turret_exist && CurrentVoidrays < 4)
 				{
 				}
 				else if (unit->orders.empty() || unit->orders.front().ability_id == ABILITY_ID::EFFECT_VOIDRAYPRISMATICALIGNMENT)
@@ -1011,8 +1019,8 @@ void MEMIBot::ManageRush() {
 					}
 					else if (unit->orders.empty())
 					{
-						RetreatSmart(unit, advance_pylon_location);
-						//Roam_randombase(unit);
+						//RetreatSmart(unit, advance_pylon_location);
+						Roam_randombase(unit);
 					}
 				}
 				else
@@ -1187,6 +1195,8 @@ void  MEMIBot::Roam_randombase(const Unit* unit)
 	Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
 
 	bool good_position = false;
+
+	
 	if (!bases.empty())
 	{
 		const Unit * randombase;
@@ -1201,8 +1211,16 @@ void  MEMIBot::Roam_randombase(const Unit* unit)
 			roam_radius = 15;
 		}
 
-		Point2D RoamPosition = Point2D(mp.x + rx * roam_radius, mp.y + ry * roam_radius);
-		
+		Point2D RoamPosition;
+		if (next_expansion != Point2D(0, 0) && Distance2D(unit->pos, next_expansion) < 40)
+		{
+			RoamPosition = Point2D(next_expansion.x + rx * roam_radius, next_expansion.y + ry * roam_radius);
+		}
+		else
+		{
+			RoamPosition = Point2D(mp.x + rx * roam_radius, mp.y + ry * roam_radius);
+		}
+
 		if (!Observation()->IsPathable(RoamPosition)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
 		{
 			return;

@@ -3,6 +3,8 @@
 
 int fileread(Race enemyrace, std::string mapname);
 void filewrite(Race enemyrace, std::string mapname, GameResult result);
+void write(const ObservationInterface* observation,Race enemyrace, std::string map_name);
+int time_count = 1, data_c = 1;
 
 int MEMIBot::ReadStats() {
 	enemyrace = Race::Random;
@@ -24,6 +26,7 @@ int MEMIBot::ReadStats() {
 }
 
 void MEMIBot::WriteStats() {
+	/*
 	auto playerID = Observation()->GetPlayerID();
 	GameResult gameresult = GameResult::Undecided;
 	for (const auto& result : Observation()->GetResults()) {
@@ -32,6 +35,11 @@ void MEMIBot::WriteStats() {
 		}
 	}
 	filewrite(enemyrace, Observation()->GetGameInfo().map_name, gameresult);
+	*/
+
+	const ObservationInterface* observation = Observation();
+	
+	write(observation, enemyrace, Observation()->GetGameInfo().map_name);
 }
 
 using namespace std;
@@ -76,6 +84,24 @@ int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리
 				outFile << 1 << endl;
 			outFile.close();
 			cout << "파일생성완료" << endl;
+
+		}
+		ifstream in("P_Result.txt");
+		if (in.fail()) {
+			in.close();
+		}
+		else
+		{
+			string ttt,tp;
+			GameResult sult;
+			getline(in, ttt);
+			if (ttt == "Win")
+				sult = GameResult::Win;
+			else
+				sult = GameResult::Loss;
+			getline(in, tp);
+			in.close();
+			filewrite(Race::Protoss, tp, sult);
 
 		}
 		ifstream inFile("Protoss.txt");
@@ -145,6 +171,25 @@ int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리
 			outFile.close();
 			cout << "파일생성완료" << endl;
 		}
+		ifstream in("T_Result.txt");
+		if (in.fail()) {
+			in.close();
+		}
+		else
+		{
+			string ttt;
+			GameResult sult;
+			getline(in, ttt);
+			if (ttt == "Win")
+				sult = GameResult::Win;
+			else
+				sult = GameResult::Loss;
+
+
+
+			filewrite(Race::Terran, mapname, sult);
+		}
+
 		ifstream inFile("Terran.txt");
 
 		while (1) {
@@ -211,6 +256,25 @@ int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리
 			outFile.close();
 			cout << "파일생성완료" << endl;
 		}
+		ifstream in("Z_Result.txt");
+		if (in.fail()) {
+			in.close();
+		}
+		else
+		{
+			string ttt;
+			GameResult sult;
+			getline(in, ttt);
+			if (ttt == "Win")
+				sult = GameResult::Win;
+			else
+				sult = GameResult::Loss;
+				
+		
+
+			filewrite(Race::Zerg, mapname, sult);
+		}
+
 		ifstream inFile("Zerg.txt");
 		while (1) {
 			getline(inFile, inputString);
@@ -501,5 +565,63 @@ void filewrite(Race enemyrace, string mapname, GameResult result) {
 			outFile << z_arr[a] << endl;
 		}
 		outFile.close();
+	}
+}
+
+void write(const ObservationInterface* observation,Race enemyrace, std::string map_name)
+{
+
+	if (observation->GetGameLoop()>2600)
+		time_count = observation->GetGameLoop() / 130;//12초에 260 초당 21.6
+
+	if (time_count != data_c && observation->GetGameLoop() > 2600)
+	{
+		size_t Mystructure_num = observation->GetUnits(Unit::Alliance::Self, IsStructure(observation)).size();
+		size_t Enemystructure_num = observation->GetUnits(Unit::Alliance::Enemy, IsStructure(observation)).size();
+		data_c = time_count;
+		if (enemyrace == Race::Protoss)
+		{
+			ofstream outFile("P_Result.txt");
+			if (Mystructure_num <= 5)
+				outFile << "Loss" << std::endl;
+			else if (Enemystructure_num <= 5)
+				outFile << "Win" << std::endl;
+			else if (Mystructure_num>Enemystructure_num)
+				outFile << "Win" << std::endl;
+			else
+				outFile << "Loss" << std::endl;
+			outFile <<map_name << std::endl;
+			outFile.close();
+		}
+		else if (enemyrace == Race::Terran)
+		{
+			ofstream outFile("T_Result.txt");
+			if (Mystructure_num <= 5)
+				outFile << "Loss" << std::endl;
+			else if (Enemystructure_num <= 5)
+				outFile << "Win" << std::endl;
+			else if (Mystructure_num+5>Enemystructure_num)
+				outFile << "Win" << std::endl;
+			else
+				outFile << "Loss" << std::endl;
+			outFile << map_name << std::endl;
+			outFile.close();
+		}
+		else
+		{
+			ofstream outFile("Z_Result.txt");
+			if (Mystructure_num <= 5)
+				outFile << "Loss" << std::endl;
+			else if (Enemystructure_num <= 5)
+				outFile << "Win" << std::endl;
+			else if (Mystructure_num > Enemystructure_num)
+				outFile << "Win" << std::endl;
+			else
+				outFile << "Loss" << std::endl;
+			outFile << map_name << std::endl;
+			outFile.close();
+		}
+
+
 	}
 }

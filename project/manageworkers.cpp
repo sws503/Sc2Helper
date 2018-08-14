@@ -521,6 +521,7 @@ void MEMIBot::ControlWorkers() {
 	bool situation_3 = false;
 	bool situation_4 = false;
 
+	
 	for (const Unit*& i_eu : enemy_units) {
 		const Unit& eu = *i_eu;
 		bool inbase = filter_inbase(eu);
@@ -652,6 +653,13 @@ void MEMIBot::ControlWorkers() {
 			}
 		}
 	}
+
+	std::cout << "prbecount 이 " << probecount << " 입니다" << std::endl;
+	std::cout << "situation_1 이 " << situation_1 << " 입니다" << std::endl;
+	std::cout << "situation_2 이 " << situation_2 << " 입니다" << std::endl;
+	std::cout << "situation_3 이 " << situation_3 << " 입니다" << std::endl;
+	std::cout << "situation_4 이 " << situation_4 << " 입니다" << std::endl;
+
 }
 
 bool MEMIBot::EvadeExplosiveUnits(const Unit* unit) {

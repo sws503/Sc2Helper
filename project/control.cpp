@@ -494,21 +494,28 @@ void MEMIBot::CarrierKiting(const Unit* unit, const Unit* enemyarmy)
 
 bool MEMIBot::ChargeShield(const Unit* unit)
 {
-	const Unit * NearestBattery = FindNearestUnit(unit->pos, [](const Unit& unit) {return (IsUnit(UNIT_TYPEID::PROTOSS_SHIELDBATTERY)(unit) && unit.energy > 10 && unit.is_powered == 1); });
+	const Unit * NearestBattery = FindNearestUnit(unit->pos, [](const Unit& unit) {return (IsUnit(UNIT_TYPEID::PROTOSS_SHIELDBATTERY)(unit) && unit.energy > 10 && unit.is_powered == 1 && unit.alliance == 1); });
 
 	bool need = false;
-	bool value = false;
+	bool value;
 
-	if (need && unit->shield >= unit->shield_max - 15)
-	{
-		value = false;
-	}
-	else if (unit->shield < 5 && NearestBattery != nullptr)
+	
+	if (unit->shield < 5 && NearestBattery != nullptr)
 	{
 		Actions()->UnitCommand(unit, 3707);
 		SmartMove(unit, NearestBattery->pos);
 		value = true;
 		need = true;
+	}
+	else if (need && unit->shield >= unit->shield_max - 15)
+	{
+		value = false;
+		SmartMove(unit, NearestBattery->pos);
+		//value = (unit->shield < unit->shield_max);
+	}
+	else
+	{
+		value = false;
 	}
 	
 	return value;
