@@ -206,6 +206,14 @@ struct IsGate {
 	}
 };
 
+struct IsPhasing {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_WARPPRISMPHASING: return true;
+		default: return false;
+		}
+	}
+};
 
 struct IsArmy {
 	IsArmy(const ObservationInterface* obs) : observation_(obs) {}

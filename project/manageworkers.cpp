@@ -70,7 +70,7 @@ void MEMIBot::MineIdleWorkers(const Unit* worker) {
 
 	MakeBaseResourceMap();
 
-	bool noreassign = EnemyRush && !(branch == 6);
+	bool noreassign = ManyEnemyRush && !(branch == 6);
 	bool has_space_for_half_mineral = true;
 	bool has_space_for_gas = false;
 	bool has_space_for_mineral = false;
@@ -506,8 +506,8 @@ void MEMIBot::ControlWorkers() {
 		return false;
 	};
 
-	Filter filter_nearbase = [bases](const Unit& u) {
-		const float limit = 10;
+	Filter filter_nearbase = [bases,my_armies](const Unit& u) {
+		const float limit = 10+my_armies.empty()*30;
 		for (const auto& b : bases) {
 			if (DistanceSquared2D(b->pos, u.pos) <= limit * limit)
 				return true;
@@ -572,7 +572,6 @@ void MEMIBot::ControlWorkers() {
 	}
 
 	bool should_defend = (situation_1 || situation_2 || situation_3 || situation_4);
-
 	// push
 	if (should_defend)
 	{
@@ -595,13 +594,19 @@ void MEMIBot::ControlWorkers() {
 		// push alive
 		if (workers_short > 0 || need_all_probes) {
 			for (const auto& worker : workers) {
+				
 				if (emergency_killerworkers.count(worker)) continue;
+			
 				if (probe_forward != nullptr && !work_probe_forward && worker->tag == probe_forward->tag) continue;
+				
 				if (probe_scout != nullptr && probe_scout->tag == worker->tag) continue;
-				const Unit* target = GetTarget(worker, enemy_units_killing_workers);
+
+				const Unit* target = GetTarget(worker, enemy_units); // enemy_units_killing_workers);
+				
 				if (target == nullptr) continue;
 				emergency_killerworkers.insert(worker);
 				workers_short--;
+				
 				if (workers_short <= 0 && !need_all_probes) break;
 			}
 		}
@@ -619,8 +624,9 @@ void MEMIBot::ControlWorkers() {
 				if (emergency_killerworkers.count(u))
 				{
 					const Unit* killerworker = u;
-					const Unit* target = GetTarget(killerworker, enemy_units_killing_workers);
+					const Unit* target = GetTarget(killerworker, enemy_units); // enemy_units_killing_workers);
 					SmartAttackUnit(killerworker, target);
+					
 				}
 				else {
 					// harvest
@@ -654,11 +660,7 @@ void MEMIBot::ControlWorkers() {
 		}
 	}
 
-	std::cout << "prbecount 이 " << probecount << " 입니다" << std::endl;
-	std::cout << "situation_1 이 " << situation_1 << " 입니다" << std::endl;
-	std::cout << "situation_2 이 " << situation_2 << " 입니다" << std::endl;
-	std::cout << "situation_3 이 " << situation_3 << " 입니다" << std::endl;
-	std::cout << "situation_4 이 " << situation_4 << " 입니다" << std::endl;
+	
 
 }
 

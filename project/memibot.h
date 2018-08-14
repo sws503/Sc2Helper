@@ -83,10 +83,10 @@ public:
             break;
         case 5:
             branch = 0;
-            tryadeptbranch6 = true;
             break;
         case 6:
             branch = 6;
+			tryadeptbranch6 = true;
             break;
 		case 7:
 			branch = 7;
@@ -95,7 +95,7 @@ public:
             branch = 0;
             break;
 		}
-		//branch = 6;
+		
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
@@ -357,6 +357,20 @@ public:
 		}
 	}
 
+	bool phasing_check()
+	{
+		size_t Phasing_count = CountUnitType(Observation(), UNIT_TYPEID::PROTOSS_WARPPRISMPHASING);
+
+		if (Phasing_count)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
 	// only allies. also geyser probes, passengers etc.
 	virtual void OnUnitCreated(const Unit* u) final override {
 		switch (u->unit_type.ToType()) {
@@ -365,6 +379,12 @@ public:
 			break;
 		case UNIT_TYPEID::PROTOSS_ADEPT:
 			num_adept++;
+			
+			if (phasing_check())
+			{
+				Attackers.push_back(u);
+			}
+			
 			break;
 		case UNIT_TYPEID::PROTOSS_STALKER:
 			num_stalker++;
@@ -1057,6 +1077,10 @@ private:
 					moving = true;
 				}
 			}
+			else if (!unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::MOVE) // 움직이고 있는 상황일 때도
+			{
+
+			}
 			else //너가 아무것도 안하고 있었다면
 			{
 				SmartMove(unit, retreat_position); // 움직여라
@@ -1579,7 +1603,7 @@ private:
         const ObservationInterface* observation = Observation();
         std::vector<PowerSource> power_sources = observation->GetPowerSources();
         Units warpgates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPGATE));
-        if (observation->GetFoodUsed() >= observation->GetFoodCap()) {
+		if (observation->GetFoodUsed() + 2 > observation->GetFoodCap()) {
 			return false;
 		}
 		if (power_sources.empty()) {

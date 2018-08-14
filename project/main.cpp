@@ -8,24 +8,24 @@
 #include <iostream>
 
 static const std::string bot_name = "G-ScAI";
-static const std::string current_version = "v0.5";
+static const std::string current_version = "v1.0";
 
 #ifdef DEBUG
 
 static const bool EnableCheat = false;
 static const bool VsHuman = false;
-static const int stepsize = 2;
+static const int stepsize = 4;
 static const bool Realtime = false;
 static const bool ControlTest = false;
 static const std::vector<std::string> map_names({
-	//"BlackpinkLE",
-	//"NeonVioletSquareLE",
-	//"BackwaterLE",
-	//"LostAndFoundLE",
+	"BlackpinkLE",
+	"NeonVioletSquareLE",
+	"BackwaterLE",
+	"LostAndFoundLE",
 	"InterloperLE",
-	//"ProximaStationLE",
-	//"NewkirkPrecinctTE",
-	//"BelShirVestigeLE"
+	"ProximaStationLE",
+	"NewkirkPrecinctTE",
+	"BelShirVestigeLE"
 	});
 
 static const std::vector<std::string> map_names_2018s2({
@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 
 	if (VsHuman) {
 		coordinator.SetParticipants({
-			CreateParticipant(sc2::Race::Terran, &human_bot),
+			CreateParticipant(sc2::Race::Zerg, &human_bot),
 			CreateParticipant(sc2::Race::Protoss, &bot),
 			});
 	}

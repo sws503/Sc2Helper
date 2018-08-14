@@ -47,6 +47,11 @@ void MEMIBot::Defend() {
 
 	for (const auto & unit : enemy_units)
 	{
+		if (unit->unit_type == UNIT_TYPEID::ZERG_OVERLORD)
+		{
+			continue;
+		}
+
 		for (const auto & base : bases) //기지별로
 		{
 			if (Distance2D(base->pos, startLocation_) < 15)

@@ -361,7 +361,7 @@ void MEMIBot::ManageRush() {
 			}
 		}
 
-		if (725 <= stage_number && stage_number <= 726 && !EnemyRush)
+		if (725 <= stage_number && stage_number <= 726 && !ManyEnemyRush)
 		{
 
 		}
@@ -420,7 +420,7 @@ void MEMIBot::ManageRush() {
 
 	for (const auto& unit : WarpPrisms)
 	{
-		Units NearbyArmies = FindUnitsNear(unit, 25, Unit::Alliance::Enemy, IsArmy(observation));
+		Units NearbyArmies = FindUnitsNear(unit, 35, Unit::Alliance::Enemy, IsArmy(observation));
 		Units Airattackers = FindUnitsNear(unit, 16, Unit::Alliance::Enemy, AirAttacker());
 		//Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
 		size_t MyWarpGates = CountUnitType(observation, UNIT_TYPEID::PROTOSS_WARPGATE);
@@ -476,13 +476,13 @@ void MEMIBot::ManageRush() {
 				}
 			}
 
-			if (Attackers.size() > 5)
+			if (Attackers.size() > 10)
 			{
 				TimeToDrop = true;
 				num_adept = 0;
 			}
-
-			if ((num_adept >= MyWarpGates && !Summoning) || CanHitMe(unit) || num_adept >= MyWarpGates+1)
+			Point2D MyPosition = unit->pos;
+			if ((num_adept >= MyWarpGates && !Summoning) || CanHitMe(unit) || num_adept >= MyWarpGates+1 || Query()->PathingDistance(MyPosition, Point2D(retreat_position.x, retreat_position.y)) > 50)
 			{
 				std::cout << num_adept << " 은 사도 생산 횟수 " << std::endl;
 				Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMTRANSPORTMODE);
@@ -838,7 +838,7 @@ void MEMIBot::ManageRush() {
 					target = GetTarget(unit, AirAttackers);
 				}
 
-				if (725 <= stage_number && stage_number<= 726 && !EnemyRush)
+				if (725 <= stage_number && stage_number<= 726 && ! ManyEnemyRush)
 				{
 					if (the_pylon_pos != nullptr) {
 						the_pylon = FindNearestUnit(*the_pylon_pos, IsPylon(), 1);
@@ -1009,7 +1009,7 @@ void MEMIBot::ManageRush() {
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_ADEPT)
 		{
 
-			Units NearbyArmies = FindUnitsNear(unit, 7, Unit::Alliance::Enemy, IsArmy(observation));
+			Units NearbyArmies = FindUnitsNear(unit, 8, Unit::Alliance::Enemy, IsArmy(observation));
 			Units NearbyWorkers = FindUnitsNear(unit, 6, Unit::Alliance::Enemy, IsWorker());
 
 			if (branch == 6)
@@ -1024,13 +1024,13 @@ void MEMIBot::ManageRush() {
 			else
 			{
 				if (EvadeEffect(unit)) {}
-				else if (9 <= stage_number && stage_number <= 16)
+				else if (9 <= stage_number && stage_number <= 24)
 				{
 					bool ComeOn = false;
 
 					if (targetGROUND != nullptr)
 					{
-						if (getunitsDpsGROUND(NearbyArmies) > 6.0f)
+						if (getunitsDpsGROUND(NearbyArmies) > 10.0f)
 						{
 							AdeptPhaseShift(unit, ShadeNearArmies, NearbyArmies, ComeOn);
 						}

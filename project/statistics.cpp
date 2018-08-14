@@ -501,7 +501,7 @@ void filewrite(Race enemyrace, string mapname, GameResult result) {
 					{
 						win++;
 					}
-					else if (((float)win / (float)lose) >= ((float)win1 / (float)lose1) && ((float)win / (float)lose) >= ((float)zwin / (float)zlose))
+					else if (((float)win1 / (float)lose1) >= ((float)win / (float)lose) && ((float)win1 / (float)lose1) >= ((float)zwin / (float)zlose))
 						win1++;
 					else
 						zwin++;

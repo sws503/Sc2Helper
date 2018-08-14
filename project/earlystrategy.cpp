@@ -104,7 +104,7 @@ bool MEMIBot::EarlyStrategy() {
                 if (ManyEnemyRush) {
                     expand = false;
                 }
-                if (try_colossus<(bases.size()-2)*4) {
+                if (try_colossus<bases.size()*6-14) {
                     expand = false;
                 }
                 for (const auto& b :bases) {
@@ -123,7 +123,12 @@ bool MEMIBot::EarlyStrategy() {
             if (gateway_count<bases.size()*2) {
                 TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
             }
-            if (robotics_facility_count<2) {
+            if (robotics_facility_count<3) {
+				if (bases.size() < 4) {
+					if (robotics_facility_count < 2) {
+						TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+					}
+				}
                 TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
             }
             TryBuildArmyBranch0();
@@ -184,6 +189,10 @@ bool MEMIBot::EarlyStrategy() {
         }
 	}
 	else if (branch==6) {
+		if (cores.empty() && stage_number>604) {
+			return TryBuildStructureAtLocation(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, Core1);
+		}
+
         if (stage_number>613) {
             TryBuildPylonIfNeeded();
             if (gateway_count == 0) {
@@ -299,6 +308,8 @@ bool MEMIBot::EarlyStrategy() {
                 stage_number =200;
             }
             else if (branch == 6) {
+				work_probe_forward = false;
+				Actions()->UnitCommand(probe_forward, ABILITY_ID::MOVE, Pylon2);
                 stage_number = 601;
             }
             else if (branch == 7) {
@@ -777,9 +788,7 @@ bool MEMIBot::EarlyStrategy() {
         }
 		return false;
 	case 603:
-	    work_probe_forward = false;
 	    TryChronoboost(base);
-	    Actions()->UnitCommand(probe_forward, ABILITY_ID::MOVE, Pylon2);
 		if (assimilator_count>=2) {
 			stage_number=604;
 			return false;
@@ -807,20 +816,20 @@ bool MEMIBot::EarlyStrategy() {
             return false;
         }
         return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon3);
-    case 607:
+    case 608:
         if (stargate_count > 0) {
-			stage_number=608;
+			stage_number=610;
 			return false;
 		}
 		return TryBuildStructureAtLocation(ABILITY_ID::BUILD_STARGATE, UNIT_TYPEID::PROTOSS_STARGATE, Star1);
-    case 608:
+    case 607:
         if (tryadeptbranch6) {
             if (gateway_count == 0) {
                 stage_number = 602;
                 return false;
             }
             if (!gateways.front()->orders.empty()) {
-                stage_number=610;
+                stage_number=608;
                 return false;
             }
             return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
@@ -831,7 +840,7 @@ bool MEMIBot::EarlyStrategy() {
                 return false;
             }
             if (!gateways.front()->orders.empty()) {
-                stage_number=610;
+                stage_number=608;
                 return false;
             }
             return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
