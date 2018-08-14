@@ -96,7 +96,7 @@ public:
             branch = 0;
             break;
 		}
-		branch = 6;
+		branch = 0;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
@@ -2167,14 +2167,39 @@ private:
 		Units forges = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FORGE));
 		size_t base_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_NEXUS);
 		auto upgrades = observation->GetUpgrades();
-		if (branch == 0 || branch == 1 || branch==5) {
-            if (branch!=5) {
-                TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES,UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL,UPGRADE_ID::ADEPTPIERCINGATTACK);
-            }
+
+		if (branch == 0) {
             TryBuildUpgrade(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::GRAVITICDRIVE);
+            for (const auto& forge : forges) {
+                if (!forge->orders.empty()) {
+                    TryChronoboost(forge);
+                }
+		    }
+            if (forges.size() ==0) {
+                return;
+            }
+
+            for (const auto& upgrade : upgrades) {
+                if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1) {
+                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2);
+                }
+                else if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2) {
+                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL3);
+                }
+                else if (upgrade == UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL1) {
+                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDARMOR, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL2);
+                }
+                else if (upgrade == UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL2) {
+                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDARMOR, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL3);
+                }
+                else if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL3) {
+                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDARMOR, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL1);
+                }
+            }
 		}
-		//TryBuildUnit(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE);
-		if (branch == 0 || branch == 1 || branch == 5) {
+
+		if (branch == 5) {
+            TryBuildUpgrade(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::GRAVITICDRIVE);
             for (const auto& forge : forges) {
                 if (!forge->orders.empty()) {
                     TryChronoboost(forge);
@@ -2185,7 +2210,7 @@ private:
             }
             TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1);
             TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL1);
-            if (branch==5 && base_count>3) {
+            if (base_count>3) {
                 TryBuildUpgrade(ABILITY_ID::RESEARCH_GRAVITICDRIVE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::PROTOSSSHIELDSLEVEL1);
             }
 
@@ -2462,6 +2487,9 @@ private:
     bool TryBuildArmyBranch0(){
         const ObservationInterface* observation = Observation();
         Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
+        Units warpprisms_phasing = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPPRISMPHASING));
+        Units observers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER));
+        Units enemy_flyunits = observation->GetUnits(Unit::Alliance::Enemy, IsZergFlying());
 
         size_t stalker_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER);
         size_t sentry_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_SENTRY);
@@ -2475,26 +2503,42 @@ private:
                 robotics_empty++;
             }
             else {
-                TryChronoboost(r);
                 if (r->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
                     robotics_observer++;
+                }
+                else if (r->orders.front().ability_id == ABILITY_ID::TRAIN_WARPPRISM) {
+                    num_warpprism=1;
+                }
+                else {
+                    TryChronoboost(r);
                 }
             }
         }
 
         if (robotics_empty==0) {
-            if (sentry_count<2) {
+            if (!warpprisms_phasing.empty()) {
+                return TryWarpUnitPrism(ABILITY_ID::TRAINWARP_ADEPT);
+            }
+            else if (sentry_count<3) {
                 return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_SENTRY, front_expansion);
             }
-            else if (stalker_count<12) {
-                return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
-            }
             else {
+                if (!enemy_flyunits.empty()) {
+                    if (enemy_flyunits.size()>10) {
+                        return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+                    }
+                    else if (stalker_count<10) {
+                        TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+                    }
+                }
                 return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT, front_expansion);
             }
         }
-        else if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_OBSERVER)+robotics_observer<2) {
+        else if (observers.size()+robotics_observer<3) {
             return TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
+        }
+        else if (num_warpprism==0) {
+            return TryBuildUnit(ABILITY_ID::TRAIN_WARPPRISM, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_WARPPRISM);
         }
         else {
             return TryBuildUnit(ABILITY_ID::TRAIN_COLOSSUS, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_COLOSSUS);

@@ -19,7 +19,7 @@ bool MEMIBot::EarlyStrategy() {
     Units archons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ARCHON));
     Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
     Units twilights = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL));
-
+    Units forges = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FORGE));
 	//건물 지을 프로브 재지정
 	if (workers.size() > 2 && (probe_forward != nullptr && !probe_forward->is_alive)) {
 		for (const auto& p : workers) {
@@ -29,7 +29,7 @@ bool MEMIBot::EarlyStrategy() {
 		}
 	}
 	//브랜치 지정
-	if (branch ==0 && flags.status("search_branch") == 1) {
+	/*if (branch ==0 && flags.status("search_branch") == 1) {
 		// 정찰 실패: 입구를 막았거나 프로브가 죽었음
 		if (flags.status("search_result") == 1) {
 			//branch = 2;
@@ -43,7 +43,8 @@ bool MEMIBot::EarlyStrategy() {
 		else if (flags.status("search_result") == 3) {
 			branch = 1;
 		}
-	}
+	}*/
+
 
 	size_t observer_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_OBSERVER);
 	size_t forge_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FORGE);
@@ -58,6 +59,8 @@ bool MEMIBot::EarlyStrategy() {
 	size_t robotics_bay_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
 	size_t fleetbeacon_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FLEETBEACON);
     size_t templar_archive_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_TEMPLARARCHIVE);
+    size_t sentry_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_SENTRY);
+
 
 #ifdef DEBUG
 	std::cout << "branch : " << branch << ", stage : "<< stage_number << std::endl;
@@ -91,24 +94,17 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
         }
 	}
-    if (branch<2) {
-        if (stage_number>30 && stage_number<100) {
-            TryBuildPylonIfNeeded(3);
+    if (branch == 0) {
+        if (stage_number>12 && stage_number<25) {
+            TryBuildPylonIfNeeded();
         }
-        if (stage_number>39 && stage_number<100) {
-            if (bases.size()*2>assimilator_count) {
-                TryBuildAssimilator();
-            }
-            if (forge_count<2) {
-                TryBuildStructureNearPylonInBase(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_FORGE);
-            }
-
-            if (gateway_count<bases.size()*2 && gateway_count<10) {
-                TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
-            }
-            else if (observation->GetFoodUsed()>120 && GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() ) {
-                bool expand = 1;
+        if (stage_number>24) {
+            if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() || bases.size()<3) {
+                bool expand = true;
                 if (ManyEnemyRush) {
+                    expand = false;
+                }
+                if (try_colossus<(bases.size()-2)*4) {
                     expand = false;
                 }
                 for (const auto& b :bases) {
@@ -116,9 +112,19 @@ bool MEMIBot::EarlyStrategy() {
                         expand = false;
                     }
                 }
-                if (expand) {
+                if (expand || bases.size()<3) {
                     return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
                 }
+            }
+            TryBuildPylonIfNeeded(3);
+            if (bases.size()*2>assimilator_count) {
+                TryBuildAssimilator();
+            }
+            if (gateway_count<bases.size()*2) {
+                TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
+            }
+            if (robotics_facility_count<2) {
+                TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
             }
             TryBuildArmyBranch0();
         }
@@ -323,31 +329,28 @@ bool MEMIBot::EarlyStrategy() {
 			stage_number=4;
 			return false;
 		}
-		if (observation->GetMinerals()>75) {
-			return TryBuildGas(base->pos);
+		if (observation->GetFoodWorkers()>=18) {
+            if (TryBuildGas(base->pos)) {
+                stage_number=4;
+                return false;
+            }
 		}
 		return false;
 	case 4:
-		if (gateway_count>1) {
-			stage_number=5;
-			return false;
-		}
-		if (observation->GetMinerals()>150) {
-            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
-		}
-		return false;
-    case 5:
-        if (pylons.size()>1) {
-            stage_number=6;
+		if (bases.size()>=2) {
+            stage_number=5;
             return false;
         }
-        if (observation->GetMinerals()>100) {
-            return TryBuildPylon(startLocation_,15.0f);
-        }
-        return false;
+        return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
     case 6:
+        if (pylons.size()>1) {
+            stage_number=7;
+            return false;
+        }
+        return TryBuildPylon(startLocation_,15.0f);
+    case 5:
 		if (cybernetics_count>0) {
-			stage_number=7;
+			stage_number=6;
 			return false;
 		}
 		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
@@ -358,251 +361,136 @@ bool MEMIBot::EarlyStrategy() {
 		}
 		return TryBuildGas(base->pos);
     case 8:
-		if (cybernetics_count == 0) {
-			stage_number = 6;
+		if (gateway_count>2) {
+			stage_number=9;
 			return false;
 		}
-        if (cores.front()->build_progress < 0.9f) {
-            return false;
-        }
-        stage_number=9;
-        return false;
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
     case 9:
         for (const auto& gate : gateways) {
+            if (gate->build_progress < 1.0f) continue;
             if (gate->orders.empty()) {
-                return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
+                return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
             }
-            else TryChronoboost(gate);
         }
         stage_number=10;
         return false;
     case 10:
-		if (cybernetics_count == 0) {
-			stage_number = 6;
-			return false;
+        if (cybernetics_count == 0) {
+			return TryBuildStructureNearPylon(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
 		}
         if (!cores.front()->orders.empty()) {
             stage_number=11;
             return false;
         }
-        if (TryBuildUpgrade(ABILITY_ID::RESEARCH_WARPGATE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, UPGRADE_ID::WARPGATERESEARCH)) {
-            stage_number=11;
-            return false;
-        }
-        return false;
+        return TryBuildUpgrade(ABILITY_ID::RESEARCH_WARPGATE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, UPGRADE_ID::WARPGATERESEARCH);
     case 11:
         for (const auto& gate : gateways) {
             if (gate->orders.empty()) {
                 return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
             }
-            if (gate->orders.front().ability_id != ABILITY_ID::TRAIN_ADEPT) {
-                return false;
+        }
+        for (const auto& b : bases) {
+            if (b!=base) {
+                TryChronoboost(b);
             }
         }
-        stage_number=13;
+        if (num_adept==0) {
+            return false;
+        }
+        stage_number=12;
         return false;
-    case 13:
+    case 12:
         if (pylons.size()>2) {
-            stage_number=14;
+            stage_number=13;
             return false;
         }
         return TryBuildPylon(startLocation_,15.0);
-    case 14:
-		// ?뺤같: 遺꾧린 1 寃곗젙.
-        if (branch == 0 || branch == 3) {
-            stage_number = 17;
+    case 13:
+        for (const auto& gate : gateways) {
+            if (gate->orders.empty()) {
+                return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
+            }
+        }
+        if (num_adept<4) {
             return false;
         }
-        if (branch == 1) {
+        stage_number=14;
+        return false;
+    case 14:
+        if (assimilator_count>3) {
             stage_number=15;
             return false;
         }
-        return false;
+        return TryBuildGas(front_expansion);
     case 15:
-        if (CountUnitType(observation, UNIT_TYPEID::PROTOSS_SHIELDBATTERY)>=2) {
+        if (robotics_facility_count>=1) {
             stage_number=16;
             return false;
         }
-        if (observation->GetMinerals()>100){
-            TryBuildStructureNearPylon(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY);
-        }
-        return false;
+        return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
     case 16:
-        for (const auto& gate : gateways) {
-            if (gate->orders.empty()) {
-                return TryBuildUnit(ABILITY_ID::TRAIN_STALKER, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_STALKER);
-            }
-            if (gate->orders.front().ability_id != ABILITY_ID::TRAIN_STALKER) {
-                return false;
-            }
-            TryChronoboost(gate);
+        if (forge_count<1) {
+            return TryBuildStructureNearPylonInBase(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_FORGE);
         }
-        stage_number=17;
-        return false;
-	case 17:
+        else {
+            stage_number=17;
+            return false;
+        }
+    case 17:
         if (twilight_council_count>0) {
             stage_number=18;
             return false;
         }
         return TryBuildStructureNearPylon(ABILITY_ID::BUILD_TWILIGHTCOUNCIL, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
     case 18:
-        for (const auto& gate : gateways) {
-            if (gate->orders.empty()) {
-                return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
-            }
-            if (gate->orders.front().ability_id != ABILITY_ID::TRAIN_ADEPT) {
-                return false;
-            }
-        }
-        if (num_adept<2) {
+        if (sentry_count>2) {
+            stage_number=19;
             return false;
         }
-        stage_number=20;
-        return false;
+        return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_SENTRY, front_expansion);
+    case 19:
+        if (robotics_bay_count>=1) {
+            stage_number=20;
+            return false;
+        }
+        return TryBuildStructureNearPylonInBase(ABILITY_ID::BUILD_ROBOTICSBAY, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
     case 20:
-		if (gateway_count>2) {
-			stage_number=21;
-			return false;
-		}
-		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
+        if (forges.empty()) {
+            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_FORGE, UNIT_TYPEID::PROTOSS_FORGE);
+        }
+        if (!forges.front()->orders.empty()) {
+            stage_number=21;
+            return false;
+        }
+        return TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1);
     case 21:
-        if (pylons.size()>3) {
+        if (robotics_facility_count>1) {
             stage_number=22;
             return false;
         }
-        return TryBuildPylon(startLocation_,15.0);
+        return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
     case 22:
-		work_probe_forward = false;
-		SmartMove(probe_forward, advance_pylon_location);
-		if (twilight_council_count == 0) {
-			stage_number = 17;
-			return false;
-		}
-        if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
+        if (twilights.empty()) {
+            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_TWILIGHTCOUNCIL, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL);
+        }
+        if (!twilights.front()->orders.empty()) {
             stage_number=23;
             return false;
         }
-        return TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::ADEPTPIERCINGATTACK);
-
+        return TryBuildUpgrade(ABILITY_ID::RESEARCH_ADEPTRESONATINGGLAIVES,UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL,UPGRADE_ID::ADEPTPIERCINGATTACK);
     case 23:
-        for (const auto& gate : gateways) {
-            if (gate->build_progress < 1.0f) {
-                continue;
-            }
-            if (gate->orders.empty()) {
-                return TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);
-            }
-            if (gate->orders.front().ability_id != ABILITY_ID::TRAIN_ADEPT) {
-                return false;
-            }
-        }
-        if (num_adept<4) {
-            return false;
-        }
-        stage_number=26;
-        return false;
-    case 26:
-        if (branch==3) {
-            stage_number=50;
-            return false;
-        }
-
-        if (advance_pylon != nullptr) {
-            stage_number=27;
-            return false;
-        }
-        for (const auto& p : pylons) {
-            if (Distance2D(p->pos,advance_pylon_location)<20) {
-                advance_pylon = p;
-				work_probe_forward = true;
-            }
-        }
-        return TryBuildPylon(advance_pylon_location, 10.0);
-    case 27:
-        if (bases.size()>=2) {
-            stage_number=28;
-            return false;
-        }
-        return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
-    case 28:
-        if (bases.size()<2) {
-            stage_number=27;
-            return false;
-        }
-        if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, front_expansion, 8.0)>=1) {
-            stage_number=29;
-            return false;
-        }
-        TryBuildPylon(front_expansion, 6.0);
-    case 29:
-        if (num_adept>8) {
-            stage_number=32;
-            return false;
-        }
-        return TryWarpAdept();
-
-    case 32:
-        if (stalkers.size()>10) {
-            stage_number=33;
-            return false;
-        }
-        return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
-    case 33:
         if (bases.size()>=3) {
-            stage_number=34;
+            stage_number=24;
             return false;
         }
         return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
-    case 34:
-        if (robotics_facility_count>=1) {
-            stage_number=35;
-            return false;
-        }
-        return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
-    case 35:
-        if (stalkers.size()>=14) {
-            stage_number=36;
-            return false;
-        }
-        TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
-        return false;
-    case 36:
-        if (gateway_count>=6) {
-			stage_number=37;
+    case 24:
+        if (gateway_count>5) {
+			stage_number=25;
 			return false;
 		}
-		if (observation->GetMinerals()>150) {
-            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
-		}
-		return false;
-    case 37:
-        if (robotics_bay_count > 0) {
-            stage_number = 38;
-            return false;
-        }
-        if (robotics_facility_count > 0 && robotics_bay_count < 1) {
-            if (observation->GetMinerals() > 200 && observation->GetVespene() > 200) {
-                TryBuildStructureNearPylonInBase(ABILITY_ID::BUILD_ROBOTICSBAY, UNIT_TYPEID::PROTOSS_ROBOTICSBAY);
-            }
-        }
-        return false;
-    case 38:
-		if (twilight_council_count == 0) {
-			stage_number = 17;
-			return false;
-		}
-        if (BlinkResearched || !observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
-            stage_number=39;
-            return false;
-        }
-        TryBuildUpgrade(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::BLINKTECH);
-        return false;
-    case 39:
-        if (robotics_facility_count>=2) {
-            stage_number=40;
-            return false;
-        }
-        return TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
+		return TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY,UNIT_TYPEID::PROTOSS_GATEWAY);
 
 
 	//branch 5

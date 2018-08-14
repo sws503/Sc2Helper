@@ -67,14 +67,14 @@ struct AirAttacker { // 공중 공격 가능한 적들 (폭풍함이 우선 공격하는 적) //시간
 		switch (unit.unit_type.ToType()) {
 
 		case UNIT_TYPEID::PROTOSS_STALKER:
-		case UNIT_TYPEID::PROTOSS_PHOTONCANNON: 
+		case UNIT_TYPEID::PROTOSS_PHOTONCANNON:
 
-		case UNIT_TYPEID::TERRAN_MARINE: 
-		case UNIT_TYPEID::TERRAN_MISSILETURRET: 
+		case UNIT_TYPEID::TERRAN_MARINE:
+		case UNIT_TYPEID::TERRAN_MISSILETURRET:
 		case UNIT_TYPEID::TERRAN_BUNKER:
 
 		case UNIT_TYPEID::ZERG_SPORECRAWLER:
-		case UNIT_TYPEID::ZERG_QUEEN: 
+		case UNIT_TYPEID::ZERG_QUEEN:
 
 		case UNIT_TYPEID::TERRAN_BATTLECRUISER:
 		case UNIT_TYPEID::TERRAN_CYCLONE:
@@ -514,4 +514,16 @@ private:
 	const ObservationInterface* observation_;
 	Point2D mp;
 	int radius;
+};
+
+struct IsZergFlying {
+    bool operator()(const Unit& unit) {
+        switch (unit.unit_type.ToType()) {
+        case UNIT_TYPEID::ZERG_OVERLORD: return false;
+        case UNIT_TYPEID::ZERG_OVERLORDCOCOON: return false;
+        case UNIT_TYPEID::ZERG_OVERLORDTRANSPORT: return false;
+        case UNIT_TYPEID::ZERG_OVERSEER: return false;
+        default: return unit.is_flying;
+        }
+    }
 };

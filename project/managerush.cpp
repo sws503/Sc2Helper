@@ -272,7 +272,7 @@ void MEMIBot::ManageTimingAttack()
 {
 	const ObservationInterface* observation = Observation();
 	size_t CurrentColossus = CountUnitType(observation, UNIT_TYPEID::PROTOSS_COLOSSUS);
-	
+
 	if (branch == 0 || branch == 1)
 	{
 		if (num_colossus >= 4)
@@ -558,13 +558,13 @@ void MEMIBot::ManageRush() {
 	{
 		meeting_spot = startLocation_;
 	}
-	
+
 
 
 	if (timing_attack)
 	{
 		if (AttackersRecruiting.empty()) {
-			for (const auto& unit : rangedunits) 
+			for (const auto& unit : rangedunits)
 			{
 				if (!unit->is_alive)
 				{
@@ -634,7 +634,7 @@ void MEMIBot::ManageRush() {
 		const Unit * target = GetTarget(unit, NearbyEnemies);
 		const Unit * targetGROUND = GetTarget(unit, NearbyGroundEnemies);
 		const Unit * targetAIR = GetTarget(unit, AirAttackers);
-		
+
 
 		// 스킬은 알아서 피하시구요 *^^*
 
@@ -735,7 +735,7 @@ void MEMIBot::ManageRush() {
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
 		{
-			
+
 
 			if (branch == 6)
 			{
@@ -837,7 +837,7 @@ void MEMIBot::ManageRush() {
 
 			Units NearbyAirAttackers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, AirAttacker());
 			Units NearbyWorkers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, IsWorker());
-			
+
 			const Unit * Workertarget = GetOracleRushTarget(unit, NearbyWorkers);
 			const Unit * Armytarget = GetTarget(unit, NearbyAirAttackers);
 
@@ -850,8 +850,8 @@ void MEMIBot::ManageRush() {
 					OracleCanAttack = true;
 				}
 			}
-			
-			
+
+
 
 			Units ArmiesNearStar1 = FindUnitsNear(Star1, 10, Unit::Alliance::Enemy, [](const Unit& unit) {return !unit.is_flying; });
 
@@ -946,7 +946,7 @@ void MEMIBot::ManageRush() {
 					Roam_randombase(unit);
 				}
 			}
-			
+
 		}
 
 
@@ -968,7 +968,7 @@ void MEMIBot::ManageRush() {
 			else
 			{
 				if (EvadeEffect(unit)) {}
-				else if (26 <= stage_number && stage_number <= 35)
+				else if (9 <= stage_number && stage_number <= 16)
 				{
 					bool ComeOn = false;
 
@@ -1005,14 +1005,14 @@ void MEMIBot::ManageRush() {
 						}
 					}
 					else if (DefendDuty(unit)) {}
-					else if (32 <= stage_number) //AdeptMustAttack) // target이 없음
+					else if (num_adept>=7) //AdeptMustAttack) // target이 없음
 					{
 						ScoutWithUnit(unit, observation);
 					}
 					else if (unit->orders.empty())
 					{
-						RetreatSmart(unit, advance_pylon_location);
-						//Roam_randombase(unit);
+						//RetreatSmart(unit, advance_pylon_location);
+						Roam_randombase(unit);
 					}
 				}
 				else
@@ -1156,7 +1156,7 @@ void  MEMIBot::Roam_enemybase(const Unit* unit)
 	if (enemy_townhalls_scouter_seen.size() == 1)
 	{
 		//const Unit * EnemyExpansionMineral = FindNearestMineralPatch(enemy_expansion);
-		
+
 
 		if (Distance2D(unit->pos, EnemyBaseMineral->pos) < 15)
 		{
@@ -1202,7 +1202,7 @@ void  MEMIBot::Roam_randombase(const Unit* unit)
 		}
 
 		Point2D RoamPosition = Point2D(mp.x + rx * roam_radius, mp.y + ry * roam_radius);
-		
+
 		if (!Observation()->IsPathable(RoamPosition)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
 		{
 			return;
@@ -1755,8 +1755,8 @@ const Unit * MEMIBot::GetOracleRushTarget(const Unit * rangedUnit, Units & targe
 		{
 			continue;
 		}
-		
-		
+
+
 		const float range = getAttackRangeGROUND(rangedUnit); //rangedUnit->getAttackRange(targetUnit); 사도 사거리 4
 		int priority = getAttackPriority(targetUnit);
 		if (IsBonusType(rangedUnit, targetUnit) == true)
@@ -1880,7 +1880,7 @@ const Unit * MEMIBot::GetOracleRushTarget(const Unit * rangedUnit, Units & targe
 		 float DIST = distance - rangedUnit->radius - targetUnit->radius;
 		 const Unit& TARGETUNIT = *targetUnit;
 
-		 
+
 		 if (IsWorker()(TARGETUNIT))
 		 {
 			 if (DIST <= 4)
