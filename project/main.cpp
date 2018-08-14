@@ -13,9 +13,9 @@ static const std::string current_version = "v0.5";
 #ifdef DEBUG
 
 static const bool EnableCheat = false;
-static const bool VsHuman = true;
-static const int stepsize = 5;
-static const bool Realtime = true;
+static const bool VsHuman = false;
+static const int stepsize = 8;
+static const bool Realtime = false;
 static const bool ControlTest = false;
 static const std::vector<std::string> map_names({
 	"BlackpinkLE",
