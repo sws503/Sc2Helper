@@ -272,9 +272,7 @@ void MEMIBot::ManageTimingAttack()
 {
 	const ObservationInterface* observation = Observation();
 	size_t CurrentColossus = CountUnitType(observation, UNIT_TYPEID::PROTOSS_COLOSSUS);
-
 	
-
 	if (branch == 0 || branch == 1)
 	{
 		if (num_colossus >= 4)
@@ -720,12 +718,28 @@ void MEMIBot::ManageRush() {
 				Roam_randombase(unit);
 			}
 		}
+
+		Units NearbyTurrets = observation->GetUnits(Unit::Alliance::Enemy, IsAIRTurretType());
+		for (const auto & turret : NearbyTurrets)
+		{
+			if (turret->build_progress != 1)
+			{
+				continue;
+			}
+			if (Distance2D(EnemyBaseLocation, turret->pos) <= 15)
+			{
+				std::cout << " 헉.. 포탑이 있잖아? " << std::endl;
+				turret_exist = true;
+			}
+		}
+
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_VOIDRAY)
 		{
 			
 
 			if (branch == 6)
 			{
+
 				if (AirAttackers.empty())
 				{
 					target = GetRushTarget(unit, NearbyEnemies);
@@ -735,7 +749,7 @@ void MEMIBot::ManageRush() {
 					target = GetRushTarget(unit, AirAttackers);
 				}
 
-				Units ArmiesNearStar1 = FindUnitsNear(Star1, 10, Unit::Alliance::Enemy, [](const Unit& unit) {return !unit.is_flying; });
+				Units ArmiesNearStar1 = FindUnitsNear(Star1, 10, Unit::Alliance::Enemy);
 
 				if (EvadeEffect(unit)) {}
 				else if (ArmiesNearStar1.size() > 0)
@@ -748,6 +762,9 @@ void MEMIBot::ManageRush() {
 				else if (target != nullptr) // 카이팅은 항상하자
 				{
 					VoidRayKiting(unit, target);
+				}
+				else if (turret_exist && num_voidray < 4)
+				{
 				}
 				else if (unit->orders.empty() || unit->orders.front().ability_id == ABILITY_ID::EFFECT_VOIDRAYPRISMATICALIGNMENT)
 				{
@@ -799,6 +816,24 @@ void MEMIBot::ManageRush() {
 
 		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_ORACLE)
 		{
+			if (branch == 6)
+			{
+				Units NearbyTurrets = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, IsTurretType());
+
+				for (const auto & turret : NearbyTurrets)
+				{
+					if (turret->build_progress != 1)
+					{
+						continue;
+					}
+					if (Distance2D(EnemyBaseLocation, turret->pos) <= 15)
+					{
+						std::cout << " 헉.. 포탑이 있잖아? " << std::endl;
+						turret_exist = true;
+					}
+				}
+			}
+
 
 			Units NearbyAirAttackers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, AirAttacker());
 			Units NearbyWorkers = FindUnitsNear(unit, 20, Unit::Alliance::Enemy, IsWorker());
@@ -836,7 +871,6 @@ void MEMIBot::ManageRush() {
 				if (Workertarget != nullptr) // 일꾼이 있으면
 				{
 					ManageOracleBeam(unit, Workertarget);
-					std::cout << " 적 일꾼 어택땅 했어요 " << std::endl;
 					SmartAttackMove(unit, Workertarget->pos);
 					//OracleKiting(unit, Workertarget);
 				}
@@ -922,7 +956,6 @@ void MEMIBot::ManageRush() {
 			Units NearbyArmies = FindUnitsNear(unit, 7, Unit::Alliance::Enemy, IsArmy(observation));
 			Units NearbyWorkers = FindUnitsNear(unit, 6, Unit::Alliance::Enemy, IsWorker());
 
-			
 			if (branch == 6)
 			{
 				if (EvadeEffect(unit)) {}
@@ -939,7 +972,7 @@ void MEMIBot::ManageRush() {
 				{
 					bool ComeOn = false;
 
-					if (target != nullptr)
+					if (targetGROUND != nullptr)
 					{
 						if (getunitsDpsGROUND(NearbyArmies) > 6.0f)
 						{
@@ -1472,7 +1505,7 @@ int MEMIBot::getRushPriority(const Unit * u)
 	}
 	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_SHIELDBATTERY)
 	{
-		return 160;
+		return 185;
 	}
 	if (unit.unit_type.ToType() == sc2::UNIT_TYPEID::ZERG_OVERLORD || unit.unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_PYLON)
 	{

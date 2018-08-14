@@ -96,7 +96,7 @@ public:
             branch = 0;
             break;
 		}
-		//branch = 0;
+		branch = 6;
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
@@ -199,6 +199,7 @@ public:
 	}
 
 	virtual void OnGameEnd() final override{
+	std::cout << "OngameENd Page"<<std::endl;
 		WriteStats();
 	}
 
@@ -3128,6 +3129,7 @@ private:
 	bool ColossusRangeUp;
 	bool timing_attack;
 	bool Recruited;
+	bool turret_exist = false;
 
 	const Unit* advance_pylon;
 	const Unit* probe_scout;

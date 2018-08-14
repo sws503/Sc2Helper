@@ -497,14 +497,21 @@ bool MEMIBot::ChargeShield(const Unit* unit)
 	const Unit * NearestBattery = FindNearestUnit(unit->pos, [](const Unit& unit) {return (IsUnit(UNIT_TYPEID::PROTOSS_SHIELDBATTERY)(unit) && unit.energy > 10 && unit.is_powered == 1); });
 
 	bool need = false;
+	bool value = false;
 
-	if (unit->shield < 5 && NearestBattery != nullptr)
+	if (need && unit->shield >= unit->shield_max - 15)
+	{
+		value = false;
+	}
+	else if (unit->shield < 5 && NearestBattery != nullptr)
 	{
 		Actions()->UnitCommand(unit, 3707);
 		SmartMove(unit, NearestBattery->pos);
+		value = true;
 		need = true;
 	}
-	return need;
+	
+	return value;
 }
 
 
@@ -520,17 +527,23 @@ void MEMIBot::VoidRayKiting(const Unit* unit, const Unit* enemyarmy)
 
 	if (DIST < unitattackrange)
 	{
-		for (const auto & Attribute : Observation()->GetUnitTypeData()[enemyarmy->unit_type].attributes)
+		if (enemyarmy->unit_type == UNIT_TYPEID::PROTOSS_PYLON || enemyarmy->unit_type == UNIT_TYPEID::ZERG_OVERLORD || enemyarmy->unit_type == UNIT_TYPEID::PROTOSS_PHOTONCANNON || enemyarmy->unit_type == UNIT_TYPEID::PROTOSS_SHIELDBATTERY || enemyarmy->unit_type == UNIT_TYPEID::ZERG_SPORECRAWLER || enemyarmy->unit_type == UNIT_TYPEID::TERRAN_MISSILETURRET || enemyarmy->unit_type == UNIT_TYPEID::TERRAN_BUNKER)
+		{
+			Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_VOIDRAYPRISMATICALIGNMENT);
+		}
+
+		/*for (const auto & Attribute : Observation()->GetUnitTypeData()[enemyarmy->unit_type].attributes)
 		{
 			if (Attribute == Attribute::Armored)
 			{
 				Actions()->UnitCommand(unit, ABILITY_ID::EFFECT_VOIDRAYPRISMATICALIGNMENT);
 			}
-		}
+		}*/
 	}
 	
+	SmartAttackUnit(unit, enemyarmy);
 
-	if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f)
+	/*if (DIST < unitattackrange && !unit->orders.empty() && unit->orders.front().ability_id == ABILITY_ID::ATTACK && unit->weapon_cooldown == 0.0f)
 	{
 		//가만히 있도록 합시다
 	}
@@ -544,7 +557,7 @@ void MEMIBot::VoidRayKiting(const Unit* unit, const Unit* enemyarmy)
 		FrontKitingLocation -= CalcKitingPosition(unit->pos, enemyarmy->pos) * 1.0f;
 
 		SmartMove(unit, FrontKitingLocation);
-	}
+	}*/
 }
 
 void MEMIBot::OracleKiting(const Unit* unit, const Unit* enemyarmy)

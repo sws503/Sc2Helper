@@ -7,36 +7,27 @@ void filewrite(Race enemyrace, std::string mapname, GameResult result);
 int MEMIBot::ReadStats() {
 	enemyrace = Race::Random;
 	myid = 0;
+	auto playerID = Observation()->GetPlayerID();
 	for (const auto& info : Observation()->GetGameInfo().player_info) {
-		std::cout << "pid:" << info.player_id << std::endl;
+		//std::cout << "pid:" << info.player_id << std::endl;
 
-	
-		if (info.race_actual == 1) {
-			enemyrace = Race::Zerg;
+		if (info.player_id != playerID) {
+			enemyrace = info.race_requested;
 			
 		}
-		else if (info.race_actual == 2)
-		{
-			enemyrace = Race::Protoss;
-		}
-		else
-			enemyrace = Race::Terran;
-		if (info.race_actual == Race::Random)
-		{
-			enemyrace = info.race_requested;
-		}
-		if (info.race_actual != Race::Random) {
-			myid = info.player_id;
-		}
+
 	}
 	std::cout << "EnemyRace" <<enemyrace<< std::endl;
+	std::cout <<"내 플레이어 아이디 : "<< playerID << std::endl;
+
 	return fileread(enemyrace, Observation()->GetGameInfo().map_name);
 }
 
 void MEMIBot::WriteStats() {
+	auto playerID = Observation()->GetPlayerID();
 	GameResult gameresult = GameResult::Undecided;
 	for (const auto& result : Observation()->GetResults()) {
-		if (result.player_id == myid) {
+		if (result.player_id == playerID) {
 			gameresult = result.result;
 		}
 	}
@@ -264,6 +255,7 @@ int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리
 
 //todo : 랜덤종족 감지, 맵추가
 void filewrite(Race enemyrace, string mapname, GameResult result) {
+	std::cout << "write part";
 	string tmp, map;
 	int win, win1, lose, lose1,zwin,zlose;
 	string s_arr[35];
@@ -501,7 +493,7 @@ void filewrite(Race enemyrace, string mapname, GameResult result) {
 		inFile.close();
 
 		ofstream outFile("Zerg.txt");
-		outFile << mapname << endl << win << endl << lose << endl << win1 << endl << lose1 << endl;
+		outFile << mapname << endl << win << endl << lose << endl << win1 << endl << lose1 << endl<<zwin<<endl<<zlose<<endl;
 
 
 		for (int a = 0; a < 49; a++)

@@ -47,6 +47,21 @@ struct IsTurretType {
 	}
 };
 
+struct IsAIRTurretType {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_PHOTONCANNON: return true;
+		case UNIT_TYPEID::ZERG_SPORECRAWLER: return true;
+		case UNIT_TYPEID::TERRAN_BUNKER: return true;
+		case UNIT_TYPEID::TERRAN_MISSILETURRET: return true;
+		case UNIT_TYPEID::PROTOSS_SHIELDBATTERY: return true;
+
+		default: return false;
+		}
+	}
+};
+
+
 struct AirAttacker { // 공중 공격 가능한 적들 (폭풍함이 우선 공격하는 적) //시간이 남으면 weapon.type == sc2::Weapon::TargetType::Air 으로 할수있지만 시간이 없음
 	bool operator()(const Unit& unit) {
 		switch (unit.unit_type.ToType()) {

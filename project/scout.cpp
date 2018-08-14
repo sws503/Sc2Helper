@@ -471,10 +471,11 @@ void MEMIBot::manageobserver() {
 		Point2D avg_pos(0, 0);
 		if (attacker_s_observer != nullptr) {
 			if (EvadeEffect(attacker_s_observer)) {}
-			else if (CanHitMe(attacker_s_observer, safedistance))
+			else if (CanHitMe(attacker_s_observer, safedistance) && enemyarmies.size() > 0)
 			{
 				const Unit * target = GetTarget(attacker_s_observer, enemyarmies);
-				FleeKiting(attacker_s_observer, target);
+				EvadeKiting(attacker_s_observer, target);
+				
 			}
 			else if (GetPosition(Attackers, avg_pos)) {
 				const Unit* n_u = FindNearestUnit(avg_pos, Attackers);
@@ -507,10 +508,10 @@ void MEMIBot::manageobserver() {
 					Actions()->UnitCommand(escort_observer, ABILITY_ID(3739));
 				}
 				if (EvadeEffect(escort_observer)) {}
-				else if (CanHitMe(escort_observer, safedistance))
+				else if (CanHitMe(escort_observer, safedistance) && enemyarmies.size() > 0)
 				{
 					const Unit * target = GetTarget(escort_observer, enemyarmies);
-					FleeKiting(escort_observer, target);
+					EvadeKiting(escort_observer, target);
 				}
 				else {
 					SmartMove(escort_observer, EscortProbeExpansionPoint);
@@ -556,10 +557,10 @@ void MEMIBot::manageobserver() {
 					Actions()->UnitCommand(observer, ABILITY_ID(3739));
 				}
 				if (EvadeEffect(observer)) {}
-				else if (CanHitMe(observer, safedistance))
+				else if (CanHitMe(observer, safedistance) && enemyarmies.size() > 0)
 				{
 					const Unit * target = GetTarget(observer, enemyarmies);
-					FleeKiting(observer, target);
+					EvadeKiting(observer, target);
 				}
 				else {
 					SmartMove(observer, base->pos);
@@ -594,10 +595,10 @@ void MEMIBot::manageobserver() {
 			const Unit* nearest_observer = FindNearestUnit(pos, Unit::Alliance::Self, f);
 			if (nearest_observer) {
 				if (EvadeEffect(nearest_observer)) {}
-				else if (CanHitMe(nearest_observer, safedistance))
+				else if (CanHitMe(nearest_observer, safedistance) && enemyarmies.size() > 0)
 				{
 					const Unit * target = GetTarget(nearest_observer, enemyarmies);
-					FleeKiting(nearest_observer, target);
+					EvadeKiting(nearest_observer, target);
 				}
 				else {
 					SmartMove(nearest_observer, pos);
@@ -627,10 +628,10 @@ void MEMIBot::manageobserver() {
 		}
 		// check if observer found some hidden enemy unit
 		if (EvadeEffect(observer)) {}
-		else if (CanHitMe(observer, safedistance))
+		else if (CanHitMe(observer, safedistance) && enemyarmies.size() > 0)
 		{
 			const Unit * target = GetTarget(observer, enemyarmies);
-			FleeKiting(observer, target);
+			EvadeKiting(observer, target);
 		}
 		else if (nearbase && nearenemy) {
 			SmartMove(observer, avg_pos);
