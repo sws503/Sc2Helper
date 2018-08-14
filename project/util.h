@@ -196,6 +196,17 @@ struct IsWorker {
 	}
 };
 
+struct IsGate {
+	bool operator()(const Unit& unit) {
+		switch (unit.unit_type.ToType()) {
+		case UNIT_TYPEID::PROTOSS_GATEWAY: return true;
+		case UNIT_TYPEID::PROTOSS_WARPGATE: return true;
+		default: return false;
+		}
+	}
+};
+
+
 struct IsArmy {
 	IsArmy(const ObservationInterface* obs) : observation_(obs) {}
 

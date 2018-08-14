@@ -423,21 +423,15 @@ void MEMIBot::ManageRush() {
 		Units NearbyArmies = FindUnitsNear(unit, 25, Unit::Alliance::Enemy, IsArmy(observation));
 		Units Airattackers = FindUnitsNear(unit, 16, Unit::Alliance::Enemy, AirAttacker());
 		//Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
+		size_t MyWarpGates = CountUnitType(observation, UNIT_TYPEID::PROTOSS_WARPGATE);
 
-		bool Summoning = false;
-		for (const Unit * zealot : Zealots)
-		{
-			if (zealot->build_progress != 1)
-			{
-				Summoning = true;
-			}
-		}
+		
 
 		Point2D enemy_position;
 		Point2D retreat_position;
 
 		GetPosition(NearbyArmies, Unit::Alliance::Enemy, enemy_position);
-		GetPosition(my_army, Unit::Alliance::Self, retreat_position); // TODO : 러쉬하는 유닛들로만 지정
+		GetPosition(Attackers, Unit::Alliance::Self, retreat_position); // TODO : 러쉬하는 유닛들로만 지정
 
 		// 둘 중 하나를 골라서 쓰세요~
 		//const Unit * NearestEnemybase = FindNearestUnit(unit->pos, enemy_townhalls_scouter_seen);
@@ -445,18 +439,59 @@ void MEMIBot::ManageRush() {
 
 		//bool TimeToDrop;
 
-		if (Attackers.size() > 5)
+		if (branch == 5)
 		{
-			TimeToDrop = true;
+			bool Summoning = false;
+			for (const Unit * zealot : Zealots)
+			{
+				if (zealot->build_progress != 1)
+				{
+					Summoning = true;
+				}
+			}
+
+			if (Attackers.size() > 5)
+			{
+				TimeToDrop = true;
+				num_zealot = 0;
+			}
+
+			if ((num_zealot >= MyWarpGates && !Summoning) || CanHitMe(unit) || num_zealot >= MyWarpGates+1)
+			{
+				std::cout << num_zealot << " 은 질럿 생산 횟수 " << std::endl;
+				Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMTRANSPORTMODE);
+				
+				TimeToDrop = false;
+			}
 		}
 
-		if ((num_zealot >= 5 && !Summoning )|| CanHitMe(unit) || num_zealot >= 7)
+		if (branch == 0)
 		{
-			std::cout << num_zealot << " 은 질럿 생산 횟수 " << std::endl;
-			Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMTRANSPORTMODE);
-			num_zealot = 0;
-			TimeToDrop = false;
+			bool Summoning = false;
+			for (const Unit * adept : Adepts)
+			{
+				if (adept->build_progress != 1)
+				{
+					Summoning = true;
+				}
+			}
+
+			if (Attackers.size() > 5)
+			{
+				TimeToDrop = true;
+				num_adept = 0;
+			}
+
+			if ((num_adept >= MyWarpGates && !Summoning) || CanHitMe(unit) || num_adept >= MyWarpGates+1)
+			{
+				std::cout << num_adept << " 은 사도 생산 횟수 " << std::endl;
+				Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMTRANSPORTMODE);
+				TimeToDrop = false;
+			}
 		}
+
+
+		
 
 		const Unit * nearenemy = GetNearTarget(unit, Airattackers);
 		Point2D MyPosition = unit->pos;
@@ -466,16 +501,29 @@ void MEMIBot::ManageRush() {
 		{
 			EvadeKiting(unit, nearenemy);
 		}
-		else if (CurrentZealot > 0)
+		/*else if (CurrentZealot > 0)
 		{
 			SmartMove(unit, startLocation_);
-		}
-		else if (NearestEnemybase != Point2D(0, 0) && Query()->PathingDistance(MyPosition, Point2D(NearestEnemybase.x + 3, NearestEnemybase.y)) < 20 && Query()->PathingDistance(MyPosition, Point2D(NearestEnemybase.x + 3, NearestEnemybase.y)) > 0.01f) {
+		}*/
+		else if (retreat_position != Point2D(0, 0) && NearbyArmies.size()>5 && Query()->PathingDistance(MyPosition, Point2D(retreat_position.x + 3, retreat_position.y)) < 15 && Query()->PathingDistance(MyPosition, Point2D(retreat_position.x + 3, retreat_position.y)) > 0.01f) {
 			Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMPHASINGMODE);
 		}
 		else if (TimeToDrop)
 		{
-			SmartMove(unit, NearestEnemybase);
+			if (NearbyArmies.empty())
+			{
+				RetreatSmart(unit, retreat_position);
+			}
+			else
+			{
+				sc2::Point2D KitingLocation = retreat_position;
+				KitingLocation += CalcKitingPosition(enemy_position, retreat_position * 10.0f);
+
+				RetreatSmart(unit, KitingLocation);
+			}
+
+			//RetreatSmart(unit, retreat_position);
+			//SmartMove(unit, NearestEnemybase);
 		}
 		else if (unit->orders.empty())
 		{
@@ -643,7 +691,7 @@ void MEMIBot::ManageRush() {
 
 		if(unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_MOTHERSHIP)
 		{
-			Units NearbyArmies = FindUnitsNear(unit, 25, Unit::Alliance::Enemy, IsArmy(observation));
+			Units NearbyArmies = FindUnitsNear(unit, 8, Unit::Alliance::Enemy, IsArmy(observation));
 			//Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
 
 			Point2D enemy_position;
