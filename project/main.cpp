@@ -17,15 +17,15 @@ static const bool VsHuman = false;
 static const int stepsize = 4;
 static const bool Realtime = false;
 static const bool ControlTest = false;
-static const std::vector<std::string> map_names({
-	"BlackpinkLE",
-	"NeonVioletSquareLE",
-	"BackwaterLE",
+
+static const std::vector<std::string> map_names_2018s3({
+	"AcidPlantLE",
+	"BlueshiftLE",
+	"CeruleanFallLE",
+	"DreamcatcherLE",
+	"FractureLE",
 	"LostAndFoundLE",
-	"InterloperLE",
-	"ProximaStationLE",
-	"NewkirkPrecinctTE",
-	"BelShirVestigeLE"
+	"ParaSiteLE"
 	});
 
 static const std::vector<std::string> map_names_2018s2({
@@ -37,6 +37,9 @@ static const std::vector<std::string> map_names_2018s2({
 	"Redshift",
 	"16BitLE"
 	} );
+
+static const std::vector<std::string> map_names = map_names_2018s3;
+
 static const std::string ControlMap = "1pTest.SC2Map"; // 1pTest 2pTest
 
 class Human : public sc2::Agent {
@@ -78,12 +81,13 @@ int main(int argc, char* argv[])
 	}
 	// Add the custom bot, it will control the players.
 	MEMIBot bot(bot_name, current_version);
+	MEMIBot bot2(bot_name, current_version);
 	Human human_bot;
 
 	if (VsHuman) {
 		coordinator.SetParticipants({
-			CreateParticipant(sc2::Race::Zerg, &human_bot),
 			CreateParticipant(sc2::Race::Protoss, &bot),
+			CreateParticipant(sc2::Race::Protoss, &bot2),
 			});
 	}
 	else {
