@@ -108,7 +108,7 @@ public:
 		recent_probe_scout_location = Point2D(0, 0);
 		recent_probe_scout_loop = 0;
 		last_dead_probe_pos.clear();
-		attacker_s_observer_tag = NullTag;
+		attackers_observer_tag = NullTag;
 		escort_observer_tag = NullTag;
 		EscortProbeExpansionPoint = Point2D(0,0);
 		next_expansion = Point2D(0,0);
@@ -153,7 +153,6 @@ public:
 		AttackersRecruiting.clear();
 
 		emergency_killerworkers.clear();
-		void wirte();
 		try_initialbalance = false;
 		the_pylon = nullptr;
 
@@ -163,7 +162,7 @@ public:
 
 		// 본진 좌표가 (0,0)으로 나오는 것 수정.
 		for (auto& e : expansions_) {
-			if (Point2D(e) == Point2D(0, 0)) {
+			if (Point2D(0, 0) == e) {
 				e.x = startLocation_.x;
 				e.y = startLocation_.y;
 				break;
@@ -1041,7 +1040,7 @@ private:
 					return;
 				}
 			}
-			SmartAttackMove(unit, EnemyBaseLocation); //위 작업이 끝나면 적 기지를 다시한번 간다
+			SmartAttackMove(unit, target_pos); //위 작업이 끝나면 적 기지를 다시한번 간다
 		}
 		else { //적 기지도 모르면 막 돌아다녀라
 			if (!unit->orders.empty()) {
@@ -1138,7 +1137,7 @@ private:
 		if (game_info_.enemy_start_locations.empty()) {
 			return false;
 		}
-		target_pos = last_destroyed_enemy_structure_pos == Point2D(0,0)? game_info_.enemy_start_locations.front(): last_destroyed_enemy_structure_pos;
+		target_pos = (last_destroyed_enemy_structure_pos == Point2D(0,0))? game_info_.enemy_start_locations.front(): last_destroyed_enemy_structure_pos;
 		EnemyBaseLocation = game_info_.enemy_start_locations.front();
 		return find_enemy_location;
 	}
@@ -3223,7 +3222,7 @@ private:
 	void scoutenemylocation();
 
 	std::unordered_map<Tag, Tag> observer_nexus_match;
-	Tag attacker_s_observer_tag;
+	Tag attackers_observer_tag;
 	Tag escort_observer_tag;
 	Point2D EscortProbeExpansionPoint;
 

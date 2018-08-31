@@ -85,7 +85,7 @@ void MEMIBot::scout_all() {
 	if (observers_not_sieged.size() >= 3) {
 		if (probe_scout == nullptr || probe_scout->unit_type != UNIT_TYPEID::PROTOSS_OBSERVER) {
 			for (const auto& observer : observers_not_sieged) {
-				if (observer->tag != attacker_s_observer_tag 
+				if (observer->tag != attackers_observer_tag 
 					&& observer->tag != escort_observer_tag) {
 					probe_scout = observer;
 				}
@@ -310,12 +310,6 @@ bool MEMIBot::determine_scout_location(const Unit* u) {
 			if (FindNearestUnit(pos, f_structure, 15) != nullptr) {
 				continue;
 			}
-			if (DistanceSquared2D(EnemyBaseLocation, pos)<200 ||
-				DistanceSquared2D(enemy_expansion, pos)<200 ||
-				DistanceSquared2D(front_expansion, pos)<200 ||
-				DistanceSquared2D(startLocation_, pos)<200) {
-				continue;
-			}
 			if (d < 5.0f) {
 				continue;
 			}
@@ -370,38 +364,38 @@ void MEMIBot::manageobserver() {
 		return u.display_type == Unit::CloakState::CloakedDetected || u.is_burrowed;
 	};
 
-	if (observation->GetUnit(attacker_s_observer_tag) == nullptr) {
-		attacker_s_observer_tag = NullTag;
+	if (observation->GetUnit(attackers_observer_tag) == nullptr) {
+		attackers_observer_tag = NullTag;
 	}
 	if (observation->GetUnit(escort_observer_tag) == nullptr) {
 		escort_observer_tag = NullTag;
 	}
 	// attacker_s_probe_tag 지정
-	if (attacker_s_observer_tag == NullTag) {
+	if (attackers_observer_tag == NullTag) {
 		for (const auto& o : observers_not_sieged) {
 			if (probe_scout != nullptr && probe_scout->tag == o->tag) continue;
 			if (escort_observer_tag == o->tag) continue;
-			attacker_s_observer_tag = o->tag;
+			attackers_observer_tag = o->tag;
 			break;
 		}
 	}
 	if (escort_observer_tag == NullTag) {
 		for (const auto& o : observers_not_sieged) {
 			if (probe_scout != nullptr && probe_scout->tag == o->tag) continue;
-			if (attacker_s_observer_tag == o->tag) continue;
+			if (attackers_observer_tag == o->tag) continue;
 			escort_observer_tag = o->tag;
 			break;
 		}
 	}
 
-	const Unit* attacker_s_observer = observation->GetUnit(attacker_s_observer_tag);
+	const Unit* attackers_observer = observation->GetUnit(attackers_observer_tag);
 	float safedistance = 3.0f;
 
 	// 판단
 	bool do_siege_mode = false;
 	bool dead_probe_cleared = false;
 	bool observer_is_going = false;
-	bool attackers_probe_is_doing = false;
+	bool attackers_observer_working = false;
 
 	if (!last_dead_probe_pos.empty()) {
 		Point2D pos = last_dead_probe_pos.front();
@@ -432,7 +426,9 @@ void MEMIBot::manageobserver() {
 				// 죽은 곳으로 갔는데 없다.
 				if (dist_sq < 1) {
 					Units cloakeddetected_units = FindUnitsNear(observer, 15, Unit::Alliance::Enemy, filter_hidden);
-					if (cloakeddetected_units.empty()) {
+					Units near_units = FindUnitsNear(observer, 10, Unit::Alliance::Enemy);
+					size_t near_units_size = near_units.size();
+					if (cloakeddetected_units.empty() || !(0 < near_units_size && near_units_size <= 5) ) {
 						dead_probe_cleared = true;
 						break;
 					}
@@ -443,7 +439,18 @@ void MEMIBot::manageobserver() {
 			}
 		}
 		if (dead_probe_cleared) {
+			Point2D front_pos = last_dead_probe_pos.front();
 			last_dead_probe_pos.pop_front();
+			// 근처에 죽은 프로브들은 스킵
+			for (auto& it = last_dead_probe_pos.begin(); it != last_dead_probe_pos.end();) {
+				const Point2D& p = (*it);
+				if (DistanceSquared2D(front_pos, p) < 49.0f) {
+					it = last_dead_probe_pos.erase(it);
+				}
+				else {
+					it++;
+				}
+			}
 		}
 	}
 
@@ -468,36 +475,52 @@ void MEMIBot::manageobserver() {
 
 	// 옵저버 한마리 attackers와 함께 다니기
 	if (flags.status("observer_on_nexus") == 2) {
-		Point2D avg_pos(0, 0);
-		if (attacker_s_observer != nullptr) {
-			if (EvadeEffect(attacker_s_observer)) {}
-			else if (CanHitMe(attacker_s_observer, safedistance) && enemyarmies.size() > 0)
+		if (attackers_observer != nullptr) {
+			Point2D avg_pos(0, 0);
+			Point2D candidate_pos(0, 0);
+			if (EvadeEffect(attackers_observer)) {}
+			else if (CanHitMe(attackers_observer, safedistance) && enemyarmies.size() > 0)
 			{
-				const Unit * target = GetTarget(attacker_s_observer, enemyarmies);
-				EvadeKiting(attacker_s_observer, target);
+				const Unit * target = GetTarget(attackers_observer, enemyarmies);
+				EvadeKiting(attackers_observer, target);
 				
 			}
 			else if (GetPosition(Attackers, avg_pos)) {
-				const Unit* n_u = FindNearestUnit(avg_pos, Attackers);
-				Point2D move_pos(avg_pos);
+				candidate_pos = (avg_pos + attackers_observer->pos) / 2;
+				const Unit* n_u = FindNearestUnit(candidate_pos, Attackers);
 				if (n_u != nullptr) {
-					move_pos = n_u->pos;
+					candidate_pos = n_u->pos;
 				}
-				SmartMove(attacker_s_observer, move_pos);
-				attackers_probe_is_doing = true;
+				// skip order if too near
+				if (!attackers_observer->orders.empty() 
+					&& attackers_observer->orders.front().ability_id == ABILITY_ID::MOVE
+					&& DistanceSquared2D(attackers_observer->orders.front().target_pos, candidate_pos) < 2) {
+				}
+				else {
+					SmartMove(attackers_observer, candidate_pos);
+				}
+				attackers_observer_working = true;
 			}
 			else if (GetPosition(AttackersRecruiting, avg_pos)) {
+				candidate_pos = (avg_pos + attackers_observer->pos) / 2;
 				const Unit* n_u = FindNearestUnit(avg_pos, AttackersRecruiting);
-				Point2D move_pos(avg_pos);
 				if (n_u != nullptr) {
-					move_pos = n_u->pos;
+					candidate_pos = n_u->pos;
 				}
-				SmartMove(attacker_s_observer, move_pos);
-				attackers_probe_is_doing = true;
+				// skip order if too near
+				if (!attackers_observer->orders.empty()
+					&& attackers_observer->orders.front().ability_id == ABILITY_ID::MOVE
+					&& DistanceSquared2D(attackers_observer->orders.front().target_pos, candidate_pos) < 2) {
+				}
+				else {
+					SmartMove(attackers_observer, candidate_pos);
+				}
+				attackers_observer_working = true;
 			}
 		}
 	}
 
+	// 확장 에스코트
 	if (EscortProbeExpansionPoint != Point2D(0, 0)) {
 		const Unit* escort_observer = observation->GetUnit(escort_observer_tag);
 		if (escort_observer != nullptr) {
@@ -518,12 +541,15 @@ void MEMIBot::manageobserver() {
 				}
 			}
 			// 가까이 있으면 감시모드
+			// Todo: 감시모드 푸는거랑 겹치지 않게 하기
+			/*
 			else {
 				if (escort_observer->unit_type == UNIT_TYPEID::PROTOSS_OBSERVER) {
 					// change to surveilance mode
 					Actions()->UnitCommand(escort_observer, ABILITY_ID(3741));
 				}
 			}
+			*/
 		}
 		if (FindNearestUnit(EscortProbeExpansionPoint, bases, 15) != nullptr) {
 			EscortProbeExpansionPoint = Point2D(0, 0);
@@ -588,9 +614,9 @@ void MEMIBot::manageobserver() {
 		// 본진에 프로브가 죽었고 옵저버가 가지 않는 경우 가장 가까운 놈 보내기
 		if (!last_dead_probe_pos.empty() && !dead_probe_cleared && !observer_is_going) {
 			Point2D pos = last_dead_probe_pos.front();
-			Tag attack_obs_tag = attacker_s_observer_tag;
-			Filter f = [attack_obs_tag, attackers_probe_is_doing](const Unit& u) {
-				return IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER)(u) && (!attackers_probe_is_doing || attack_obs_tag != u.tag);
+			Tag attack_obs_tag = attackers_observer_tag;
+			Filter f = [attack_obs_tag, attackers_observer_working](const Unit& u) {
+				return IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER)(u) && (!attackers_observer_working || attack_obs_tag != u.tag);
 			};
 			const Unit* nearest_observer = FindNearestUnit(pos, Unit::Alliance::Self, f);
 			if (nearest_observer) {
@@ -609,7 +635,7 @@ void MEMIBot::manageobserver() {
 
 	// 할 일 없으면 돌아다니기
 	for (const auto& observer : observers_not_sieged) {
-		if (attackers_probe_is_doing && observer->tag == attacker_s_observer_tag) continue;
+		if (attackers_observer_working && observer->tag == attackers_observer_tag) continue;
 
 		// check if observer is near bases
 		bool nearbase = false;
