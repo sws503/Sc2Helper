@@ -636,6 +636,7 @@ void MEMIBot::manageobserver() {
 	// 할 일 없으면 돌아다니기
 	for (const auto& observer : observers_not_sieged) {
 		if (attackers_observer_working && observer->tag == attackers_observer_tag) continue;
+		if (EscortProbeExpansionPoint != Point2D(0, 0) && observer->tag == escort_observer_tag) continue;
 
 		// check if observer is near bases
 		bool nearbase = false;
