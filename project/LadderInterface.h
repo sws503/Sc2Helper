@@ -1,4 +1,4 @@
-static sc2::Difficulty GetDifficultyFromString(std::string InDifficulty)
+static sc2::Difficulty GetDifficultyFromString(const std::string &InDifficulty)
 {
 	if (InDifficulty == "VeryEasy")
 	{
@@ -77,6 +77,7 @@ struct ConnectionOptions
 	bool ComputerOpponent;
 	sc2::Difficulty ComputerDifficulty;
 	sc2::Race ComputerRace;
+	std::string OpponentId;
 };
 
 static void ParseArguments(int argc, char *argv[], ConnectionOptions &connect_options)
@@ -88,7 +89,8 @@ static void ParseArguments(int argc, char *argv[], ConnectionOptions &connect_op
 		{ "-l", "--LadderServer", "Ladder server address", false },
 		{ "-c", "--ComputerOpponent", "If we set up a computer oppenent" },
 		{ "-a", "--ComputerRace", "Race of computer oppent"},
-		{ "-d", "--ComputerDifficulty", "Difficulty of computer oppenent"}
+		{ "-d", "--ComputerDifficulty", "Difficulty of computer oppenent"},
+		{ "-x", "--OpponentId", "PlayerId of opponent"}
 		});
 	arg_parser.Parse(argc, argv);
 	std::string GamePortStr;
@@ -120,9 +122,10 @@ static void ParseArguments(int argc, char *argv[], ConnectionOptions &connect_op
 	{
 		connect_options.ComputerOpponent = false;
 	}
+	arg_parser.Get("OpponentId", connect_options.OpponentId);
 }
 
-static void RunBot(int argc, char *argv[], sc2::Agent *Agent,sc2::Race race)
+static void RunBot(int argc, char *argv[], sc2::Agent *Agent, sc2::Race race)
 {
 	ConnectionOptions Options;
 	ParseArguments(argc, argv, Options);
