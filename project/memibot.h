@@ -61,12 +61,38 @@ public:
 			game_info_.enemy_start_locations.push_back(Point2D());
 		}
 		else {
+		
+			//strategy = ReadStats({});
+		}
+
+
+		GetEnemyRace();
+		
+		std::initializer_list<int> branch_lists;
+		switch (enemyrace){
+		case Protoss:
+			branch_lists = { 6,7 };
+			break;
+		case Terran:
+			branch_lists = { 5,6 };
+			break;
+		case Zerg:
+			branch_lists = { 0,6,7 };
+			break;
+		case Random:
+		default:
+			branch_lists = { 0 };
+			break;
+		}
+		std::vector<int> branches(branch_lists);
+		strategy = ReadStats(branches);
+		branch = strategy;
+		tryadeptbranch6 = (branch == 6 && enemyrace == Zerg);
+
+		/*
 		// protoss : 1, 2 (기록 없으면 1)
 		// terran : 3, 4 (기록 없으면 3)
 		// zerg : 5, 6 (기록 없으면 5)
-			strategy = ReadStats();
-		}
-
 		tryadeptbranch6 = false;
 		switch (strategy) {
         case 1:
@@ -95,7 +121,7 @@ public:
             branch = 0;
             break;
 		}
-		
+		*/
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
@@ -199,7 +225,6 @@ public:
 	}
 
 	virtual void OnGameEnd() final override{
-	std::cout << "OngameENd Page"<<std::endl;
 		WriteStats();
 	}
 
@@ -218,7 +243,7 @@ public:
 			EarlyStrategy();
 		}
 
-		WriteStats();
+		//WriteStats();
 		//write(observation,enemyrace);
 		
 
@@ -610,6 +635,9 @@ public:
 	Units AttackersRecruiting;
 	const Unit * the_pylon;
 	Point2D* the_pylon_pos;
+
+	bool SetOpponentID(std::string& opponentid);
+
 private:
 	void ChatVersion() {
 		Actions()->SendChat(botname + " " + version);
@@ -3292,9 +3320,11 @@ private:
 	Point2D Pylon1, Pylon2, Pylon3, Pylon4, Gate1, Core1, Star1, Batt1, Batt2, Batt3, Batt4, Batt5, Center;
     Point2D next_expansion;
 
-	uint32_t myid;
 	Race enemyrace;
-	int ReadStats();
-	void WriteStats();
+	std::string opponentID;
+	//int ReadStats();
+	int ReadStats(std::vector<int>& branches);
+	bool WriteStats();
+	Race GetEnemyRace();
 	float PredictWinrate(int stalker, int immortal, int marine, int marauder, int siegetank, int medivac, int viking, int cyclone, int battlecruiser);
 };

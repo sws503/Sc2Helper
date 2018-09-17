@@ -1,30 +1,156 @@
 #include "memibot.h"
 #include <fstream>
+#include <sstream>
+#include "json/json.h"
+
+const std::string statfilename = "stats/GScAI-stats.json";
 
 int fileread(Race enemyrace, std::string mapname);
 void filewrite(Race enemyrace, std::string mapname, GameResult result);
 void write(const ObservationInterface* observation,Race enemyrace, std::string map_name);
-int time_count = 1, data_c = 1;
 
-int MEMIBot::ReadStats() {
+bool MEMIBot::SetOpponentID(std::string& id) {
+	opponentID = id;
+	return true;
+}
+
+Race MEMIBot::GetEnemyRace() {
 	enemyrace = Race::Random;
-	myid = 0;
-	auto playerID = Observation()->GetPlayerID();
+	uint32_t playerID = Observation()->GetPlayerID();
 	for (const auto& info : Observation()->GetGameInfo().player_info) {
-		//std::cout << "pid:" << info.player_id << std::endl;
-
 		if (info.player_id != playerID) {
 			enemyrace = info.race_requested;
-			
 		}
+	}
+	return enemyrace;
+}
 
+int MEMIBot::ReadStats(std::vector<int>& branches) {
+	std::string map = Observation()->GetGameInfo().map_name;
+	std::string filename = statfilename;
+	std::string oppID = opponentID;
+	std::string map3 = map.substr(0, 3);
+
+	int maxbranch;
+	if (!branches.empty()) {
+		maxbranch = branches[GetRandomInteger(0, (int)branches.size() - 1)];
+	}
+	else {
+		std::cout << "fatal error at readstats" << std::endl;
+	}
+
+	Json::Value root;
+	std::ifstream istatfile(filename, std::ifstream::binary);
+	if (istatfile.is_open()) {
+		Json::CharReaderBuilder rbuilder;
+
+		std::string errs;
+
+		bool parsingSuccessful = Json::parseFromStream(rbuilder, istatfile, &root, &errs);
+		if (!parsingSuccessful)
+		{
+			// report to the user the failure and their locations in the document.
+			std::cout << "Failed to parse stats, use random\n"
+				<< errs;
+		}
+		else {
+			float maxwr = 0.0f;
+			for (int b : branches) {
+				int prevwin = root["IDW"][oppID][map3].get(b, 1).asInt();
+				int prevall = root["IDA"][oppID][map3].get(b, 1).asInt();
+				float curwr = prevwin / (float)prevall;
+				if (maxwr < curwr) {
+					maxwr = curwr;
+					maxbranch = b;
+				}
+			}
+		}
+		istatfile.close();
+	}
+	else {
+		std::cout << "Failed to open file, use random\n";
+	}
+
+	return maxbranch;
+}
+
+bool MEMIBot::WriteStats() {
+	std::string map = Observation()->GetGameInfo().map_name;
+	std::string filename = statfilename;
+	std::string oppID = opponentID;
+	std::string map3 = map.substr(0, 3);
+
+	uint32_t playerID = Observation()->GetPlayerID();
+	GameResult gameresult = GameResult::Undecided;
+	for (const auto& result : Observation()->GetResults()) {
+		if (result.player_id == playerID) {
+			gameresult = result.result;
+		}
+	}
+
+	//int racewin = 1;
+	//int raceall = 1;
+	int prevwin = 1;
+	int prevall = 1;
+
+	Json::Value root;
+	std::ifstream istatfile(filename, std::ifstream::binary);
+	if (istatfile.is_open()) {
+		Json::CharReaderBuilder rbuilder;
+
+		std::string errs;
+
+		bool parsingSuccessful = Json::parseFromStream(rbuilder, istatfile, &root, &errs);
+		if (!parsingSuccessful)
+		{
+			// report to the user the failure and their locations in the document.
+			std::cout << "Failed to parse stats, use default\n"
+				<< errs;
+		}
+		else {
+			prevwin = root["IDW"][oppID][map3].get(branch, 1).asInt();
+			prevall = root["IDA"][oppID][map3].get(branch, 1).asInt();
+		}
+		istatfile.close();
+	}
+	else {
+		std::cout << "Failed to open file, use default\n";
+	}
+	// statfile >> root;
+
+	root["IDW"][oppID][map3][branch] = prevwin + (gameresult == Win);
+	root["IDA"][oppID][map3][branch] = prevall++;
+
+	Json::StreamWriterBuilder wbuilder;
+
+	std::string outputstring = Json::writeString(wbuilder, root);
+	std::ofstream ostatfile(filename);
+	if (ostatfile.is_open()) {
+		ostatfile << outputstring << std::endl;
+		ostatfile.close();
+		return true;
+	}
+	else {
+		std::cout << "file writing failed!" << std::endl;
+		return false;
+	}
+}
+/*
+int MEMIBot::ReadStats() {
+	enemyrace = Race::Random;
+	uint32_t playerID = Observation()->GetPlayerID();
+	for (const auto& info : Observation()->GetGameInfo().player_info) {
+		if (info.player_id != playerID) {
+			enemyrace = info.race_requested;
+		}
 	}
 	std::cout << "EnemyRace" <<enemyrace<< std::endl;
-	std::cout <<"내 플레이어 아이디 : "<< playerID << std::endl;
+	std::cout << "내 플레이어 아이디 : "<< playerID << std::endl;
 
 	return fileread(enemyrace, Observation()->GetGameInfo().map_name);
 }
-
+*/
+/*
 void MEMIBot::WriteStats() {
 	/*
 	auto playerID = Observation()->GetPlayerID();
@@ -35,21 +161,23 @@ void MEMIBot::WriteStats() {
 		}
 	}
 	filewrite(enemyrace, Observation()->GetGameInfo().map_name, gameresult);
-	*/
+	* /
 
 	const ObservationInterface* observation = Observation();
 	
 	write(observation, enemyrace, Observation()->GetGameInfo().map_name);
 }
+*/
 
 using namespace std;
 
 //todo: 랜덤종족 감지, 맵추가
-int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리턴
+int fileread(Race enemyrace, std::string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리턴
 	int win, lose;
-	string tmp;
-	double winratio1, winratio2,winratio3;
-	string inputString;
+	std::string tmp;
+	double winratio1, winratio2, winratio3;
+	std::string inputString;
+
 	if (enemyrace == Race::Protoss)
 	{
 		ifstream knFile("Protoss.txt");
@@ -318,7 +446,10 @@ int fileread(Race enemyrace, string mapname) { //race는 1-P 2-T 3-Z 빌드 넘버 리
 }
 
 //todo : 랜덤종족 감지, 맵추가
-void filewrite(Race enemyrace, string mapname, GameResult result) {
+void filewrite(Race enemyrace, std::string mapname, GameResult result) {
+	std::string mapname_front3 = mapname.substr(0, 3);
+
+
 	std::cout << "write part";
 	string tmp, map;
 	int win, win1, lose, lose1,zwin,zlose;
@@ -568,60 +699,127 @@ void filewrite(Race enemyrace, string mapname, GameResult result) {
 	}
 }
 
-void write(const ObservationInterface* observation,Race enemyrace, std::string map_name)
+void write(const ObservationInterface* observation, Race enemyrace, std::string map_name)
 {
-
-	if (observation->GetGameLoop()>2600)
-		time_count = observation->GetGameLoop() / 130;//12초에 260 초당 21.6
-
-	if (time_count != data_c && observation->GetGameLoop() > 2600)
+	//12초에 260 초당 21.6
+	if (observation->GetGameLoop() % 130 == 0 && observation->GetGameLoop() > 2600)
 	{
 		size_t Mystructure_num = observation->GetUnits(Unit::Alliance::Self, IsStructure(observation)).size();
 		size_t Enemystructure_num = observation->GetUnits(Unit::Alliance::Enemy, IsStructure(observation)).size();
-		data_c = time_count;
-		if (enemyrace == Race::Protoss)
-		{
-			ofstream outFile("P_Result.txt");
-			if (Mystructure_num <= 5)
-				outFile << "Loss" << std::endl;
-			else if (Enemystructure_num <= 5)
-				outFile << "Win" << std::endl;
-			else if (Mystructure_num>Enemystructure_num)
-				outFile << "Win" << std::endl;
-			else
-				outFile << "Loss" << std::endl;
-			outFile <<map_name << std::endl;
-			outFile.close();
+		std::string outfile_name;
+		switch (enemyrace) {
+		case Protoss:
+			outfile_name = "P_Result.txt";
+			break;
+		case Terran:
+			outfile_name = "T_Result.txt";
+			break;
+		case Zerg:
+			outfile_name = "Z_Result.txt";
+			break;
+		case Random:
+		default:
+			outfile_name = "R_Result.txt";
+			break;
 		}
-		else if (enemyrace == Race::Terran)
-		{
-			ofstream outFile("T_Result.txt");
-			if (Mystructure_num <= 5)
-				outFile << "Loss" << std::endl;
-			else if (Enemystructure_num <= 5)
-				outFile << "Win" << std::endl;
-			else if (Mystructure_num+5>Enemystructure_num)
-				outFile << "Win" << std::endl;
-			else
-				outFile << "Loss" << std::endl;
-			outFile << map_name << std::endl;
-			outFile.close();
-		}
+		std::ofstream outFile(outfile_name);
+		if (Mystructure_num <= 5)
+			outFile << "Loss" << std::endl;
+		else if (Enemystructure_num <= 5)
+			outFile << "Win" << std::endl;
+		else if (Mystructure_num > Enemystructure_num)
+			outFile << "Win" << std::endl;
 		else
-		{
-			ofstream outFile("Z_Result.txt");
-			if (Mystructure_num <= 5)
-				outFile << "Loss" << std::endl;
-			else if (Enemystructure_num <= 5)
-				outFile << "Win" << std::endl;
-			else if (Mystructure_num > Enemystructure_num)
-				outFile << "Win" << std::endl;
-			else
-				outFile << "Loss" << std::endl;
-			outFile << map_name << std::endl;
-			outFile.close();
-		}
-
-
+			outFile << "Loss" << std::endl;
+		outFile << map_name << std::endl;
+		outFile.close();
 	}
 }
+
+/*
+int json()
+{
+	Json::Value root;   // starts as "null"; will contain the root value after parsing
+	//std::cin >> root;
+	std::ifstream config_doc("config_doc.json", std::ifstream::binary);
+	config_doc >> root;
+
+	// Get the value of the member of root named 'my-encoding', return 'UTF-32' if there is no
+	// such member.
+	std::string my_encoding = root.get("my-encoding", "UTF-32").asString();
+
+	// Get the value of the member of root named 'my-plug-ins'; return a 'null' value if
+	// there is no such member.
+	const Json::Value my_plugins = root["my-plug-ins"];
+	for (int index = 0; index < my_plugins.size(); ++index)  // Iterates over the sequence elements.
+		yourlib::loadPlugIn(my_plugins[index].asString());
+
+	yourlib::setIndentLength(root["my-indent"].get("length", 3).asInt());
+	yourlib::setIndentUseSpace(root["my-indent"].get("use_space", true).asBool());
+
+	// ...
+	// At application shutdown to make the new configuration document:
+	// Since Json::Value has implicit constructor for all value types, it is not
+	// necessary to explicitly construct the Json::Value object:
+	root["encoding"] = yourlib::getCurrentEncoding();
+	root["indent"]["length"] = yourlib::getCurrentIndentLength();
+	root["indent"]["use_space"] = yourlib::getCurrentIndentUseSpace();
+
+	// Make a new JSON document with the new configuration. Preserve original comments.
+	std::cout << root << "\n";
+}
+
+int json2(std::string map, std::string opponentID, GameResult result, int branch)
+{
+	std::string filename = statfilename;
+	std::string oppID = opponentID;
+	std::string map3 = map.substr(0, 3);
+
+	//int racewin = 1;
+	//int raceall = 1;
+	int prevwin = 1;
+	int prevall = 1;
+
+	Json::Value root;
+	std::ifstream istatfile(filename, std::ifstream::binary);
+	if (istatfile.is_open()) {
+		Json::CharReaderBuilder rbuilder;
+
+		std::string errs;
+
+		bool parsingSuccessful = Json::parseFromStream(rbuilder, istatfile, &root, &errs);
+		if (!parsingSuccessful)
+		{
+			// report to the user the failure and their locations in the document.
+			std::cout << "Failed to parse stats, use default\n"
+				<< errs;
+		}
+		else {
+			prevwin = root["IDW"][oppID][map3].get(branch, 1).asInt();
+			prevall = root["IDA"][oppID][map3].get(branch, 1).asInt();
+		}
+		istatfile.close();
+	}
+	else {
+		std::cout << "Failed to open file, use default\n";
+	}
+	// statfile >> root;
+
+	root["IDW"][oppID][map3][branch] = prevwin + (result == Win);
+	root["IDA"][oppID][map3][branch] = prevall++;
+
+	Json::StreamWriterBuilder wbuilder;
+
+	std::string outputstring = Json::writeString(wbuilder, root);
+	std::ofstream ostatfile(filename);
+	if (ostatfile.is_open()) {
+		ostatfile << outputstring << std::endl;
+		ostatfile.close();
+		return true;
+	}
+	else {
+		std::cout << "file writing failed!" << std::endl;
+		return false;
+	}
+}
+*/

@@ -71,13 +71,13 @@ static sc2::Race GetRaceFromString(const std::string & RaceIn)
 
 struct ConnectionOptions
 {
-	int32_t GamePort;
-	int32_t StartPort;
-	std::string ServerAddress;
-	bool ComputerOpponent;
+	int32_t GamePort = 0;
+	int32_t StartPort = 0;
+	std::string ServerAddress = std::string("");;
+	bool ComputerOpponent = true;
 	sc2::Difficulty ComputerDifficulty;
 	sc2::Race ComputerRace;
-	std::string OpponentId;
+	std::string OpponentId = std::string("");
 };
 
 static void ParseArguments(int argc, char *argv[], ConnectionOptions &connect_options)
@@ -125,7 +125,7 @@ static void ParseArguments(int argc, char *argv[], ConnectionOptions &connect_op
 	arg_parser.Get("OpponentId", connect_options.OpponentId);
 }
 
-static void RunBot(int argc, char *argv[], sc2::Agent *Agent, sc2::Race race)
+static void RunBot(int argc, char *argv[], MEMIBot *Agent, sc2::Race race)
 {
 	ConnectionOptions Options;
 	ParseArguments(argc, argv, Options);
@@ -155,6 +155,7 @@ static void RunBot(int argc, char *argv[], sc2::Agent *Agent, sc2::Race race)
 	}
 
 	// Start the game.
+	Agent->SetOpponentID(Options.OpponentId);
 
 	// Step forward the game simulation.
 	std::cout << "Connecting to port " << Options.GamePort << std::endl;
