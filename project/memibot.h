@@ -56,6 +56,8 @@ public:
 
 		int strategy = 0;
 
+		std::cout<<"mapname::::::"<<game_info_.map_name<<std::endl;
+
 		// 테스트맵용
 		if (game_info_.enemy_start_locations.empty()) {
 			game_info_.enemy_start_locations.push_back(Point2D());
@@ -95,7 +97,7 @@ public:
             branch = 0;
             break;
 		}
-		
+
 
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
@@ -140,6 +142,8 @@ public:
 
 		last_map_renewal = 0;
 		resources_to_nearest_base.clear();
+
+		MapName.clear();
 
 		flags.reset();
 
@@ -220,7 +224,7 @@ public:
 
 		WriteStats();
 		//write(observation,enemyrace);
-		
+
 
 
 		scout_all();
@@ -378,12 +382,12 @@ public:
 			break;
 		case UNIT_TYPEID::PROTOSS_ADEPT:
 			num_adept++;
-			
+
 			if (phasing_check())
 			{
 				Attackers.push_back(u);
 			}
-			
+
 			break;
 		case UNIT_TYPEID::PROTOSS_STALKER:
 			num_stalker++;
@@ -2787,171 +2791,405 @@ private:
     }
 
     void initial_location_building(std::string map_name) {
-        switch (map_name.length()) {
-            case 12:
-                switch (map_name[1]) {
-                case 'l'://blackpink
-                    advance_pylon_location = Point2D(59.0f, 16.0f);
-                    Center = Point2D(84.0f, 78.0f);
-                    break;
-                case 'a'://backwater
-                    advance_pylon_location = Point2D(101.0f, 19.0f);
-                    Center = Point2D(85.0f, 74.0f);
-                    break;
-                default:
-                    break;
-                }
-                break;
 
-            case 21://neon violet square
-                advance_pylon_location = Point2D(117.0f, 40.0f);
-                Center = Point2D(100.0f, 82.0f);
-                break;
-            case 17://lost and found
-                advance_pylon_location = Point2D(62.0f, 33.0f);
-                Center = Point2D(84.0f, 82.0f);
-                break;
-            case 13://interloper
-                advance_pylon_location = Point2D(92.0f, 23.0f);
-                Center = Point2D(76.0f, 84.0f);
-                break;
-            case 18://proxima station
-                advance_pylon_location = Point2D(31.0f, 55.0f);
-                Center = Point2D(100.0f, 84.0f);
-                break;
-            case 26:
-                switch (map_name[0]) {
-                case 'N'://newkirk
-                    advance_pylon_location = Point2D(138.0f, 25.0f);
-                    Center = Point2D(112.0f, 70.0f);
-                    break;
-                case 'B'://belshir
-                    advance_pylon_location = Point2D(122.0f, 54.0f);
-                    Center = Point2D(72.0f, 80.0f);
-                    break;
-                default:
-                    break;
-                }
-                break;
+        MapName.insert(std::make_pair("16-",1));
+        MapName.insert(std::make_pair("Abi",2));
+        MapName.insert(std::make_pair("Aby",3));
+        MapName.insert(std::make_pair("Aci",4));
+        MapName.insert(std::make_pair("Aco",5));
+        MapName.insert(std::make_pair("Asc",6));
+        MapName.insert(std::make_pair("Bac",7));
+        MapName.insert(std::make_pair("Bat",8));
+        MapName.insert(std::make_pair("Bel",9));
+        MapName.insert(std::make_pair("Bla",10));
+        MapName.insert(std::make_pair("Blo",11));
+        MapName.insert(std::make_pair("Cac",12));
+        MapName.insert(std::make_pair("Cat",13));
+        MapName.insert(std::make_pair("Dar",14));
+        MapName.insert(std::make_pair("Def",15));
+        MapName.insert(std::make_pair("Dre",16));
+        MapName.insert(std::make_pair("Eas",17));
+        MapName.insert(std::make_pair("Fro",18));
+        MapName.insert(std::make_pair("Hon",19));
+        MapName.insert(std::make_pair("Int",20));
+        MapName.insert(std::make_pair("Los",21));
+        MapName.insert(std::make_pair("Mec",22));
+        MapName.insert(std::make_pair("Neo",23));
+        MapName.insert(std::make_pair("New",24));
+        MapName.insert(std::make_pair("Ody",25));
+        MapName.insert(std::make_pair("Pal",26));
+        MapName.insert(std::make_pair("Pro",27));
+        MapName.insert(std::make_pair("Red",28));
+        MapName.insert(std::make_pair("Seq",29));
 
-            default:
-                break;
+        int number = MapName.at(map_name.substr(0,3));
+
+        switch (number) {
+        case 1://16-BitLE
+            Center = Point2D(80.0f, 86.0f);
+            break;
+
+        case 2://AbiogenesisLE
+            Center = Point2D(84.0f, 92.0f);
+            break;
+
+        case 3://AbyssalReefLE
+            Center = Point2D(100.0f, 72.0f);
+            break;
+
+        case 4://AcidPlantLE
+            Center = Point2D(84.0f, 92.0f);
+            break;
+
+        case 5://AcolyteLE
+            Center = Point2D(84.0f, 92.0f);
+            break;
+
+        case 6://AscensiontoAiurLE
+            Center = Point2D(88.0f, 76.0f);
+            break;
+
+        case 7://backwater
+            Center = Point2D(85.0f, 74.0f);
+            break;
+
+        case 8://BattleontheBoardwalkLE
+            Center = Point2D(96.0f, 64.0f);
+            break;
+
+        case 9://belshir
+            Center = Point2D(72.0f, 80.0f);
+            break;
+
+        case 10://blackpink
+            Center = Point2D(84.0f, 78.0f);
+            break;
+
+        case 11://BloodBoilLE
+            Center = Point2D(76.0f, 98.0f);
+            break;
+
+        case 12://CactusValleyLE
+            Center = Point2D(96.0f, 96.0f);
+            break;
+
+        case 13://CatalystLE
+            Center = Point2D(92.0f, 84.0f);
+            break;
+
+        case 14://DarknessSanctuaryLE
+            Center = Point2D(88.0f, 88.0f);
+            break;
+
+        case 15://DefendersLandingLE
+            Center = Point2D(84.0f, 70.0f);
+            break;
+
+        case 16://DreamcatcherLE
+            Center = Point2D(80.0f, 78.0f);
+            break;
+
+        case 17://EastwatchLE
+            Center = Point2D(88.0f, 88.0f);
+            break;
+
+        case 18://FrostLE
+            Center = Point2D(92.0, 92.0);
+            break;
+
+        case 19://HonorgroundsLE
+            Center = Point2D(88.0, 88.0);
+            break;
+
+        case 20://interloper
+            Center = Point2D(76.0f, 84.0f);
+            break;
+
+        case 21://lost and found
+            Center = Point2D(84.0f, 82.0f);
+            break;
+
+        case 22://MechDepotLE
+            Center = Point2D(92.0, 84.0);
+            break;
+
+        case 23://neon violet
+            Center = Point2D(100.0f, 82.0f);
+            break;
+
+        case 24://newkirk
+            Center = Point2D(112.0f, 70.0f);
+            break;
+
+        case 25://OdysseyLE
+            Center = Point2D(84.0, 86.0);
+            break;
+
+        case 26://PaladinoTerminalLE
+            Center = Point2D(80.0, 64.0);
+            break;
+
+        case 27://proxima station
+            Center = Point2D(100.0f, 84.0f);
+            break;
+
+        case 28://RedshiftLE
+            Center = Point2D(84.0, 86.0);
+            break;
+
+        case 29://SequencerLE
+            Center = Point2D(92.0, 100.0);
+            break;
+
+
+        default:
+            break;
         }
 
-        if (branch==0 || branch==1 || branch==5) {
-            switch (map_name.length()) {
-            case 12:
-                switch (map_name[1]) {
-                case 'l'://blackpink
-                    Pylon1 = Point2D(135.0f, 105.0f);
-                    return;
-                case 'a'://backwater
-                    Pylon1 = Point2D(38.0f, 96.0f);
-                    return;
+        if (branch==6) {
+            switch (number) {
 
-                default:
-                    return;
-                }
-                return;
+            case 1://16-BitLE
+                Pylon1 = Point2D(125.0f, 129.0f);
+                Gate1 = Point2D(127.5f, 129.5f);
+                Pylon2 = Point2D(83.0f, 156.0f);
+                Core1 = Point2D(124.5f, 126.5f);
+                Star1 = Point2D(81.5f, 158.5f);
+                Pylon3 = Point2D(79.0f, 158.0f);
+                Batt1 = Point2D(125.0f, 131.0f);
+                Batt2 = Point2D(123.0f, 129.0f);
+                Batt3 = Point2D(77.0f, 159.0f);
+                Batt4 = Point2D(77.0f, 153.0f);
+                Batt5 = Point2D(75.0f, 158.0f);
+                Pylon4 = Point2D(123.0f, 131.0f);
+                break;
 
-            case 21://neon violet square
-                Pylon1 = Point2D(46.0f, 109.0f);
-                return;
-            case 17://lost and found
-                Pylon1 = Point2D(136.0f, 101.0f);
-                return;
-            case 13://interloper
-                Pylon1 = Point2D(37.0f, 111.0f);
-                return;
-            case 18://proxima station
-                Pylon1 = Point2D(144.0f, 101.0f);
-                return;
-            case 26:
-                switch (map_name[0]) {
-                case 'N'://newkirk
-                    Pylon1 = Point2D(51.0f, 56.0f);			//뉴커크일때만 pylon3을 깨야함
-                    return;
+            case 2://AbiogenesisLE
+                Pylon1 = Point2D(47.0f, 141.0f);
+                Gate1 = Point2D(49.5f, 141.5f);
+                Pylon2 = Point2D(134.0f, 79.0f);
+                Core1 = Point2D(46.5f, 138.5f);
+                Star1 = Point2D(131.5f, 78.5f);
+                Pylon3 = Point2D(130.0f, 83.0f);
+                Batt1 = Point2D(45.0f, 141.0f);
+                Batt2 = Point2D(47.0f, 143.0f);
+                Batt3 = Point2D(136.0f, 79.0f);
+                Batt4 = Point2D(128.0f, 83.0f);
+                Batt5 = Point2D(128.0f, 81.0f);
+                Pylon4 = Point2D(45.0f, 143.0f);
+                break;
 
-                case 'B'://belshir
-                    Pylon1 = Point2D(65.0f, 129.0f);
-                    return;
+            case 3://AbyssalReefLE
+                Pylon1 = Point2D(53.0f, 121.0f);
+                Gate1 = Point2D(52.5f, 118.5f);
+                Pylon2 = Point2D(106.0f, 22.0f);
+                Core1 = Point2D(55.5f, 121.5f);
+                Star1 = Point2D(108.5f, 22.5f);
+                Pylon3 = Point2D(104.0f, 20.0f);
+                Batt1 = Point2D(53.0f, 123.0f);
+                Batt2 = Point2D(51.0f, 121.0f);
+                Batt3 = Point2D(106.0f, 20.0f);
+                Batt4 = Point2D(105.0f, 25.0f);
+                Batt5 = Point2D(104.0f, 18.0f);
+                Pylon4 = Point2D(51.0f, 123.0f);
+                break;
 
-                default:
-                    return;
-                }
-                return;
+            case 4://AcidPlantLE
+                Pylon1 = Point2D(37.0f, 139.0f);
+                Gate1 = Point2D(36.5f, 141.5f);
+                Pylon2 = Point2D(139.0f, 95.0f);
+                Core1 = Point2D(39.5f, 138.5f);
+                Star1 = Point2D(138.5f, 92.5f);
+                Pylon3 = Point2D(137.0f, 95.0f);
+                Batt1 = Point2D(35.0f, 139.0f);
+                Batt2 = Point2D(37.0f, 137.0f);
+                Batt3 = Point2D(137.0f, 97.0f);
+                Batt4 = Point2D(141.0f, 95.0f);
+                Batt5 = Point2D(141.0f, 93.0f);
+                Pylon4 = Point2D(35.0f,137.0f);
+                break;
 
-            default:
-                return;
-            }
-        }
-        else if (branch==6) {
-            switch (map_name.length()) {
-            case 12:
-                switch (map_name[1]) {
-                case 'l'://blackpink
-                    Pylon1 = Point2D(147.0f, 119.0f);
-                    Gate1 = Point2D(144.5f, 119.5f);
-                    Pylon2 = Point2D(60.0f, 16.0f);
-                    Core1 = Point2D(147.5f, 116.5f);
-                    Star1 = Point2D(62.5f, 15.5f);
-                    Pylon3 = Point2D(63.0f, 18.0f);
-                    Batt1 = Point2D(147.0f, 121.0f);
-                    Batt2 = Point2D(149.0f, 119.0f);
-                    Batt3 = Point2D(58.0f, 15.0f);
-                    Batt4 = Point2D(61.0f, 18.0f);
-                    Batt5 = Point2D(65.0f, 17.0f);
-                    Pylon4 = Point2D(149.0f, 121.0f);
-                    return;
-                case 'a'://backwater
-                    Pylon1 = Point2D(21.0f, 111.0f);
-                    Gate1 = Point2D(20.5f, 108.5f);
-                    Pylon2 = Point2D(101.0f, 19.0f);
-                    Core1 = Point2D(23.5f, 111.5f);
-                    Star1 = Point2D(101.5f, 21.5f);
-                    Pylon3 = Point2D(99.0f, 20.0f);
-                    Batt1 = Point2D(19.0f, 111.0f);
-                    Batt2 = Point2D(21.0f, 113.0f);
-                    Batt3 = Point2D(99.0f, 22.0f);
-                    Batt4 = Point2D(99.0f, 18.0f);
-                    Batt5 = Point2D(100.0f, 16.0f);
-                    Pylon4 = Point2D(19.0f, 113.0f);
-                    return;
+            case 5://AcolyteLE
+                Pylon1 = Point2D(119.0f, 157.0f);
+                Gate1 = Point2D(119.5f, 159.5f);
+                Pylon2 = Point2D(37.0f, 73.0f);
+                Core1 = Point2D(116.5f, 156.5f);
+                Star1 = Point2D(34.5f, 73.5f);
+                Pylon3 = Point2D(37.0f, 75.0f);
+                Batt1 = Point2D(121.0f, 157.0f);
+                Batt2 = Point2D(119.0f, 155.0f);
+                Batt3 = Point2D(35.0f, 76.0f);
+                Batt4 = Point2D(37.0f, 77.0f);
+                Batt5 = Point2D(33.0f, 76.0f);
+                Pylon4 = Point2D(121.0f, 155.0f);
+                break;
 
-                default:
-                    return;
-                }
-                return;
+            case 6://AscensiontoAiurLE
+                Pylon1 = Point2D(33.0f, 119.0f);
+                Gate1 = Point2D(30.5f, 119.5f);
+                Pylon2 = Point2D(105.0f, 20.0f);
+                Core1 = Point2D(33.5f, 116.5f);
+                Star1 = Point2D(102.5f, 21.5f);
+                Pylon3 = Point2D(105.0f, 22.0f);
+                Batt1 = Point2D(33.0f, 121.0f);
+                Batt2 = Point2D(35.0f, 119.0f);
+                Batt3 = Point2D(105.0f, 18.0f);
+                Batt4 = Point2D(105.0f, 24.0f);
+                Batt5 = Point2D(103.0f, 24.0f);
+                Pylon4 = Point2D(35.0f, 121.0f);
+                break;
 
-            case 21://neon violet square
-                Pylon1 = Point2D(53.0f, 131.0f);
-                Gate1 = Point2D(53.5f, 128.5f);
-                Pylon2 = Point2D(117.0f, 40.0f);
-                Core1 = Point2D(50.5f, 131.5f);
-                Star1 = Point2D(115.5f, 37.5f);
-                Pylon3 = Point2D(115.0f, 40.0f);
-                Batt1 = Point2D(53.0f, 133.0f);
-                Batt2 = Point2D(55.0f, 131.0f);
-                Batt3 = Point2D(116.0f, 44.0f);
-                Batt4 = Point2D(116.0f, 42.0f);
-                Batt5 = Point2D(114.0f, 42.0f);
-                Pylon4 = Point2D(55.0f, 133.0f);
-                return;
-            case 17://lost and found
-                Pylon1 = Point2D(133.0f, 121.0f);
-                Gate1 = Point2D(135.5f, 121.5f);
-                Pylon2 = Point2D(62.0f, 33.0f);
-                Core1 = Point2D(132.5f, 118.5f);
-                Star1 = Point2D(64.5f, 34.5f);
-                Pylon3 = Point2D(67.0f, 34.0f);
-                Batt1 = Point2D(131.0f, 121.0f);
-                Batt2 = Point2D(133.0f, 123.0f);
-                Batt3 = Point2D(64.0f, 32.0f);
-                Batt4 = Point2D(66.0f, 32.0f);
-                Batt5 = Point2D(65.0f, 30.0f);
-                Pylon4 = Point2D(131.0f, 123.0f);
-                return;
-            case 13://interloper
+            case 7://backwater
+                Pylon1 = Point2D(21.0f, 111.0f);
+                Gate1 = Point2D(20.5f, 108.5f);
+                Pylon2 = Point2D(101.0f, 19.0f);
+                Core1 = Point2D(23.5f, 111.5f);
+                Star1 = Point2D(101.5f, 21.5f);
+                Pylon3 = Point2D(99.0f, 20.0f);
+                Batt1 = Point2D(19.0f, 111.0f);
+                Batt2 = Point2D(21.0f, 113.0f);
+                Batt3 = Point2D(99.0f, 22.0f);
+                Batt4 = Point2D(99.0f, 18.0f);
+                Batt5 = Point2D(100.0f, 16.0f);
+                Pylon4 = Point2D(19.0f, 113.0f);
+                break;
+
+            case 8://BattleontheBoardwalkLE
+                Pylon1 = Point2D(46.0f, 85.0f);
+                Gate1 = Point2D(46.5f, 87.5f);
+                Pylon2 = Point2D(151.0f, 57.0f);
+                Core1 = Point2D(48.5f, 84.5f);
+                Star1 = Point2D(150.5f, 54.5f);
+                Pylon3 = Point2D(153.0f, 55.0f);
+                Batt1 = Point2D(44.0f, 85.0f);
+                Batt2 = Point2D(46.0f, 83.0f);
+                Batt3 = Point2D(153.0f, 57.0f);
+                Batt4 = Point2D(149.0f, 57.0f);
+                Batt5 = Point2D(153.0f, 53.0f);
+                Pylon4 = Point2D(44.0f, 83.0f);
+                break;
+
+            case 9://belshir
+                Pylon1 = Point2D(43.0f, 133.0f);
+                Gate1 = Point2D(45.5f, 133.5f);
+                Pylon2 = Point2D(122.0f, 54.0f);
+                Core1 = Point2D(42.5f, 130.5f);
+                Star1 = Point2D(122.5f, 56.5f);
+                Pylon3 = Point2D(120.0f, 54.0f);
+                Batt1 = Point2D(43.0f, 135.0f);
+                Batt2 = Point2D(41.0f, 133.0f);
+                Batt3 = Point2D(120.0f, 56.0f);
+                Batt4 = Point2D(123.0f, 52.0f);
+                Batt5 = Point2D(121.0f, 52.0f);
+                Pylon4 = Point2D(41.0f, 135.0f);
+                break;
+
+            case 10://blackpink
+                Pylon1 = Point2D(147.0f, 119.0f);
+                Gate1 = Point2D(144.5f, 119.5f);
+                Pylon2 = Point2D(60.0f, 16.0f);
+                Core1 = Point2D(147.5f, 116.5f);
+                Star1 = Point2D(62.5f, 15.5f);
+                Pylon3 = Point2D(63.0f, 18.0f);
+                Batt1 = Point2D(147.0f, 121.0f);
+                Batt2 = Point2D(149.0f, 119.0f);
+                Batt3 = Point2D(58.0f, 15.0f);
+                Batt4 = Point2D(61.0f, 18.0f);
+                Batt5 = Point2D(65.0f, 17.0f);
+                Pylon4 = Point2D(149.0f, 121.0f);
+                break;
+
+            case 11://BloodBoilLE
+                Pylon1 = Point2D(43.0f, 149.0f);
+                Gate1 = Point2D(42.5f, 151.5f);
+                Pylon2 = Point2D(134.0f, 84.0f);
+                Core1 = Point2D(45.5f, 148.5f);
+                Star1 = Point2D(134.5f, 86.5f);
+                Pylon3 = Point2D(134.0f, 81.0f);
+                Batt1 = Point2D(41.0f, 149.0f);
+                Batt2 = Point2D(43.0f, 147.0f);
+                Batt3 = Point2D(133.0f, 78.0f);
+                Batt4 = Point2D(136.0f, 81.0f);
+                Batt5 = Point2D(133.0f, 80.0f);
+                Pylon4 = Point2D(41.0f, 147.0f);
+                break;
+
+            case 12://CactusValleyLE
+                Pylon1 = Point2D(96.0f, 96.0f);
+                Gate1 = Point2D(96.0f, 96.0f);
+                Pylon2 = Point2D(96.0f, 96.0f);
+                Core1 = Point2D(96.0f, 96.0f);
+                Star1 = Point2D(96.0f, 96.0f);
+                Pylon3 = Point2D(96.0f, 96.0f);
+                Batt1 = Point2D(96.0f, 96.0f);
+                Batt2 = Point2D(96.0f, 96.0f);
+                Batt3 = Point2D(96.0f, 96.0f);
+                Batt4 = Point2D(96.0f, 96.0f);
+                Batt5 = Point2D(96.0f, 96.0f);
+                Pylon4 = Point2D(96.0f, 96.0f);
+                break;
+
+            case 13://CatalystLE
+                Pylon1 = Point2D(55.0f, 131.0f);
+                Gate1 = Point2D(54.5f, 133.5f);
+                Pylon2 = Point2D(152.0f, 90.0f);
+                Core1 = Point2D(57.5f, 130.5f);
+                Star1 = Point2D(154.5f, 88.5f);
+                Pylon3 = Point2D(152.0f, 88.0f);
+                Batt1 = Point2D(53.0f, 131.0f);
+                Batt2 = Point2D(55.0f, 129.0f);
+                Batt3 = Point2D(153.0f, 84.0f);
+                Batt4 = Point2D(152.0f, 86.0f);
+                Batt5 = Point2D(151.0f, 84.0f);
+                Pylon4 = Point2D(53.0f, 129.0f);
+                break;
+
+            case 15://DefendersLandingLE
+                Pylon1 = Point2D(121.0f, 105.0f);
+                Gate1 = Point2D(121.5f, 107.5f);
+                Pylon2 = Point2D(20.0f, 63.0f);
+                Core1 = Point2D(118.5f, 104.5f);
+                Star1 = Point2D(20.5f, 65.5f);
+                Pylon3 = Point2D(22.0f, 62.0f);
+                Batt1 = Point2D(123.0f, 105.0f);
+                Batt2 = Point2D(121.0f, 103.0f);
+                Batt3 = Point2D(20.0f, 61.0f);
+                Batt4 = Point2D(20.0f, 59.0f);
+                Batt5 = Point2D(22.0f, 60.0f);
+                Pylon4 = Point2D(123.0f, 103.0f);
+                break;
+
+            case 16://DreamcatcherLE
+                Pylon1 = Point2D(35.0f, 121.0f);
+                Gate1 = Point2D(34.5f, 123.5f);
+                Pylon2 = Point2D(142.0f, 68.0f);
+                Core1 = Point2D(37.5f, 120.5f);
+                Star1 = Point2D(142.5f, 70.5f);
+                Pylon3 = Point2D(138.0f, 68.0f);
+                Batt1 = Point2D(33.0f, 121.0f);
+                Batt2 = Point2D(35.0f, 119.0f);
+                Batt3 = Point2D(140.0f, 67.0f);
+                Batt4 = Point2D(136.0f, 67.0f);
+                Batt5 = Point2D(140.0f, 69.0f);
+                Pylon4 = Point2D(33.0f, 119.0f);
+                break;
+
+            case 17://EastwatchLE
+                Pylon1 = Point2D(135.0f, 135.0f);
+                Gate1 = Point2D(137.5f, 135.5f);
+                Pylon2 = Point2D(66.0f, 16.0f);
+                Core1 = Point2D(134.5f, 132.5f);
+                Star1 = Point2D(63.5f, 18.5f);
+                Pylon3 = Point2D(67.0f, 22.0f);
+                Batt1 = Point2D(133.0f, 135.0f);
+                Batt2 = Point2D(135.0f, 137.0f);
+                Batt3 = Point2D(66.0f, 18.0f);
+                Batt4 = Point2D(70.0f, 18.0f);
+                Batt5 = Point2D(68.0f, 17.0f);
+                Pylon4 = Point2D(133.0f, 137.0f);
+                break;
+
+            case 20://interloper
                 Pylon1 = Point2D(37.0f, 125.0f);
                 Gate1 = Point2D(34.5f, 125.5f);
                 Pylon2 = Point2D(92.0f, 23.0f);
@@ -2964,8 +3202,99 @@ private:
                 Batt4 = Point2D(95.0f, 26.0f);
                 Batt5 = Point2D(92.0f, 27.0f);
                 Pylon4 = Point2D(39.0f, 127.0f);
-                return;
-            case 18://proxima station
+                break;
+
+            case 21://lost and found
+                Pylon1 = Point2D(133.0f, 121.0f);
+                Gate1 = Point2D(135.5f, 121.5f);
+                Pylon2 = Point2D(62.0f, 33.0f);
+                Core1 = Point2D(132.5f, 118.5f);
+                Star1 = Point2D(64.5f, 34.5f);
+                Pylon3 = Point2D(67.0f, 34.0f);
+                Batt1 = Point2D(131.0f, 121.0f);
+                Batt2 = Point2D(133.0f, 123.0f);
+                Batt3 = Point2D(64.0f, 32.0f);
+                Batt4 = Point2D(66.0f, 32.0f);
+                Batt5 = Point2D(65.0f, 30.0f);
+                Pylon4 = Point2D(131.0f, 123.0f);
+                break;
+
+            case 22://MechDepotLE
+                Pylon1 = Point2D(141.0, 127.0);
+                Gate1 = Point2D(143.5, 127.5);
+                Pylon2 = Point2D(70.0, 27.0);
+                Core1 = Point2D(140.5, 124.5);
+                Star1 = Point2D(72.5, 26.5);
+                Pylon3 = Point2D(66.0, 28.0);
+                Batt1 = Point2D(139.0, 127.0);
+                Batt2 = Point2D(141.0, 129.0);
+                Batt3 = Point2D(68.0, 25.0);
+                Batt4 = Point2D(68.0, 27.0);
+                Batt5 = Point2D(66.0, 26.0);
+                Pylon4 = Point2D(139.0, 129.0);
+                break;
+
+            case 23://neon violet
+                Pylon1 = Point2D(53.0f, 131.0f);
+                Gate1 = Point2D(53.5f, 128.5f);
+                Pylon2 = Point2D(117.0f, 40.0f);
+                Core1 = Point2D(50.5f, 131.5f);
+                Star1 = Point2D(115.5f, 37.5f);
+                Pylon3 = Point2D(115.0f, 40.0f);
+                Batt1 = Point2D(53.0f, 133.0f);
+                Batt2 = Point2D(55.0f, 131.0f);
+                Batt3 = Point2D(116.0f, 44.0f);
+                Batt4 = Point2D(116.0f, 42.0f);
+                Batt5 = Point2D(114.0f, 42.0f);
+                Pylon4 = Point2D(55.0f, 133.0f);
+                break;
+
+            case 24://newkirk
+                Pylon1 = Point2D(55.0f, 43.0f);
+                Gate1 = Point2D(55.5f, 45.5f);
+                Pylon2 = Point2D(138.0f, 25.0f);
+                Core1 = Point2D(52.5f, 42.5f);
+                Star1 = Point2D(140.5f, 21.5f);
+                Pylon3 = Point2D(140.0f, 25.0f);
+                Batt1 = Point2D(55.0f, 41.0f);
+                Batt2 = Point2D(57.0f, 43.0f);
+                Batt3 = Point2D(140.0f, 27.0f);
+                Batt4 = Point2D(136.0f, 25.0f);
+                Batt5 = Point2D(138.0f, 27.0f);
+                Pylon4 = Point2D(57.0f, 41.0f);
+                break;
+
+            case 25://OdysseyLE
+                Pylon1 = Point2D(135.0, 39.0);
+                Gate1 = Point2D(137.5, 38.5);
+                Pylon2 = Point2D(61.0, 148.0);
+                Core1 = Point2D(137.5, 38.5);
+                Star1 = Point2D(63.5, 148.5);
+                Pylon3 = Point2D(61.0, 146.0);
+                Batt1 = Point2D(133.0, 39.0);
+                Batt2 = Point2D(135.0, 37.0);
+                Batt3 = Point2D(59.0, 149.0);
+                Batt4 = Point2D(59.0, 147.0);
+                Batt5 = Point2D(57.0, 148.0);
+                Pylon4 = Point2D(133.0, 37.0);
+                break;
+
+            case 26://PaladinoTerminalLE
+                Pylon1 = Point2D(43.0, 85.0);
+                Gate1 = Point2D(40.5, 85.5);
+                Pylon2 = Point2D(86.0, 17.0);
+                Core1 = Point2D(43.5, 82.5);
+                Star1 = Point2D(85.5, 21.5);
+                Pylon3 = Point2D(84.0, 18.0);
+                Batt1 = Point2D(45.0, 85.0);
+                Batt2 = Point2D(43.0, 87.0);
+                Batt3 = Point2D(88.0, 21.0);
+                Batt4 = Point2D(88.0, 19.0);
+                Batt5 = Point2D(86.0, 19.0);
+                Pylon4 = Point2D(45.0, 87.0);
+                break;
+
+            case 27://proxima station
                 Pylon1 = Point2D(149.0f, 119.0f);
                 Gate1 = Point2D(146.5f, 119.5f);
                 Pylon2 = Point2D(31.0f, 55.0f);
@@ -2978,81 +3307,310 @@ private:
                 Batt4 = Point2D(34.0f, 53.0f);
                 Batt5 = Point2D(33.0f, 55.0f);
                 Pylon4 = Point2D(32.0f, 51.0f);
-                return;
-            case 26:
-                switch (map_name[0]) {
-                case 'N'://newkirk
-                    Pylon1 = Point2D(55.0f, 43.0f);
-                    Gate1 = Point2D(55.5f, 45.5f);
-                    Pylon2 = Point2D(138.0f, 25.0f);
-                    Core1 = Point2D(52.5f, 42.5f);
-                    Star1 = Point2D(140.5f, 21.5f);
-                    Pylon3 = Point2D(140.0f, 25.0f);
-                    Batt1 = Point2D(55.0f, 41.0f);
-                    Batt2 = Point2D(57.0f, 43.0f);
-                    Batt3 = Point2D(140.0f, 27.0f);
-                    Batt4 = Point2D(136.0f, 25.0f);
-                    Batt5 = Point2D(138.0f, 27.0f);
-                    Pylon4 = Point2D(57.0f, 41.0f);
-                    return;
+                break;
 
-                case 'B'://belshir
-                    Pylon1 = Point2D(43.0f, 133.0f);
-                    Gate1 = Point2D(45.5f, 133.5f);
-                    Pylon2 = Point2D(122.0f, 54.0f);
-                    Core1 = Point2D(42.5f, 130.5f);
-                    Star1 = Point2D(122.5f, 56.5f);
-                    Pylon3 = Point2D(120.0f, 54.0f);
-                    Batt1 = Point2D(43.0f, 135.0f);
-                    Batt2 = Point2D(41.0f, 133.0f);
-                    Batt3 = Point2D(120.0f, 56.0f);
-                    Batt4 = Point2D(123.0f, 52.0f);
-                    Batt5 = Point2D(121.0f, 52.0f);
-                    Pylon4 = Point2D(41.0f, 135.0f);
-                    return;
+            case 28://RedshiftLE
+                Pylon1 = Point2D(45.0, 139.0);
+                Gate1 = Point2D(44.5, 141.5);
+                Pylon2 = Point2D(84.0, 17.0);
+                Core1 = Point2D(47.5, 138.5);
+                Star1 = Point2D(86.5, 16.5);
+                Pylon3 = Point2D(85.0, 19.0);
+                Batt1 = Point2D(43.0, 139.0);
+                Batt2 = Point2D(45.0, 137.0);
+                Batt3 = Point2D(81.0, 20.0);
+                Batt4 = Point2D(83.0, 19.0);
+                Batt5 = Point2D(83.0, 21.0);
+                Pylon4 = Point2D(43.0, 137.0);
+                break;
 
-                default:
-                    return;
-                }
-                return;
+            case 29://SequencerLE
+                Pylon1 = Point2D(131.0, 163.0);
+                Gate1 = Point2D(131.5, 160.5);
+                Pylon2 = Point2D(91.0, 24.0);
+                Core1 = Point2D(128.5, 163.5);
+                Star1 = Point2D(94.5, 22.5);
+                Pylon3 = Point2D(92.0, 21.0);
+                Batt1 = Point2D(131.0, 165.0);
+                Batt2 = Point2D(133.0, 163.0);
+                Batt3 = Point2D(87.0, 26.0);
+                Batt4 = Point2D(89.0, 24.0);
+                Batt5 = Point2D(87.0, 24.0);
+                Pylon4 = Point2D(133.0, 165.0);
+                break;
 
             default:
-                return;
+                break;
             }
         }
         else if (branch==7) {
-            switch (map_name.length()) {
-            case 12:
-                switch (map_name[1]) {
-                case 'l'://blackpink
-                    Pylon1 = Point2D(135.0f, 105.0f);
-                    Gate1 = Point2D(136.5f, 102.5f);
-                    Core1 = Point2D(132.5f, 106.5f);
-                    Star1 = Point2D(134.5f, 109.5f);
-                    Pylon2 = Point2D(137.0f, 100.0f);
-                    Batt1 = Point2D(135.0f, 107.0f);
-                    Batt2 = Point2D(137.0f, 105.0f);
-                    Pylon3 = Point2D(137.0f, 107.0f);
-					the_pylon_pos = &Pylon2;
-                    return;
-                case 'a'://backwater
-                    Pylon1 = Point2D(38.0f, 96.0f);
-                    Gate1 = Point2D(38.5f, 98.5f);
-                    Core1 = Point2D(38.5f, 93.5f);
-                    Star1 = Point2D(33.5f, 98.5f);
-                    Pylon2 = Point2D(38.0f, 91.0f);
-                    Batt1 = Point2D(36.0f, 97.0f);
-                    Batt2 = Point2D(36.0f, 95.0f);
-                    Pylon3 = Point2D(34.0f, 96.0f);
-					the_pylon_pos = &Pylon2;
-                    return;
+            switch (number) {
 
-                default:
-                    return;
-                }
-                return;
+            case 1://16-BitLE
+                Pylon1 = Point2D(125.0f, 108.0f);
+                Gate1 = Point2D(126.5f, 105.5f);
+                Core1 = Point2D(122.5f, 109.5f);
+                Star1 = Point2D(129.5f, 106.5f);
+                Pylon2 = Point2D(121.0f, 112.0f);
+                Batt1 = Point2D(127.0f, 108.0f);
+                Batt2 = Point2D(125.0f, 110.0f);
+                Pylon3 = Point2D(127.0f, 110.0f);
+                the_pylon_pos = &Pylon2;
+                break;
 
-            case 21://neon violet square
+            case 2://AbiogenesisLE
+                Pylon1 = Point2D(61.0f, 126.0f);
+                Gate1 = Point2D(61.5f, 128.5f);
+                Core1 = Point2D(59.5f, 123.5f);
+                Star1 = Point2D(56.5f, 128.5f);
+                Pylon2 = Point2D(59.0f, 121.0f);
+                Batt1 = Point2D(59.0f, 126.0f);
+                Batt2 = Point2D(57.0f, 124.0f);
+                Pylon3 = Point2D(57.0f, 126.0f);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 3://AbyssalReefLE
+                Pylon1 = Point2D(66.0f, 106.0f);
+                Gate1 = Point2D(68.5f, 109.5f);
+                Core1 = Point2D(62.5f, 104.5f);
+                Star1 = Point2D(65.5f, 112.5f);
+                Pylon2 = Point2D(60.0f, 106.0f);
+                Batt1 = Point2D(66.0f, 108.0f);
+                Batt2 = Point2D(62.0f, 107.0f);
+                Pylon3 = Point2D(64.0f, 107.0f);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 4://AcidPlantLE
+                Pylon1 = Point2D(56.0f, 134.0f);
+                Gate1 = Point2D(58.5f, 135.5f);
+                Core1 = Point2D(53.5f, 133.5f);
+                Star1 = Point2D(58.5f, 138.5f);
+                Pylon2 = Point2D(51.0f, 132.0f);
+                Batt1 = Point2D(56.0f, 136.0f);
+                Batt2 = Point2D(52.0f, 136.0f);
+                Pylon3 = Point2D(54.0f, 136.0f);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 5://AcolyteLE
+                Pylon1 = Point2D(101.0f, 154.0f);
+                Gate1 = Point2D(98.5f, 155.5f);
+                Core1 = Point2D(103.5f, 153.5f);
+                Star1 = Point2D(103.5f, 158.5f);
+                Pylon2 = Point2D(106.0f, 152.0f);
+                Batt1 = Point2D(101.0f, 156.0f);
+                Batt2 = Point2D(103.0f, 156.0f);
+                Pylon3 = Point2D(105.0f, 156.0f);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 6://AscensiontoAiurLE
+                Pylon1 = Point2D(32.0f, 102.0f);
+                Gate1 = Point2D(32.5f, 104.5f);
+                Core1 = Point2D(29.5f, 100.5f);
+                Star1 = Point2D(27.5f, 105.5f);
+                Pylon2 = Point2D(35.0f, 106.0f);
+                Batt1 = Point2D(30.0f, 103.0f);
+                Batt2 = Point2D(28.0f, 103.0f);
+                Pylon3 = Point2D(30.0f, 105.0f);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 7://backwater
+                Pylon1 = Point2D(38.0f, 96.0f);
+                Gate1 = Point2D(38.5f, 98.5f);
+                Core1 = Point2D(38.5f, 93.5f);
+                Star1 = Point2D(33.5f, 98.5f);
+                Pylon2 = Point2D(38.0f, 91.0f);
+                Batt1 = Point2D(36.0f, 97.0f);
+                Batt2 = Point2D(36.0f, 95.0f);
+                Pylon3 = Point2D(34.0f, 96.0f);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 8://BattleontheBoardwalkLE
+                Pylon1 = Point2D(58.0f, 83.0f);
+                Gate1 = Point2D(55.5f, 83.5f);
+                Core1 = Point2D(59.5f, 80.5f);
+                Star1 = Point2D(58.5f, 87.5f);
+                Pylon2 = Point2D(62.0f, 79.0f);
+                Batt1 = Point2D(60.0f, 83.0f);
+                Batt2 = Point2D(58.0f, 85.0f);
+                Pylon3 = Point2D(60.0f, 85.0f);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 9://belshir
+                Pylon1 = Point2D(65.0f, 129.0f);
+                Gate1 = Point2D(63.5f, 126.5f);
+                Core1 = Point2D(67.5f, 130.5f);
+                Star1 = Point2D(65.5f, 135.5f);
+                Pylon2 = Point2D(70.0f, 132.0f);
+                Batt1 = Point2D(63.0f, 129.0f);
+                Batt2 = Point2D(65.0f, 131.0f);
+                Pylon3 = Point2D(63.0f, 131.0f);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 10://blackpink
+                Pylon1 = Point2D(135.0f, 105.0f);
+                Gate1 = Point2D(136.5f, 102.5f);
+                Core1 = Point2D(132.5f, 106.5f);
+                Star1 = Point2D(134.5f, 109.5f);
+                Pylon2 = Point2D(137.0f, 100.0f);
+                Batt1 = Point2D(135.0f, 107.0f);
+                Batt2 = Point2D(137.0f, 105.0f);
+                Pylon3 = Point2D(137.0f, 107.0f);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 11://BloodBoilLE
+                Pylon1 = Point2D(61.0f, 150.0f);
+                Gate1 = Point2D(58.5f, 149.5f);
+                Core1 = Point2D(63.5f, 150.5f);
+                Star1 = Point2D(60.5f, 155.5f);
+                Pylon2 = Point2D(61.0f, 152.0f);
+                Batt1 = Point2D(59.0f, 152.0f);
+                Batt2 = Point2D(63.0f, 153.0f);
+                Pylon3 = Point2D(51.0f, 161.0f);
+                the_pylon_pos = nullptr;
+                break;
+
+            case 12://CactusValleyLE
+                Pylon1 = Point2D(70.0f, 151.0f);
+                Gate1 = Point2D(72.5f, 150.5f);
+                Core1 = Point2D(68.5f, 148.5f);
+                Star1 = Point2D(70.5f, 155.5f);
+                Pylon2 = Point2D(70.0f, 153.0f);
+                Batt1 = Point2D(68.0f, 152.0f);
+                Batt2 = Point2D(72.0f, 153.0f);
+                Pylon3 = Point2D(68.0f, 154.0f);
+                the_pylon_pos = &Pylon1;
+                break;
+
+            case 13://CatalystLE
+                Pylon1 = Point2D(71.0f, 132.0f);
+                Gate1 = Point2D(73.5f, 131.5f);
+                Core1 = Point2D(69.5f, 129.5f);
+                Star1 = Point2D(66.5f, 132.5f);
+                Pylon2 = Point2D(76.0f, 131.0f);
+                Batt1 = Point2D(69.0f, 132.0f);
+                Batt2 = Point2D(71.0f, 134.0f);
+                Pylon3 = Point2D(69.0f, 134.0f);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 14://DarknessSanctuaryLE
+                Pylon1 = Point2D(27.0f, 133.0f);
+                Gate1 = Point2D(29.5f, 136.5f);
+                Core1 = Point2D(25.5f, 130.5f);
+                Star1 = Point2D(22.5f, 134.5f);
+                Pylon2 = Point2D(27.0f, 135.0f);
+                Batt1 = Point2D(25.0f, 133.0f);
+                Batt2 = Point2D(25.0f, 135.0f);
+                Pylon3 = Point2D(25.0f, 128.0f);
+                the_pylon_pos = &Pylon3;
+                break;
+
+            case 15://DefendersLandingLE
+                Pylon1 = Point2D(109.0f, 106.0f);
+                Gate1 = Point2D(106.5f, 106.5f);
+                Core1 = Point2D(106.5f, 109.5f);
+                Star1 = Point2D(109.5f, 111.5f);
+                Pylon2 = Point2D(104.0f, 106.0f);
+                Batt1 = Point2D(109.0f, 108.0f);
+                Batt2 = Point2D(104.0f, 108.0f);
+                Pylon3 = Point2D(104.0f, 110.0f);
+                the_pylon_pos = nullptr;
+                break;
+
+            case 16://DreamcatcherLE
+                Pylon1 = Point2D(51.0f, 127.0f);
+                Gate1 = Point2D(53.5f, 127.5f);
+                Core1 = Point2D(49.5f, 124.5f);
+                Star1 = Point2D(46.5f, 128.5f);
+                Pylon2 = Point2D(49.0f, 122.0f);
+                Batt1 = Point2D(49.0f, 127.0f);
+                Batt2 = Point2D(51.0f, 129.0f);
+                Pylon3 = Point2D(49.0f, 129.0f);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 17://EastwatchLE
+                Pylon1 = Point2D(141.0f, 119.0f);
+                Gate1 = Point2D(138.5f, 119.5f);
+                Core1 = Point2D(142.5f, 116.5f);
+                Star1 = Point2D(140.5f, 123.5f);
+                Pylon2 = Point2D(143.0f, 114.0f);
+                Batt1 = Point2D(143.0f, 119.0f);
+                Batt2 = Point2D(141.0f, 121.0f);
+                Pylon3 = Point2D(143.0f, 121.0f);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 18://FrostLE
+                Pylon1 = Point2D(39.0, 132.0);
+                Gate1 = Point2D(39.5, 134.5);
+                Core1 = Point2D(39.5, 129.5);
+                Star1 = Point2D(34.5, 135.5);
+                Pylon2 = Point2D(38.0, 127.0);
+                Batt1 = Point2D(37.0, 133.0);
+                Batt2 = Point2D(37.0, 130.0);
+                Pylon3 = Point2D(35.0, 131.0);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 19://HonorgroundsLE
+                Pylon1 = Point2D(45.0, 154.0);
+                Gate1 = Point2D(44.5, 150.5);
+                Core1 = Point2D(49.5, 155.5);
+                Star1 = Point2D(42.5, 156.5);
+                Pylon2 = Point2D(47.0, 153.0);
+                Batt1 = Point2D(47.0, 155.0);
+                Batt2 = Point2D(45.0, 156.0);
+                Pylon3 = Point2D(43.0, 154.0);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 20://interloper
+                Pylon1 = Point2D(37.0f, 111.0f);
+                Gate1 = Point2D(37.5f, 113.5f);
+                Core1 = Point2D(37.5f, 108.5f);
+                Star1 = Point2D(32.5f, 112.5f);
+                Pylon2 = Point2D(35.0f, 107.0f);
+                Batt1 = Point2D(35.0f, 109.0f);
+                Batt2 = Point2D(35.0f, 113.0f);
+                Pylon3 = Point2D(35.0f, 111.0f);
+				the_pylon_pos = &Pylon2;
+                break;
+
+            case 21://lost and found
+                Pylon1 = Point2D(136.0f, 101.0f);
+                Gate1 = Point2D(137.5f, 98.5f);
+                Core1 = Point2D(133.5f, 101.5f);
+                Star1 = Point2D(140.5f, 99.5f);
+                Pylon2 = Point2D(133.0f, 104.0f);
+                Batt1 = Point2D(136.0f, 103.0f);
+                Batt2 = Point2D(138.0f, 101.0f);
+                Pylon3 = Point2D(138.0f, 103.0f);
+				the_pylon_pos = &Pylon2;
+                break;
+
+            case 22://MechDepotLE
+                Pylon1 = Point2D(147.0, 112.0);
+                Gate1 = Point2D(144.5, 113.5);
+                Core1 = Point2D(149.5, 108.5);
+                Star1 = Point2D(145.5, 116.5);
+                Pylon2 = Point2D(149.0, 111.0);
+                Batt1 = Point2D(147.0, 114.0);
+                Batt2 = Point2D(149.0, 113.0);
+                Pylon3 = Point2D(151.0, 112.0);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 23://neon violet
                 Pylon1 = Point2D(46.0f, 109.0f);
                 Gate1 = Point2D(49.5f, 111.5f);
                 Core1 = Point2D(44.5f, 106.5f);
@@ -3063,30 +3621,47 @@ private:
                 Pylon3 = Point2D(42.0f, 106.0f);
                 Batt3 = Point2D(44.0f, 109.0f);
 				the_pylon_pos = &Pylon1;
-                return;
-            case 17://lost and found
-                Pylon1 = Point2D(136.0f, 101.0f);
-                Gate1 = Point2D(137.5f, 98.5f);
-                Core1 = Point2D(133.5f, 101.5f);
-                Star1 = Point2D(140.5f, 99.5f);
-                Pylon2 = Point2D(133.0f, 104.0f);
-                Batt1 = Point2D(136.0f, 103.0f);
-                Batt2 = Point2D(138.0f, 101.0f);
-                Pylon3 = Point2D(138.0f, 103.0f);
-				the_pylon_pos = &Pylon2;
-                return;
-            case 13://interloper
-                Pylon1 = Point2D(37.0f, 111.0f);
-                Gate1 = Point2D(37.5f, 113.5f);
-                Core1 = Point2D(37.5f, 108.5f);
-                Star1 = Point2D(32.5f, 112.5f);
-                Pylon2 = Point2D(35.0f, 107.0f);
-                Batt1 = Point2D(35.0f, 109.0f);
-                Batt2 = Point2D(35.0f, 113.0f);
-                Pylon3 = Point2D(35.0f, 111.0f);
-				the_pylon_pos = &Pylon2;
-                return;
-            case 18://proxima station
+                break;
+
+            case 24://newkirk
+                Pylon1 = Point2D(51.0f, 56.0f);
+                Gate1 = Point2D(53.5f, 54.5f);
+                Core1 = Point2D(48.5f, 57.5f);
+                Star1 = Point2D(43.5f, 58.5f);
+                Pylon2 = Point2D(47.0f, 60.0f);
+                Batt1 = Point2D(51.0f, 54.0f);
+                Batt2 = Point2D(48.0f, 55.0f);
+                Pylon3 = Point2D(47.0f, 62.0f);
+                Batt3 = Point2D(46.0f, 58.0f);
+                Pylon4 = Point2D(49.0f, 53.0f);
+                the_pylon_pos = &Pylon3;
+                break;
+
+            case 25://OdysseyLE
+                Pylon1 = Point2D(137.0, 55.0);
+                Gate1 = Point2D(134.5, 53.5);
+                Core1 = Point2D(138.5, 57.5);
+                Star1 = Point2D(142.5, 56.5);
+                Pylon2 = Point2D(132.0, 52.0);
+                Batt1 = Point2D(139.0, 55.0);
+                Batt2 = Point2D(137.0, 53.0);
+                Pylon3 = Point2D(139.0, 53.0);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 26://PaladinoTerminalLE
+                Pylon1 = Point2D(37.0, 74.0);
+                Gate1 = Point2D(38.5, 76.5);
+                Core1 = Point2D(36.5, 71.5);
+                Star1 = Point2D(32.5, 73.5);
+                Pylon2 = Point2D(35.0, 69.0);
+                Batt1 = Point2D(35.0, 74.0);
+                Batt2 = Point2D(33.0, 70.0);
+                Pylon3 = Point2D(33.0, 68.0);
+                the_pylon_pos = &Pylon2;
+                break;
+
+            case 27://proxima station
                 Pylon1 = Point2D(144.0f, 101.0f);
                 Gate1 = Point2D(141.5f, 100.5f);
                 Core1 = Point2D(144.5f, 98.5f);
@@ -3096,42 +3671,34 @@ private:
                 Batt2 = Point2D(143.0f, 103.0f);
                 Pylon3 = Point2D(145.0f, 103.0f);
 				the_pylon_pos = &Pylon2;
-                return;
-            case 26:
-                switch (map_name[0]) {
-                case 'N'://newkirk
-                    Pylon1 = Point2D(51.0f, 56.0f);
-                    Gate1 = Point2D(53.5f, 54.5f);
-                    Core1 = Point2D(48.5f, 57.5f);
-                    Star1 = Point2D(43.5f, 58.5f);
-                    Pylon2 = Point2D(47.0f, 60.0f);
-                    Batt1 = Point2D(51.0f, 54.0f);
-                    Batt2 = Point2D(48.0f, 55.0f);
-                    Pylon3 = Point2D(47.0f, 62.0f);
-                    Batt3 = Point2D(46.0f, 58.0f);
-                    Pylon4 = Point2D(49.0f, 53.0f);
-					the_pylon_pos = &Pylon3;				//뉴커크일때만 pylon3을 깨야함
-                    return;
+                break;
 
-                case 'B'://belshir
-                    Pylon1 = Point2D(65.0f, 129.0f);
-                    Gate1 = Point2D(63.5f, 126.5f);
-                    Core1 = Point2D(67.5f, 130.5f);
-                    Star1 = Point2D(65.5f, 135.5f);
-                    Pylon2 = Point2D(70.0f, 132.0f);
-                    Batt1 = Point2D(63.0f, 129.0f);
-                    Batt2 = Point2D(65.0f, 131.0f);
-                    Pylon3 = Point2D(63.0f, 131.0f);
-					the_pylon_pos = &Pylon2;
-                    return;
+            case 28://RedshiftLE
+                Pylon1 = Point2D(62.0, 140.0);
+                Gate1 = Point2D(59.5, 139.5);
+                Core1 = Point2D(64.5, 141.5);
+                Star1 = Point2D(58.5, 144.5);
+                Pylon2 = Point2D(67.0, 142.0);
+                Batt1 = Point2D(62.0, 142.0);
+                Batt2 = Point2D(60.0, 142.0);
+                Pylon3 = Point2D(61.0, 144.0);
+                the_pylon_pos = &Pylon2;
+                break;
 
-                default:
-                    return;
-                }
-                return;
+            case 29://SequencerLE
+                Pylon1 = Point2D(113.0, 153.0);
+                Gate1 = Point2D(110.5, 153.5);
+                Core1 = Point2D(113.5, 150.5);
+                Star1 = Point2D(112.5, 158.5);
+                Pylon2 = Point2D(116.0, 151.0);
+                Batt1 = Point2D(113.0, 155.0);
+                Batt2 = Point2D(115.0, 153.0);
+                Pylon3 = Point2D(115.0, 155.0);
+                the_pylon_pos = &Pylon2;
+                break;
 
             default:
-                return;
+                break;
             }
         }
     }
@@ -3215,11 +3782,13 @@ private:
         }
     }
 
-	
+
 
 	void scout_all();
 
 	void scoutenemylocation();
+
+	std::unordered_map<std::string,int> MapName;
 
 	std::unordered_map<Tag, Tag> observer_nexus_match;
 	Tag attackers_observer_tag;

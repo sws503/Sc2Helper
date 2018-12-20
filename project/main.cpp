@@ -18,6 +18,45 @@ static const int stepsize = 4;
 static const bool Realtime = false;
 static const bool ControlTest = false;
 
+static const std::vector<std::string> map_names_test({
+    "BackwaterLE",
+    "BelShirVestigeLE",
+	"BlackpinkLE",
+	});
+
+static const std::vector<std::string> map_names_2018s333({
+    "16-BitLE",
+    "AbiogenesisLE",
+    "AbyssalReefLE",
+	"AcidPlantLE",
+	"AcolyteLE",
+	"AscensiontoAiurLE",
+	"BackwaterLE",
+	"BattleontheBoardwalkLE",
+	"BelShirVestigeLE",
+	"BlackpinkLE",
+	"BloodBoilLE",
+	"CactusValleyLE",
+	"CatalystLE",
+	"DarknessSanctuaryLE",
+	"DefendersLandingLE",
+	"DreamcatcherLE",
+	"EastwatchLE",
+	"FrostLE",
+	"HonorgroundsLE",
+	"InterloperLE",
+	"LostAndFoundLE",
+	"MechDepotLE",
+	"NeonVioletSquareLE",
+	"NewkirkPrecinctTE",
+	"OdysseyLE",
+	"PaladinoTerminalLE",
+	"ProximaStationLE",
+	"RedshiftLE",
+	"SequencerLE"
+	});
+
+
 static const std::vector<std::string> map_names_2018s3({
 	"AcidPlantLE",
 	"BlueshiftLE",
@@ -38,7 +77,7 @@ static const std::vector<std::string> map_names_2018s2({
 	"16BitLE"
 	} );
 
-static const std::vector<std::string> map_names = map_names_2018s3;
+static const std::vector<std::string> map_names = map_names_test;
 
 static const std::string ControlMap = "1pTest.SC2Map"; // 1pTest 2pTest
 

@@ -190,14 +190,13 @@ bool MEMIBot::EarlyStrategy() {
 	}
 	else if (branch==6) {
 		if (cores.empty() && stage_number>604) {
-			return TryBuildStructureAtLocation(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, Core1);
+			TryBuildStructureAtLocation(ABILITY_ID::BUILD_CYBERNETICSCORE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, Core1);
 		}
 
         if (stage_number>613) {
             TryBuildPylonIfNeeded();
             if (gateway_count == 0) {
-                stage_number = 602;
-                return false;
+                TryBuildStructureAtLocation(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY, Gate1);
             }
             if (tryadeptbranch6 && gateways.front()->orders.empty() && num_adept<4) {
                 TryBuildUnit(ABILITY_ID::TRAIN_ADEPT, UNIT_TYPEID::PROTOSS_GATEWAY, UNIT_TYPEID::PROTOSS_ADEPT);

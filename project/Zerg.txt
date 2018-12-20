@@ -1,4 +1,4 @@
-Proxima Station LE
+Blackpink LE
 4
 1
 1
@@ -6,6 +6,13 @@ Proxima Station LE
 1
 1
 Backwater LE
+7
+1
+1
+1
+1
+1
+Proxima Station LE
 4
 1
 1
@@ -22,13 +29,6 @@ Neon Violet Square LE
 Interloper LE
 9
 2
-1
-1
-1
-1
-Blackpink LE
-2
-1
 1
 1
 1
