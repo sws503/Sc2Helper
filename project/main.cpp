@@ -86,15 +86,17 @@ int main(int argc, char* argv[])
 
 	if (VsHuman) {
 		coordinator.SetParticipants({
+			CreateParticipant(sc2::Race::Protoss, &human_bot),
 			CreateParticipant(sc2::Race::Protoss, &bot),
-			CreateParticipant(sc2::Race::Protoss, &bot2),
 			});
+		bot.SetOpponentID("Human");
 	}
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Zerg, Difficulty::HardVeryHard),
+			CreateComputer(Race::Random, Difficulty::HardVeryHard),
 			});
+		bot.SetOpponentID("Computer");
 	}
 
 	size_t num_maps = map_names.size();

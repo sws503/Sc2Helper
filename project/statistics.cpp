@@ -7,7 +7,7 @@ int fileread(Race enemyrace, std::string mapname);
 void filewrite(Race enemyrace, std::string mapname, GameResult result);
 void write(const ObservationInterface* observation,Race enemyrace, std::string map_name);
 
-bool MEMIBot::SetOpponentID(std::string& id) {
+bool MEMIBot::SetOpponentID(const std::string& id) {
 	opponentID = id;
 	return true;
 }
@@ -38,7 +38,9 @@ int MEMIBot::ReadStats(std::vector<int>& branches) {
 		exit(1);
 	}
 
+#ifdef debug
 	Json::Value root;
+
 	std::ifstream istatfile(filename, std::ifstream::binary);
 	if (istatfile.is_open()) {
 		Json::CharReaderBuilder rbuilder;
@@ -69,6 +71,9 @@ int MEMIBot::ReadStats(std::vector<int>& branches) {
 	else {
 		std::cout << "Failed to open file, use random\n";
 	}
+#else
+	std::cout << "Debug mode! Use Random\n";
+#endif
 
 	return maxbranch;
 }

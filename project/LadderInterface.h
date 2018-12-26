@@ -145,6 +145,7 @@ static void RunBot(int argc, char *argv[], MEMIBot *Agent, sc2::Race race)
 			CreateParticipant(race, Agent),
 			CreateComputer(Options.ComputerRace, Options.ComputerDifficulty)
 			});
+		Agent->SetOpponentID("Computer");
 	}
 	else
 	{
@@ -152,10 +153,10 @@ static void RunBot(int argc, char *argv[], MEMIBot *Agent, sc2::Race race)
 		coordinator.SetParticipants({
 			CreateParticipant(race, Agent),
 			});
+		Agent->SetOpponentID(Options.OpponentId);
 	}
 
 	// Start the game.
-	Agent->SetOpponentID(Options.OpponentId);
 
 	// Step forward the game simulation.
 	std::cout << "Connecting to port " << Options.GamePort << std::endl;

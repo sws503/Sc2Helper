@@ -81,7 +81,7 @@ public:
 			break;
 		case Random:
 		default:
-			branch_lists = { 0 };
+			branch_lists = { 0,5 };
 			break;
 		}
 		std::vector<int> branches(branch_lists);
@@ -636,7 +636,7 @@ public:
 	const Unit * the_pylon;
 	Point2D* the_pylon_pos;
 
-	bool SetOpponentID(std::string& opponentid);
+	bool SetOpponentID(const std::string& opponentid);
 
 private:
 	void ChatVersion() {
