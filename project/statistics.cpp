@@ -3,8 +3,6 @@
 #include <sstream>
 #include "json/json.h"
 
-const std::string statfilename = "stats/GScAI-stats.json";
-
 int fileread(Race enemyrace, std::string mapname);
 void filewrite(Race enemyrace, std::string mapname, GameResult result);
 void write(const ObservationInterface* observation,Race enemyrace, std::string map_name);
@@ -27,7 +25,7 @@ Race MEMIBot::GetEnemyRace() {
 
 int MEMIBot::ReadStats(std::vector<int>& branches) {
 	std::string map = Observation()->GetGameInfo().map_name;
-	std::string filename = statfilename;
+	std::string filename = "stats/stats_" + version + ".json";
 	std::string oppID = opponentID;
 	std::string map3 = map.substr(0, 3);
 
@@ -37,6 +35,7 @@ int MEMIBot::ReadStats(std::vector<int>& branches) {
 	}
 	else {
 		std::cout << "fatal error at readstats" << std::endl;
+		exit(1);
 	}
 
 	Json::Value root;
@@ -76,7 +75,7 @@ int MEMIBot::ReadStats(std::vector<int>& branches) {
 
 bool MEMIBot::WriteStats() {
 	std::string map = Observation()->GetGameInfo().map_name;
-	std::string filename = statfilename;
+	std::string filename = "stats/stats_" + version + ".json";
 	std::string oppID = opponentID;
 	std::string map3 = map.substr(0, 3);
 
@@ -771,7 +770,7 @@ int json()
 
 int json2(std::string map, std::string opponentID, GameResult result, int branch)
 {
-	std::string filename = statfilename;
+	std::string filename = "stats/stats_" + version + ".json";
 	std::string oppID = opponentID;
 	std::string map3 = map.substr(0, 3);
 
