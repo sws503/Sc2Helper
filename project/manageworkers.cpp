@@ -498,7 +498,7 @@ void MEMIBot::ControlWorkers() {
 	};
 
 	Filter filter_nearstructure = [my_structures](const Unit& u) {
-		const float limit = 4.5;
+		const float limit = 4.5f;
 		for (const auto& s : my_structures) {
 			if (DistanceSquared2D(s->pos, u.pos) <= limit * limit)
 				return true;
@@ -507,7 +507,7 @@ void MEMIBot::ControlWorkers() {
 	};
 
 	Filter filter_nearbase = [bases,my_armies](const Unit& u) {
-		const float limit = 10+my_armies.empty()*30;
+		const float limit = 10.0f + static_cast<float>(my_armies.empty()) * 30.0f;
 		for (const auto& b : bases) {
 			if (DistanceSquared2D(b->pos, u.pos) <= limit * limit)
 				return true;
