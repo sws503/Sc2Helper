@@ -1,2 +1,6 @@
-# AdeptBot
-for sc2ai.net
+
+## AdeptBot
+
+G-ScAI
+
+
