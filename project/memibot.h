@@ -2023,7 +2023,7 @@ private:
 		if (observation->GetUnit(random_power_source.tag) == nullptr) {
 			return false;
 		}
-		if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISM) {
+		if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISMPHASING) {
 			return false;
 		}
 		// do not build near the_pylon
@@ -2065,7 +2065,7 @@ private:
 		if (observation->GetUnit(random_power_source.tag) == nullptr) {
 			return false;
 		}
-		if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISM) {
+		if (observation->GetUnit(random_power_source.tag)->unit_type == UNIT_TYPEID::PROTOSS_WARPPRISMPHASING) {
 			return false;
 		}
 		// do not build near the_pylon
