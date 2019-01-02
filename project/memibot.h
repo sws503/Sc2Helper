@@ -87,7 +87,6 @@ public:
 		std::vector<int> branches(branch_lists);
 		strategy = ReadStats(branches);
 		branch = strategy;
-		branch = 6;
 		tryadeptbranch6 = (branch == 6 && enemyrace == Zerg);
 
 		/*
