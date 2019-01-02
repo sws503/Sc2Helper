@@ -61,13 +61,13 @@ public:
 			game_info_.enemy_start_locations.push_back(Point2D());
 		}
 		else {
-		
+
 			//strategy = ReadStats({});
 		}
 
 
 		GetEnemyRace();
-		
+
 		std::initializer_list<int> branch_lists;
 		switch (enemyrace){
 		case Protoss:
@@ -87,6 +87,7 @@ public:
 		std::vector<int> branches(branch_lists);
 		strategy = ReadStats(branches);
 		branch = strategy;
+		branch = 6;
 		tryadeptbranch6 = (branch == 6 && enemyrace == Zerg);
 
 		/*
@@ -122,7 +123,7 @@ public:
             break;
 		}
 		*/
-
+        //branch=6;
 		//branch 6 or 7은 이 전에 fix 되어야함
 		initial_location_building(game_info_.map_name);
 
@@ -245,7 +246,7 @@ public:
 
 		//WriteStats();
 		//write(observation,enemyrace);
-		
+
 
 
 		scout_all();
@@ -403,12 +404,12 @@ public:
 			break;
 		case UNIT_TYPEID::PROTOSS_ADEPT:
 			num_adept++;
-			
+
 			if (phasing_check())
 			{
 				Attackers.push_back(u);
 			}
-			
+
 			break;
 		case UNIT_TYPEID::PROTOSS_STALKER:
 			num_stalker++;
@@ -2524,16 +2525,12 @@ private:
 
     bool UnpoweredBuilding(){
         const ObservationInterface* observation = Observation();
-        Units buildings = observation->GetUnits(Unit::Alliance::Self, IsStructure(observation));
+        Units buildings = observation->GetUnits(Unit::Alliance::Self, IsUnpowered());
         for (const auto& b : buildings) {
-            if (IsUnpowered()(*b)) {
-                if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, b->pos, 6.0f)>0) continue;
-                return TryBuildPylon(b->pos, 6.0f);
-            }
+            if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PYLON, b->pos, 5.5f)>0) continue;
+            return TryBuildPylon(b->pos, 5.5f);
         }
         return false;
-
-
     }
 
     bool TryBuildArmyBranch0(){
@@ -3243,7 +3240,7 @@ private:
         }
     }
 
-	
+
 
 	void scout_all();
 
