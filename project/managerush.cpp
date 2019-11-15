@@ -425,7 +425,7 @@ void MEMIBot::ManageRush() {
 		//Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
 		size_t MyWarpGates = CountUnitType(observation, UNIT_TYPEID::PROTOSS_WARPGATE);
 
-		
+
 
 		Point2D enemy_position;
 		Point2D retreat_position;
@@ -460,7 +460,7 @@ void MEMIBot::ManageRush() {
 			{
 				std::cout << num_zealot << " 은 질럿 생산 횟수 " << std::endl;
 				Actions()->UnitCommand(unit, ABILITY_ID::MORPH_WARPPRISMTRANSPORTMODE);
-				
+
 				TimeToDrop = false;
 			}
 		}
@@ -491,7 +491,7 @@ void MEMIBot::ManageRush() {
 		}
 
 
-		
+
 
 		const Unit * nearenemy = GetNearTarget(unit, Airattackers);
 		Point2D MyPosition = unit->pos;
@@ -769,7 +769,7 @@ void MEMIBot::ManageRush() {
 		Units NearbyTurrets = observation->GetUnits(Unit::Alliance::Enemy, IsAIRTurretType());
 
 		Units EnemyGateways = Observation()->GetUnits(Unit::Alliance::Enemy, [](const Unit& unit) {return unit.unit_type == UNIT_TYPEID::PROTOSS_GATEWAY; });
-		
+
 
 		for (const auto & turret : NearbyTurrets)
 		{
@@ -1244,7 +1244,7 @@ void  MEMIBot::Roam_randombase(const Unit* unit)
 
 	bool good_position = false;
 
-	
+
 	if (!bases.empty())
 	{
 		const Unit * randombase;
@@ -1269,10 +1269,10 @@ void  MEMIBot::Roam_randombase(const Unit* unit)
 			RoamPosition = Point2D(mp.x + rx * roam_radius, mp.y + ry * roam_radius);
 		}
 
-		if (!Observation()->IsPathable(RoamPosition)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
+		/*if (!Observation()->IsPathable(RoamPosition)) // 이동할 위치가 지상유닛이 갈 수 없는 곳이라면
 		{
 			return;
-		}
+		}*/
 		SmartMove(unit, RoamPosition);
 	}
 }

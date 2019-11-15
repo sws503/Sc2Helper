@@ -1657,7 +1657,7 @@ private:
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
         build_location = Point2D(build_location.x + rx * radius, build_location.y + ry * radius);
-		if (!observation->IsPathable(build_location)) return false;
+		//if (!observation->IsPathable(build_location)) return false;
 
         for (const auto& warpgate : warpgates) {
             if (warpgate->build_progress == 1) {
@@ -2505,7 +2505,7 @@ private:
         float rx = GetRandomScalar();
         float ry = GetRandomScalar();
         Point2D build_location = Point2D(power_source.position.x + rx * radius, power_source.position.y + ry * radius);
-		if (!observation->IsPathable(build_location)) return false;
+		//if (!observation->IsPathable(build_location)) return false;
 
 		std::vector<AvailableAbilities> abilities_vector = Query()->GetAbilitiesForUnits(warpgates);
 
