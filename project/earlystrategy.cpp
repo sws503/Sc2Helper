@@ -97,6 +97,10 @@ bool MEMIBot::EarlyStrategy() {
         }
 	}
     if (branch == 0) {
+		Units enemy_roach = observation->GetUnits(Unit::Alliance::Enemy, IsUnit(UNIT_TYPEID::ZERG_ROACH));
+		if (trainstaklerbranch0 == false && enemy_roach.size() > 4) {
+			trainstaklerbranch0 = true;
+		}
         if (stage_number>12 && stage_number<25) {
             TryBuildPylonIfNeeded();
         }
@@ -134,6 +138,10 @@ bool MEMIBot::EarlyStrategy() {
                 TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
             }
             TryBuildArmyBranch0();
+			if (!BlinkResearched && observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
+				TryBuildUpgrade(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::BLINKTECH);
+			}
+			TryBuildCannonNexus();
         }
     }
 	else if (branch == 5) {

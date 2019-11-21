@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
 	else {
 		coordinator.SetParticipants({
 			CreateParticipant(Race::Protoss, &bot),
-			CreateComputer(Race::Random, Difficulty::HardVeryHard),
+			CreateComputer(Race::Zerg, Difficulty::HardVeryHard),
 			});
 		bot.SetOpponentID("Computer");
 	}

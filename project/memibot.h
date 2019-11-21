@@ -87,7 +87,7 @@ public:
 		std::vector<int> branches(branch_lists);
 		strategy = ReadStats(branches);
 		branch = strategy;
-		branch = 7;
+		branch = 0;
 		tryadeptbranch6 = (branch == 6 && enemyrace == Zerg);
 
 		/*
@@ -2542,7 +2542,8 @@ private:
         Units warpprisms_phasing = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPPRISMPHASING));
         Units observers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER));
         Units enemy_flyunits = observation->GetUnits(Unit::Alliance::Enemy, IsZergFlying());
-
+		
+		size_t adept_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ADEPT);
         size_t stalker_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER);
         size_t sentry_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_SENTRY);
         int robotics_empty=0;
@@ -2580,10 +2581,20 @@ private:
                         return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
                     }
                     else if (stalker_count<10) {
-                        TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+                        return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
                     }
                 }
-                return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT, front_expansion);
+				if (trainstaklerbranch0 == true) {
+					if (adept_count > stalker_count) {
+						return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+					}
+				}
+				if (adept_count > stalker_count*4) {
+					return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
+				}
+				else {
+					return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT, front_expansion);
+				}
             }
         }
         else if (observers.size()+robotics_observer<3) {
@@ -3330,4 +3341,6 @@ private:
 	bool WriteStats();
 	Race GetEnemyRace();
 	float PredictWinrate(int stalker, int immortal, int marine, int marauder, int siegetank, int medivac, int viking, int cyclone, int battlecruiser);
+
+	bool trainstaklerbranch0 = false;
 };
