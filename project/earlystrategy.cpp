@@ -60,6 +60,8 @@ bool MEMIBot::EarlyStrategy() {
 	size_t fleetbeacon_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_FLEETBEACON);
     size_t templar_archive_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_TEMPLARARCHIVE);
     size_t sentry_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_SENTRY);
+	size_t carrier_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_CARRIER);
+	size_t tempest_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_TEMPEST);
 
 
 #ifdef DEBUG
@@ -248,7 +250,14 @@ bool MEMIBot::EarlyStrategy() {
             for (const auto& b : bases){
                 TryBuildBatteryNexus(b);
             }
-            TryBuildUnit(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_CARRIER);
+			if (carrier_count > tempest_count) {
+				TryBuildUnit(ABILITY_ID::TRAIN_TEMPEST, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_TEMPEST);
+			}
+			else {
+				TryBuildUnit(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_CARRIER);
+			}
+
+			//TryBuildUnit(ABILITY_ID::TRAIN_CARRIER, UNIT_TYPEID::PROTOSS_STARGATE, UNIT_TYPEID::PROTOSS_CARRIER);
             if (bases.size()<3 || (num_carrier>5 && GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers())) {
                 bool expand = 1;
                 if (ManyEnemyRush) {
@@ -958,6 +967,7 @@ bool MEMIBot::EarlyStrategy() {
             stage_number=702;
             return false;
 		}
+		//Actions()->UnitCommand(workers.front(), ABILITY_ID::MOVE, Pylon1);
 		return TryBuildStructureAtLocation(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, Pylon1);
     case 702:
         if (gateway_count>0) {
@@ -1219,11 +1229,13 @@ bool MEMIBot::EarlyStrategy() {
 			stage_number = 723;
 			return false;
 		}
-        if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FLEETBEACON)).front()->orders.empty()) {
+        /*if (!observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FLEETBEACON)).front()->orders.empty()) {
             stage_number=732;
             return false;
         }
-        return TryBuildUpgrade(ABILITY_ID::RESEARCH_INTERCEPTORGRAVITONCATAPULT, UNIT_TYPEID::PROTOSS_FLEETBEACON, UPGRADE_ID::CARRIERLAUNCHSPEEDUPGRADE);
+        return TryBuildUpgrade(ABILITY_ID::RESEARCH_INTERCEPTORGRAVITONCATAPULT, UNIT_TYPEID::PROTOSS_FLEETBEACON, UPGRADE_ID::CARRIERLAUNCHSPEEDUPGRADE);*/
+		stage_number = 732;
+		return false;
      case 732:
         for (const auto& b : bases) {
             if (b->orders.empty()) continue;

@@ -87,6 +87,7 @@ public:
 		std::vector<int> branches(branch_lists);
 		strategy = ReadStats(branches);
 		branch = strategy;
+		branch = 7;
 		tryadeptbranch6 = (branch == 6 && enemyrace == Zerg);
 
 		/*
@@ -261,10 +262,12 @@ public:
 		}
 
 		// Control ½ÃÀÛ
-		Defend();
-		ManageTimingAttack();
-		ManageRush();
+		if (observation->GetGameLoop() % 5 == 0) {
+			Defend();
+			ManageTimingAttack();
+			ManageRush();
 
+		}
 	}
 
 	virtual void OnUnitIdle(const Unit* unit) final override {
@@ -1826,15 +1829,16 @@ private:
 	bool TryBuildStructureAtLocation(AbilityID ability_type_for_structure, UnitTypeID building_type, Point2D location) {
         const ObservationInterface* observation = Observation();
 		Units workers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PROBE));
-
+		
 		if (observation->GetMinerals() < observation->GetUnitTypeData().at(building_type).mineral_cost || observation->GetVespene() < observation->GetUnitTypeData().at(building_type).vespene_cost) {
             return false;
 		}
-
+		
 		//if we have no workers Don't build
 		if (workers.empty()) {
 			return false;
 		}
+		
 
 		for (const auto& worker : workers) {
 			for (const auto& order : worker->orders) {
@@ -1843,12 +1847,12 @@ private:
 				}
 			}
 		}
-
+		
 		// Check to see if unit can build there
 		if (!Query()->Placement(ability_type_for_structure, location)) {
 			return false;
 		}
-
+		
 		// If no worker is already building one, get a nearest worker to build one
 		Tag probe_forward_tag = (probe_forward == nullptr) ? NullTag : probe_forward->tag;
 		Tag builder_tag = NullTag;
@@ -2811,6 +2815,9 @@ private:
     }
 
     void initial_location_building(std::string map_name) {
+		std::cout << "map_name : " << map_name << std::endl;
+		std::cout << "map_length : " << map_name.length() << std::endl;
+
         switch (map_name.length()) {
             case 12:
                 switch (map_name[1]) {

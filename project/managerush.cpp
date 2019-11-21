@@ -779,13 +779,13 @@ void MEMIBot::ManageRush() {
 			}
 			if (Distance2D(EnemyBaseLocation, turret->pos) <= 15)
 			{
-				std::cout << " Çä.. Æ÷Å¾ÀÌ ÀÖÀÝ¾Æ? " << std::endl;
+				//std::cout << " Çä.. Æ÷Å¾ÀÌ ÀÖÀÝ¾Æ? " << std::endl;
 				turret_exist = true;
 			}
 		}
 		if (EnemyGateways.size() > 1)
 		{
-			std::cout << " Çä.. °ü¹®ÀÌ ¿©·¯°³ ÀÖÀÝ¾Æ? " << std::endl;
+			//std::cout << " Çä.. °ü¹®ÀÌ ¿©·¯°³ ÀÖÀÝ¾Æ? " << std::endl;
 			turret_exist = true;
 		}
 
