@@ -291,7 +291,7 @@ void MEMIBot::ManageTimingAttack()
 
 	if (branch == 7)
 	{
-		if (num_carrier >= 6)
+		if (num_carrier >= 8)
 		{
 			timing_attack = true;
 			num_carrier--;
@@ -689,27 +689,34 @@ void MEMIBot::ManageRush() {
 		//GetPosition(AttackersRecruiting, MeetingPlace);
 
 
-		if(unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_MOTHERSHIP)
+		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_MOTHERSHIP)
 		{
-			Units NearbyArmies = FindUnitsNear(unit, 8, Unit::Alliance::Enemy, IsArmy(observation));
-			//Units NearbyArmies = observation->GetUnits(Unit::Alliance::Enemy, IsNearbyArmies(observation, unit->pos, 25));
-
-			Point2D enemy_position;
-			Point2D retreat_position;
-
-			GetPosition(NearbyArmies, Unit::Alliance::Enemy, enemy_position);
-			GetPosition(Attackers, Unit::Alliance::Self, retreat_position); // TODO : 러쉬하는 유닛들로만 지정
-
-			if (NearbyArmies.empty())
+			if (AirAttackers.empty())
 			{
-				RetreatSmart(unit, retreat_position);
+				target = GetTarget(unit, NearbyEnemies);
 			}
 			else
 			{
-				sc2::Point2D KitingLocation = retreat_position;
-				KitingLocation += CalcKitingPosition(enemy_position, retreat_position * 5.0f);
+				target = GetTarget(unit, AirAttackers);
+			}
 
-				RetreatSmart(unit, KitingLocation);
+			if (EvadeEffect(unit)) {}
+			else if (target != nullptr) // 카이팅은 항상하자
+			{
+				CarrierKiting(unit, target);
+			}
+			else if (DefendDuty(unit)) {}
+			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+			{
+				ScoutWithUnit(unit, observation);
+			}
+			else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
+			{
+				RetreatSmart(unit, meeting_spot);
+			}
+			else if (unit->orders.empty())
+			{
+				Roam_randombase(unit);
 			}
 		}
 
@@ -719,6 +726,37 @@ void MEMIBot::ManageRush() {
 			else if (targetGROUND != nullptr) // 카이팅은 항상하자
 			{
 				PredictKiting(unit, targetGROUND);
+			}
+			else if (DefendDuty(unit)) {}
+			else if (IsUnitInUnits(unit, Attackers)) // target이 없음
+			{
+				ScoutWithUnit(unit, observation);
+			}
+			else if (IsUnitInUnits(unit, AttackersRecruiting)) // target이 없음
+			{
+				RetreatSmart(unit, meeting_spot);
+			}
+			else if (unit->orders.empty())
+			{
+				Roam_randombase(unit);
+			}
+		}
+
+		if (unit->unit_type.ToType() == sc2::UNIT_TYPEID::PROTOSS_TEMPEST)
+		{
+			if (AirAttackers.empty())
+			{
+				target = GetTarget(unit, NearbyEnemies);
+			}
+			else
+			{
+				target = GetTarget(unit, AirAttackers);
+			}
+
+			if (EvadeEffect(unit)) {}
+			else if (target != nullptr) // 카이팅은 항상하자
+			{
+				CarrierKiting(unit, target);
 			}
 			else if (DefendDuty(unit)) {}
 			else if (IsUnitInUnits(unit, Attackers)) // target이 없음

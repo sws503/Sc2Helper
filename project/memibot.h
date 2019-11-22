@@ -87,7 +87,7 @@ public:
 		std::vector<int> branches(branch_lists);
 		strategy = ReadStats(branches);
 		branch = strategy;
-		branch = 0;
+		branch = 7;
 		tryadeptbranch6 = (branch == 6 && enemyrace == Zerg);
 
 		/*
@@ -427,7 +427,9 @@ public:
 			break;
 		case UNIT_TYPEID::PROTOSS_CARRIER:
 			num_carrier++;
-			std::cout << num_carrier << " 는 캐리어 생산된 횟수입니다." << std::endl;
+			break;
+		case UNIT_TYPEID::PROTOSS_TEMPEST:
+			num_carrier++;
 			break;
 		default:
 
@@ -2577,7 +2579,7 @@ private:
             }
             else {
                 if (!enemy_flyunits.empty()) {
-                    if (enemy_flyunits.size()>10) {
+                    if (enemy_flyunits.size()>5) {
                         return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
                     }
                     else if (stalker_count<10) {
@@ -2585,7 +2587,7 @@ private:
                     }
                 }
 				if (trainstaklerbranch0 == true) {
-					if (adept_count > stalker_count) {
+					if (adept_count*6 > stalker_count*4) {
 						return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
 					}
 				}
@@ -2829,7 +2831,302 @@ private:
 		std::cout << "map_name : " << map_name << std::endl;
 		std::cout << "map_length : " << map_name.length() << std::endl;
 
-        switch (map_name.length()) {
+		switch (map_name.length()) {
+			case 12:
+				switch (map_name[0]) {
+				case 'A'://AcropolisLE
+					Center = Point2D(88.0f, 86.0f);
+					break;
+				case 'E'://EphemeronLE
+					Center = Point2D(80.0f, 80.0f);
+					break;
+				}
+
+
+			case 17:
+				switch (map_name[0]) {
+				case 'D'://DiscoBloodbathLE
+					Center = Point2D(100.0f, 90.0f);
+					break;
+				}
+
+
+			case 14:
+				switch (map_name[0]) {
+				case 'T'://ThunderbirdLE
+
+					Center = Point2D(96.0f, 78.0f);
+					break;
+
+				case 'W'://WintersGateLE
+
+					Center = Point2D(96.0f, 82.0f);
+					break;
+				}
+
+			case 9:
+				switch (map_name[0]) {
+				case 'T'://TritonLE
+					Center = Point2D(108.0f, 102.0f);
+
+					break;
+				}
+			case 18:
+				switch (map_name[0]) {
+				case 'W'://WorldofSleepersLE
+					Center = Point2D(92.0f, 84.0f);
+
+					break;
+				}
+		}
+
+		if (branch == 6) {
+			switch (map_name.length()) {
+			case 12:
+				std::cout << "Hello" << std::endl;
+				switch (map_name[0]) {
+				case 'A'://AcropolisLE
+					Pylon1 = Point2D(43.0f, 125.0f);
+					Gate1 = Point2D(40.5f, 125.5f);
+					Core1 = Point2D(43.5f, 122.5f);
+					Star1 = Point2D(105.5f, 25.5f);
+					Pylon2 = Point2D(103.0f, 25.0f);
+					Pylon3 = Point2D(108.0f, 25.0f);
+					Batt1 = Point2D(43.0f, 127.0f);
+					Batt2 = Point2D(45.0f, 125.0f);
+					Batt3 = Point2D(105.0f, 23.0f);
+					Batt4 = Point2D(104.0f, 21.0f);
+					Batt5 = Point2D(106.0f, 21.0f);
+					Pylon4 = Point2D(38.0f, 126.0f);
+					std::cout << Pylon1.x << std::endl;
+					return;
+				case 'E'://EphemeronLE
+					Pylon1 = Point2D(37.0f, 125.0f);
+					Gate1 = Point2D(34.5f, 125.5f);
+					Core1 = Point2D(37.5f, 122.5f);
+					Star1 = Point2D(104.5f, 17.5f);
+					Pylon2 = Point2D(102.0f, 17.0f);
+					Pylon3 = Point2D(106.0f, 20.0f);
+					Batt1 = Point2D(39.0f, 125.0f);
+					Batt2 = Point2D(37.0f, 120.0f);
+					Batt3 = Point2D(103.0f, 15.0f);
+					Batt4 = Point2D(104.0f, 13.0f);
+					Batt5 = Point2D(105.0f, 15.0f);
+					Pylon4 = Point2D(35.0f, 128.0f);
+
+					return;
+				}
+
+
+			case 17:
+				switch (map_name[0]) {
+				case 'D'://DiscoBloodbathLE
+					Pylon1 = Point2D(39.0f, 129.0f);
+					Gate1 = Point2D(38.5f, 131.5f);
+					Core1 = Point2D(41.5f, 128.5f);
+					Star1 = Point2D(160.5f, 95.5f);
+					Pylon2 = Point2D(158.0f, 94.0f);
+					Pylon3 = Point2D(161.0f, 98.0f);
+					Batt1 = Point2D(37.0f, 129.0f);
+					Batt2 = Point2D(39.0f, 129.0f);
+					Batt3 = Point2D(163.0f, 97.0f);
+					Batt4 = Point2D(164.0f, 95.0f);
+					Batt5 = Point2D(165.0f, 97.0f);
+					Pylon4 = Point2D(41.0f, 126.0f);
+
+					return;
+				}
+
+
+			case 14:
+				switch (map_name[0]) {
+				case 'T'://ThunderbirdLE
+
+					Pylon1 = Point2D(37.0f, 122.0f);
+					Gate1 = Point2D(39.5f, 121.5f);
+					Core1 = Point2D(36.5f, 119.5f);
+					Star1 = Point2D(123.5f, 20.5f);
+					Pylon2 = Point2D(121.0f, 20.0f);
+					Pylon3 = Point2D(126.0f, 20.0f);
+					Batt1 = Point2D(38.0f, 124.0f);
+					Batt2 = Point2D(35.0f, 122.0f);
+					Batt3 = Point2D(122.0f, 18.0f);
+					Batt4 = Point2D(124.0f, 18.0f);
+					Batt5 = Point2D(123.0f, 16.0f);
+					Pylon4 = Point2D(36.0f.124.0f);
+
+					return;
+
+				case 'W'://WintersGateLE
+
+					Pylon1 = Point2D(55.0f, 121.0f);
+					Gate1 = Point2D(52.5f, 121.5f);
+					Core1 = Point2D(55.5f, 118.5f);
+					Star1 = Point2D(109.5f, 26.5f);
+					Pylon2 = Point2D(108.0f, 24.0f);
+					Pylon3 = Point2D(111.0f, 24.0f);
+					Batt1 = Point2D(55.0f, 123.0f);
+					Batt2 = Point2D(57.0f, 121.0f);
+					Batt3 = Point2D(107.0f, 22.0f);
+					Batt4 = Point2D(109.0f, 22.0f);
+					Batt5 = Point2D(108.0f, 20.0f);
+					Pylon4 = Point2D(53.0f, 124.0f);
+
+					return;
+				}
+
+			case 9:
+				switch (map_name[0]) {
+				case 'T'://TritonLE
+					Pylon1 = Point2D(71.0f, 151.0f);
+					Gate1 = Point2D(70.5f, 153.5f);
+					Core1 = Point2D(73.5f, 150.5f);
+					Star1 = Point2D(171.5f, 82.5f);
+					Pylon2 = Point2D(169.0f, 82.0f);
+					Pylon3 = Point2D(174.0f, 83.0f);
+					Batt1 = Point2D(69.0f, 151.0f);
+					Batt2 = Point2D(71.0f, 149.0f);
+					Batt3 = Point2D(168.0f, 80.0f);
+					Batt4 = Point2D(170.0f, 80.0f);
+					Batt5 = Point2D(169.0f, 78.0f);
+					Pylon4 = Point2D(69.0f, 149.0f);
+
+
+					return;
+				}
+			case 18:
+				switch (map_name[0]) {
+				case 'W'://WorldofSleepersLE
+					Pylon1 = Point2D(149.0f, 127.0f);
+					Gate1 = Point2D(146.5f, 127.5f);
+					Core1 = Point2D(149.5f, 124.5f);
+					Star1 = Point2D(151.0f, 127.0f);
+					Pylon2 = Point2D(60.0f, 20.0f);
+					Pylon3 = Point2D(63.0f, 16.0f);
+					Batt1 = Point2D(149.0f, 129.0f);
+					Batt2 = Point2D(151.0f, 127.0f);
+					Batt3 = Point2D(59.0f, 18.0f);
+					Batt4 = Point2D(61.0f, 18.0f);
+					Batt5 = Point2D(60.0f, 16.0f);
+					Pylon4 = Point2D(151.0f, 129.0f);
+
+
+					return;
+				}
+			}
+		}
+
+		else if (branch == 7) {
+			switch (map_name.length()) {
+			case 12:
+				switch (map_name[0]) {
+				case 'A'://AcropolisLE
+					Pylon1 = Point2D(37.0f, 103.0f);
+					Pylon2 = Point2D(32.0f, 104.0f);
+					Pylon3 = Point2D(37.0f, 105.0f);
+					Core1 = Point2D(34.5f, 102.5f);
+					Gate1 = Point2D(39.5f, 102.5f);
+					Star1 = Point2D(38.5f, 107.5f);
+					Batt1 = Point2D(35.0f, 105.0f);
+					Batt2 = Point2D(39.0f, 105.0f);
+					the_pylon_pos = &Pylon2;
+					return;
+
+				case 'E'://EphemeronLE
+					Pylon1 = Point2D(40.0f, 111.0f);
+					Pylon2 = Point2D(39.0f, 107.0f);
+					Pylon3 = Point2D(38.0f, 112.0f);
+					Core1 = Point2D(39.5f, 109.5f);
+					Gate1 = Point2D(39.5f, 114.5f);
+					Star1 = Point2D(34.5f, 114.5f);
+					Batt1 = Point2D(37.0f, 114.0f);
+					Batt2 = Point2D(37.0f, 110.0f);
+					the_pylon_pos = &Pylon2;
+					return;
+				}
+
+
+			case 17:
+				switch (map_name[0]) {
+				case 'D'://DiscoBloodbathLE
+					Pylon1 = Point2D(55.0f, 139.0f);
+					Pylon2 = Point2D(60.0f, 141.0f);
+					Pylon3 = Point2D(53.0f, 141.0f);
+					Core1 = Point2D(57.5f, 140.5f);
+					Gate1 = Point2D(39.5f, 114.5f);
+					Star1 = Point2D(34.5f, 114.5f);
+					Batt1 = Point2D(53.0f, 139.0f);
+					Batt2 = Point2D(55.0f, 141.0f);
+					the_pylon_pos = &Pylon2;
+
+					return;
+				}
+
+
+			case 14:
+				switch (map_name[0]) {
+				case 'T'://ThunderbirdLE
+					Pylon1 = Point2D(51.0f, 107.0f);
+					Pylon2 = Point2D(51.0f, 102.0f);
+					Pylon3 = Point2D(49.0f, 107.0f);
+					Core1 = Point2D(50.5f, 104.5f);
+					Gate1 = Point2D(50.5f, 109.5f);
+					Star1 = Point2D(45.5f, 108.5f);
+					Batt1 = Point2D(48.0f, 109.0f);
+					Batt2 = Point2D(48.0f, 105.0f);
+					the_pylon_pos = &Pylon2;
+
+					return;
+
+				case 'W'://WintersGateLE
+					Pylon1 = Point2D(52.0f, 104.0f);
+					Pylon2 = Point2D(49.0f, 99.0f);
+					Pylon3 = Point2D(50.0f, 106.0f);
+					Core1 = Point2D(50.5f, 101.5f);
+					Gate1 = Point2D(53.5f, 106.5f);
+					Star1 = Point2D(48.5f, 109.5f);
+					Batt1 = Point2D(51.0f, 108.0f);
+					Batt2 = Point2D(49.0f, 104.0f);
+					the_pylon_pos = &Pylon2;
+
+					return;
+				}
+
+			case 9:
+				switch (map_name[0]) {
+				case 'T'://TritonLE
+					Pylon1 = Point2D(88.0f, 152.0f);
+					Pylon2 = Point2D(92.0f, 155.0f);
+					Pylon3 = Point2D(86.0f, 154.0f);
+					Core1 = Point2D(89.5f, 154.5f);
+					Gate1 = Point2D(85.5f, 150.5f);
+					Star1 = Point2D(81.5f, 154.5f);
+					Batt1 = Point2D(84.0f, 153.0f);
+					Batt2 = Point2D(87.0f, 156.0f);
+					the_pylon_pos = &Pylon2;
+					return;
+				}
+			case 18:
+				switch (map_name[0]) {
+				case 'W'://WorldofSleepersLE
+					Pylon1 = Point2D(138.0f, 107.0f);
+					Pylon2 = Point2D(142.0f, 103.0f);
+					Pylon3 = Point2D(140.0f, 109.0f);
+					Core1 = Point2D(140.5f, 105.5f);
+					Gate1 = Point2D(136.5f, 109.5f);
+					Star1 = Point2D(141.5f, 112.5f);
+					Batt1 = Point2D(139.0f, 111.0f);
+					Batt2 = Point2D(142.0f, 108.0f);
+					Batt5 = Point2D(60.0f, 16.0f);
+					the_pylon_pos = &Pylon2;
+
+					return;
+				}
+			}
+		}
+		
+		
+		/*switch (map_name.length()) {
             case 12:
                 switch (map_name[1]) {
                 case 'l'://blackpink
@@ -3175,7 +3472,7 @@ private:
             default:
                 return;
             }
-        }
+        }*/
     }
 
     void change_building_location() {

@@ -122,6 +122,10 @@ bool MEMIBot::EarlyStrategy() {
                     return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
                 }
             }
+			if (observation->GetMinerals() > 1000 && observation->GetVespene() < 100) {
+				TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+				TryBuildCannonNexus(3);
+			}
             TryBuildPylonIfNeeded(3);
             if (bases.size()*2>assimilator_count) {
                 TryBuildAssimilator();
@@ -204,7 +208,9 @@ bool MEMIBot::EarlyStrategy() {
 		}
 
         if (stage_number>613) {
-            TryBuildPylonIfNeeded();
+			if (pylons.size() > 3) {
+				TryBuildPylonIfNeeded();
+			}
             if (gateway_count == 0) {
                 TryBuildStructureAtLocation(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY, Gate1);
             }
@@ -280,6 +286,11 @@ bool MEMIBot::EarlyStrategy() {
                     return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
                 }
             }
+			if (observation->GetMinerals() > 1000 && observation->GetVespene() < 100) {
+				TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
+				TryBuildCannonNexus(3);
+			}
+
             TryBuildCannonPylonBranch7();
 
             if (bases.size()*2>assimilator_count) {
@@ -440,7 +451,7 @@ bool MEMIBot::EarlyStrategy() {
             }
         }
         if (num_adept<4) {
-            return false;
+			return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
         }
         stage_number=14;
         return false;

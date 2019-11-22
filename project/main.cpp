@@ -38,7 +38,17 @@ static const std::vector<std::string> map_names_2018s2({
 	"16BitLE"
 	} );
 
-static const std::vector<std::string> map_names = map_names_2018s3;
+static const std::vector<std::string> map_names_2019s8({
+	"AcropolisLE",
+	"DiscoBloodbathLE",
+	"EphemeronLE",
+	"ThunderbirdLE",
+	"TritonLE",
+	"WintersGateLE",
+	"WorldofSleepersLE"
+	});
+
+static const std::vector<std::string> map_names = map_names_2019s8;
 
 static const std::string ControlMap = "1pTest.SC2Map"; // 1pTest 2pTest
 
@@ -114,8 +124,8 @@ int main(int argc, char* argv[])
 	while (!do_break) {
 		int i = GetRandomInteger(0, static_cast<int>(num_maps - 1));
 		//map_name = map_names.at(i) + ".SC2Map";
-		map_name = "LostAndFoundLE.SC2Map";
-		//std::cout << map_names.at(i) << std::endl;
+		map_name = "AcropolisLE.SC2Map";
+		std::cout << map_name << std::endl;
 
 		if (ControlTest)
 			map_name = ControlMap;
