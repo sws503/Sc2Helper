@@ -14,7 +14,7 @@ static const std::string current_version = "v1.0";
 
 static const bool EnableCheat = false;
 static const bool VsHuman = false;
-static const int stepsize = 4;
+static const int stepsize = 50;
 static const bool Realtime = false;
 static const bool ControlTest = false;
 
@@ -123,8 +123,8 @@ int main(int argc, char* argv[])
 	bool do_break = false;
 	while (!do_break) {
 		int i = GetRandomInteger(0, static_cast<int>(num_maps - 1));
-		//map_name = map_names.at(i) + ".SC2Map";
-		map_name = "AcropolisLE.SC2Map";
+		map_name = map_names.at(i) + ".SC2Map";
+		//map_name = "TritonLE.SC2Map";
 		std::cout << map_name << std::endl;
 
 		if (ControlTest)
