@@ -14,7 +14,7 @@ static const std::string current_version = "v1.0";
 
 static const bool EnableCheat = false;
 static const bool VsHuman = false;
-static const int stepsize = 50;
+static const int stepsize = 2;
 static const bool Realtime = false;
 static const bool ControlTest = false;
 
@@ -28,27 +28,7 @@ static const std::vector<std::string> map_names_2018s3({
 	"ParaSiteLE"
 	});
 
-static const std::vector<std::string> map_names_2018s2({
-	"CatalystLE",
-	"AcidPlantLE",
-	"DarknessSanctuary",
-	"DreamcatcherLE",
-	"LostAndFoundLE",
-	"Redshift",
-	"16BitLE"
-	} );
-
-static const std::vector<std::string> map_names_2019s8({
-	"AcropolisLE",
-	"DiscoBloodbathLE",
-	"EphemeronLE",
-	"ThunderbirdLE",
-	"TritonLE",
-	"WintersGateLE",
-	"WorldofSleepersLE"
-	});
-
-static const std::vector<std::string> map_names = map_names_2019s8;
+static const std::vector<std::string> map_names = map_names_2018s3;
 
 static const std::string ControlMap = "1pTest.SC2Map"; // 1pTest 2pTest
 
@@ -103,7 +83,7 @@ int main(int argc, char* argv[])
 	}
 	else {
 		coordinator.SetParticipants({
-			CreateParticipant(Race::Protoss, &bot),
+			CreateParticipant(Race::Terran, &bot),
 			CreateComputer(Race::Zerg, Difficulty::HardVeryHard),
 			});
 		bot.SetOpponentID("Computer");
@@ -122,8 +102,8 @@ int main(int argc, char* argv[])
 
 	bool do_break = false;
 	while (!do_break) {
-		map_name = "LostAndFoundLE.SC2Map";
-		//map_name = "TritonLE.SC2Map";
+		int i = GetRandomInteger(0, static_cast<int>(num_maps - 1));
+		map_name = map_names.at(i) + ".SC2Map";
 		std::cout << map_name << std::endl;
 
 		if (ControlTest)

@@ -96,59 +96,7 @@ bool MEMIBot::EarlyStrategy() {
             TryBuildUnit(ABILITY_ID::TRAIN_PROBE, UNIT_TYPEID::PROTOSS_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
         }
 	}
-    if (branch == 0) {
-		Units enemy_roach = observation->GetUnits(Unit::Alliance::Enemy, IsUnit(UNIT_TYPEID::ZERG_ROACH));
-		if (trainstaklerbranch0 == false && enemy_roach.size() > 4) {
-			trainstaklerbranch0 = true;
-		}
-        if (stage_number>12 && stage_number<25) {
-            TryBuildPylonIfNeeded();
-        }
-        if (stage_number>24) {
-            if (GetExpectedWorkers(UNIT_TYPEID::PROTOSS_ASSIMILATOR) <= observation->GetFoodWorkers() || bases.size()<3) {
-                bool expand = true;
-                if (ManyEnemyRush) {
-                    expand = false;
-                }
-                if (try_colossus<bases.size()*6-14) {
-                    expand = false;
-                }
-                for (const auto& b :bases) {
-                    if (b->build_progress < 1.0f) {
-                        expand = false;
-                    }
-                }
-                if (expand || bases.size()<3) {
-                    return TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
-                }
-            }
-			if (observation->GetMinerals() > 1000 && observation->GetVespene() < 100) {
-				TryExpand(ABILITY_ID::BUILD_NEXUS, UNIT_TYPEID::PROTOSS_PROBE);
-				TryBuildCannonNexus(3);
-			}
-            TryBuildPylonIfNeeded(3);
-            if (bases.size()*2>assimilator_count) {
-                TryBuildAssimilator();
-            }
-            if (gateway_count<bases.size()*2) {
-                TryBuildStructureNearPylon(ABILITY_ID::BUILD_GATEWAY, UNIT_TYPEID::PROTOSS_GATEWAY);
-            }
-            if (robotics_facility_count<3) {
-				if (bases.size() < 4) {
-					if (robotics_facility_count < 2) {
-						TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
-					}
-				}
-                TryBuildStructureNearPylon(ABILITY_ID::BUILD_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY);
-            }
-            TryBuildArmyBranch0();
-			if (!BlinkResearched && observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL)).front()->orders.empty()) {
-				TryBuildUpgrade(ABILITY_ID::RESEARCH_BLINK, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::BLINKTECH);
-			}
-			TryBuildCannonNexus();
-        }
-    }
-	else if (branch == 5) {
+	if (branch == 5) {
         if (observer_count<3 && stage_number>220 && stage_number<233) {
             TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
         }
@@ -238,7 +186,6 @@ bool MEMIBot::EarlyStrategy() {
                 TryBuildStructure(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PROBE, build_location);
             }
             TryBuildCannonNexus();
-            TooMuchMineralBranch6();
         }
 	}
 	else if (branch==7) {
@@ -291,7 +238,6 @@ bool MEMIBot::EarlyStrategy() {
 				TryBuildCannonNexus(3);
 			}
 
-            TryBuildCannonPylonBranch7();
 
             if (bases.size()*2>assimilator_count) {
                 TryBuildAssimilator();

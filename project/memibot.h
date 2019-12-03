@@ -124,7 +124,6 @@ public:
 		*/
         //branch=6;
 		//branch 6 or 7은 이 전에 fix 되어야함
-		initial_location_building(game_info_.map_name);
 
 		last_destroyed_enemy_structure_pos = Point2D(0, 0);
 		stage_number = 0;
@@ -221,7 +220,6 @@ public:
 		staging_location_ = Point3D(((staging_location_.x + front_expansion.x) / 2), ((staging_location_.y + front_expansion.y) / 2),
 			((staging_location_.z + front_expansion.z) / 2));
 
-        change_building_location();
 	}
 
 	virtual void OnGameEnd() final override{
@@ -230,6 +228,8 @@ public:
 
 	virtual void OnStep() final override {
 		const ObservationInterface* observation = Observation();
+		playerbot();
+		return;
 
 		if (warpgate_researched) {
             ConvertGateWayToWarpGate();
@@ -618,6 +618,7 @@ public:
 			Actions()->UnitCommand(attacker, sc2::ABILITY_ID::MOVE, targetPosition);
 		}
 	}
+
 
 
 	GameInfo game_info_;
@@ -2222,6 +2223,68 @@ private:
         return TryBuildStructure(ABILITY_ID::BUILD_PYLON, UNIT_TYPEID::PROTOSS_PYLON, UNIT_TYPEID::PROTOSS_PROBE,build_location);
 	}
 
+	bool TryBuildSupply() {
+		const ObservationInterface* observation = Observation();
+		Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::TERRAN_COMMANDCENTER));
+
+		if (bases.size() == 0) {
+			return false;
+		}
+
+		const Unit* base = bases[GetRandomInteger(0, bases.size()-1)];
+
+		if (observation->GetMinerals() < 100) {
+			return false;
+		}
+
+		//check to see if there is already on building
+		Units units = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::TERRAN_SUPPLYDEPOT));
+
+		int MaxBuildAtOnce;
+
+		if (observation->GetFoodUsed() < 50) MaxBuildAtOnce = 1;
+		else if (observation->GetFoodUsed() < 100) MaxBuildAtOnce = 2;
+		else MaxBuildAtOnce = 3;
+
+
+		int NumBuildInProgress = 0;
+		for (const auto& unit : units) {
+			if (unit->build_progress != 1) {
+				NumBuildInProgress++;
+				if (NumBuildInProgress >= MaxBuildAtOnce) {
+					return false;
+				}
+			}
+		}
+
+		int i;
+		for (i = 0; i < MaxBuildAtOnce; i++) {
+			// If we are not supply capped, don't build a supply depot. (test for (i+1) pylons)
+			int margin = (i + 1) * 8 - 2;
+			if (observation->GetFoodUsed() < observation->GetFoodCap() - margin) {
+				break;
+			}
+		}
+
+		if (i == 0) return false;
+		if (observation->GetFoodCap() == 200) return false;
+
+		// Try and build a pylon. Find a random Probe and give it the order.
+		float rx = GetRandomScalar();
+		float ry = GetRandomScalar();
+		Point2D build_location = Point2D(base->pos.x + rx * 15, base->pos.y + ry * 15);
+		return TryBuildStructure(ABILITY_ID::BUILD_SUPPLYDEPOT, UNIT_TYPEID::TERRAN_SUPPLYDEPOT, UNIT_TYPEID::TERRAN_SCV, build_location);
+
+
+	}
+
+	void playerbot() {
+		const ObservationInterface* observation = Observation();
+
+		TryBuildSupply();
+		
+	}
+
 	void MakeBaseResourceMap();
 
 	void MineIdleWorkers(const Unit* worker);
@@ -2554,78 +2617,6 @@ private:
         return false;
     }
 
-    bool TryBuildArmyBranch0(){
-        const ObservationInterface* observation = Observation();
-        Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
-        Units warpprisms_phasing = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_WARPPRISMPHASING));
-        Units observers = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_OBSERVER));
-        Units enemy_flyunits = observation->GetUnits(Unit::Alliance::Enemy, IsZergFlying());
-		
-		size_t adept_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ADEPT);
-        size_t stalker_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER);
-        size_t sentry_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_SENTRY);
-        int robotics_empty=0;
-        int robotics_observer=0;
-        for (const auto& r : robotics) {
-            if (r->build_progress<1.0f) {
-                continue;
-            }
-            if (r->orders.empty()) {
-                robotics_empty++;
-            }
-            else {
-                if (r->orders.front().ability_id == ABILITY_ID::TRAIN_OBSERVER) {
-                    robotics_observer++;
-                }
-                else if (r->orders.front().ability_id == ABILITY_ID::TRAIN_WARPPRISM) {
-                    num_warpprism=1;
-                }
-                else {
-                    TryChronoboost(r);
-                }
-            }
-        }
-
-        if (robotics_empty==0) {
-            if (!warpprisms_phasing.empty()) {
-                return TryWarpUnitPrism(ABILITY_ID::TRAINWARP_ADEPT);
-            }
-            else if (sentry_count<3) {
-                return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_SENTRY, front_expansion);
-            }
-            else {
-                if (!enemy_flyunits.empty()) {
-                    if (enemy_flyunits.size()>5) {
-                        return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
-                    }
-                    else if (stalker_count<10) {
-                        return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
-                    }
-                }
-				if (trainstaklerbranch0 == true) {
-					if (adept_count*6 > stalker_count*4) {
-						return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
-					}
-				}
-				if (adept_count > stalker_count*4) {
-					return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
-				}
-				else {
-					return TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ADEPT, front_expansion);
-				}
-            }
-        }
-        else if (observers.size()+robotics_observer<3) {
-            return TryBuildUnit(ABILITY_ID::TRAIN_OBSERVER, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_OBSERVER);
-        }
-        else if (num_warpprism==0) {
-            return TryBuildUnit(ABILITY_ID::TRAIN_WARPPRISM, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_WARPPRISM);
-        }
-        else {
-            return TryBuildUnit(ABILITY_ID::TRAIN_COLOSSUS, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_COLOSSUS);
-        }
-    }
-
     bool TryBuildArmyBranch5(){
         const ObservationInterface* observation = Observation();
         Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
@@ -2685,77 +2676,6 @@ private:
         }
     }
 
-    bool TooMuchMineralBranch6(){
-        const ObservationInterface* observation = Observation();
-        Units pylons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
-
-        if (observation->GetMinerals()<200 || observation->GetVespene()>100) {
-            return false;
-        }
-        switch (GetRandomInteger(0, 3)) {
-        case 0:
-            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, FindNearestUnit(Pylon4, pylons));
-        case 4:
-            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY, FindNearestUnit(Pylon3, pylons));
-        default:
-            return TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, FindNearestUnit(Pylon3, pylons));
-        }
-    }
-
-    /*bool TryBuildArmyBalance(){
-        const ObservationInterface* observation = Observation();
-        Units enemy_army = observation->GetUnits(Unit::Alliance::Enemy, IsArmy(observation));
-        Units robotics = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY));
-        size_t zealot = CountUnitType(observation, UNIT_TYPEID::PROTOSS_ZEALOT);
-        size_t stalker = CountUnitType(observation, UNIT_TYPEID::PROTOSS_STALKER);
-        size_t immortal = CountUnitType(observation, UNIT_TYPEID::PROTOSS_IMMORTAL);
-
-        double enemy_unit_number[1000]={0,};
-        double enemy_unit_all=0;
-
-        if(!enemy_army.empty()&&enemy_army.size()>10){
-
-			if (!try_initialbalance) {
-				try_initialbalance = true;
-				initial_balance_unit();
-			}
-			initial_balance_unit();
-			initial_build_unit();
-            //if(enemy_army.size()>10){
-            for (const auto& enemy_unit : enemy_army){
-                enemy_unit_number[static_cast<int>(enemy_unit->unit_type)]+=observation->GetUnitTypeData().at(enemy_unit->unit_type).food_required;
-                enemy_unit_all+=observation->GetUnitTypeData().at(enemy_unit->unit_type).food_required;
-            }
-            for (int i=0;i<1000;i++){
-                if(enemy_unit_number[i]!=0){
-                    for(int j=0;j<1000;j++){
-                        if(balance_unit[j][i]==1) build_unit[j]=build_unit[j]+enemy_unit_number[i]/enemy_unit_all;
-                        else if(balance_unit[j][i]==-1) build_unit[j]=build_unit[j]-enemy_unit_number[i]/enemy_unit_all;
-                    }
-                }
-            }
-        }
-            //광전사73 추적자74 불멸자83
-
-        if (build_unit[83]>0.1) {
-            for (const auto& r : robotics) {
-                if (r->orders.empty()) {
-                    TryBuildUnit(ABILITY_ID::TRAIN_IMMORTAL, UNIT_TYPEID::PROTOSS_ROBOTICSFACILITY, UNIT_TYPEID::PROTOSS_IMMORTAL);
-                }
-            }
-        }
-
-        if (build_unit[73]>build_unit[74]) {
-            TryWarpUnitPosition(ABILITY_ID::TRAINWARP_ZEALOT, front_expansion);
-        }
-        else {
-            TryWarpUnitPosition(ABILITY_ID::TRAINWARP_STALKER, front_expansion);
-        }
-        return false;
-
-
-
-    }*/
 
     void TryBuildCannonNexus(int num = 1){
         const ObservationInterface* observation = Observation();
@@ -2806,713 +2726,6 @@ private:
             return TryBuildStructure(ABILITY_ID::BUILD_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_SHIELDBATTERY, UNIT_TYPEID::PROTOSS_PROBE, build_location);
         }
     }
-
-    void TryBuildCannonPylonBranch7(){
-        const ObservationInterface* observation = Observation();
-        Units pylons = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_PYLON));
-        Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
-        Units stargates = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_STARGATE));
-
-        for (const auto& stargate : stargates) {
-            if (stargate->build_progress<1.0f) continue;
-            if (stargate->orders.empty() && observation->GetFoodUsed()<190 && observation->GetVespene()>250) {
-                return;
-            }
-        }
-
-        if (observation->GetMinerals()<600) {
-            return;
-        }
-
-        if (CountUnitTypeNearLocation(UNIT_TYPEID::PROTOSS_PHOTONCANNON, Pylon1, 10)<4) {
-            const auto& random_pylon = GetRandomEntry(pylons);
-            if (Distance2D(Pylon1, random_pylon->pos)>10) {
-                return;
-            }
-            TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, random_pylon);
-        }
-        else {
-            const auto& random_base = GetRandomEntry(bases);
-            if (random_base == base) {
-                return;
-            }
-            TryBuildStructureNearPylon(ABILITY_ID::BUILD_PHOTONCANNON, UNIT_TYPEID::PROTOSS_PHOTONCANNON, FindNearestUnit(random_base->pos, pylons));
-        }
-
-
-
-    }
-
-    void initial_location_building(std::string map_name) {
-		std::cout << "map_name : " << map_name << std::endl;
-		std::cout << "map_length : " << map_name.length() << std::endl;
-
-		switch (map_name[0]) {
-			case 'A'://AcropolisLE
-				Center = Point2D(88.0f, 86.0f);
-				break;
-			case 'E'://EphemeronLE
-				Center = Point2D(80.0f, 80.0f);
-				break;
-			case 'D'://DiscoBloodbathLE
-				Center = Point2D(100.0f, 90.0f);
-				break;
-			case 'T':
-				if (map_name[1] == 'h') {//ThunderbirdLE
-
-					Center = Point2D(96.0f, 78.0f);
-					break;
-				}
-				if (map_name[1] == 'r') {//TritonLE
-					Center = Point2D(108.0f, 102.0f);
-
-					break;
-				}
-			case 'W':
-				if (map_name[1] == 'i') {//WintersGateLE
-					Center = Point2D(96.0f, 82.0f);
-					break;
-				}
-				if (map_name[1] == 'o') {//WorldofSleepersLE
-					Center = Point2D(92.0f, 84.0f);
-					break;
-				}
-		}
-
-		if (branch == 6) {
-			switch (map_name[0]) {
-			case 'A'://AcropolisLE
-				Pylon1 = Point2D(43.0f, 125.0f);
-				Gate1 = Point2D(40.5f, 125.5f);
-				Core1 = Point2D(43.5f, 122.5f);
-				Star1 = Point2D(105.5f, 25.5f);
-				Pylon2 = Point2D(103.0f, 25.0f);
-				Pylon3 = Point2D(105.0f, 23.0f);
-				Batt1 = Point2D(43.0f, 127.0f);
-				Batt2 = Point2D(45.0f, 125.0f);
-				Batt3 = Point2D(108.0f,27.0f);
-				Batt4 = Point2D(108.0f, 25.0f);
-				Batt5 = Point2D(103.0f, 23.0f);
-				Pylon4 = Point2D(38.0f, 126.0f);
-				std::cout << Pylon1.x << std::endl;
-				return;
-			case 'E'://EphemeronLE
-				Pylon1 = Point2D(37.0f, 125.0f);
-				Gate1 = Point2D(34.5f, 125.5f);
-				Core1 = Point2D(37.5f, 122.5f);
-				Star1 = Point2D(104.5f, 17.5f);
-				Pylon2 = Point2D(102.0f, 17.0f);
-				Pylon3 = Point2D(106.0f, 20.0f);
-				Batt1 = Point2D(39.0f, 125.0f);
-				Batt2 = Point2D(37.0f, 120.0f);
-				Batt3 = Point2D(103.0f, 15.0f);
-				Batt4 = Point2D(104.0f, 13.0f);
-				Batt5 = Point2D(105.0f, 15.0f);
-				Pylon4 = Point2D(35.0f, 128.0f);
-
-				return;
-			case 'D'://DiscoBloodbathLE
-				Pylon1 = Point2D(39.0f, 129.0f);
-				Gate1 = Point2D(38.5f, 131.5f);
-				Core1 = Point2D(41.5f, 128.5f);
-				Star1 = Point2D(160.5f, 95.5f);
-				Pylon2 = Point2D(158.0f, 94.0f);
-				Pylon3 = Point2D(161.0f, 98.0f);
-				Batt1 = Point2D(37.0f, 129.0f);
-				Batt2 = Point2D(39.0f, 129.0f);
-				Batt3 = Point2D(163.0f, 97.0f);
-				Batt4 = Point2D(164.0f, 95.0f);
-				Batt5 = Point2D(165.0f, 97.0f);
-				Pylon4 = Point2D(41.0f, 126.0f);
-
-				return;
-			case 'T':
-				if (map_name[1] == 'h') {//ThunderbirdLE
-					Pylon1 = Point2D(37.0f, 122.0f);
-					Gate1 = Point2D(39.5f, 121.5f);
-					Core1 = Point2D(36.5f, 119.5f);
-					Star1 = Point2D(123.5f, 20.5f);
-					Pylon2 = Point2D(121.0f, 20.0f);
-					Pylon3 = Point2D(126.0f, 20.0f);
-					Batt1 = Point2D(38.0f, 124.0f);
-					Batt2 = Point2D(35.0f, 122.0f);
-					Batt3 = Point2D(122.0f, 18.0f);
-					Batt4 = Point2D(124.0f, 18.0f);
-					Batt5 = Point2D(123.0f, 16.0f);
-					Pylon4 = Point2D(36.0f, 124.0f);
-
-					return;
-				}
-				if (map_name[1] == 'r') {//TritonLE
-					Pylon1 = Point2D(71.0f, 151.0f);
-					Gate1 = Point2D(70.5f, 153.5f);
-					Core1 = Point2D(73.5f, 150.5f);
-					Star1 = Point2D(171.5f, 82.5f);
-					Pylon2 = Point2D(169.0f, 82.0f);
-					Pylon3 = Point2D(174.0f, 83.0f);
-					Batt1 = Point2D(69.0f, 151.0f);
-					Batt2 = Point2D(71.0f, 149.0f);
-					Batt3 = Point2D(168.0f, 80.0f);
-					Batt4 = Point2D(170.0f, 80.0f);
-					Batt5 = Point2D(169.0f, 78.0f);
-					Pylon4 = Point2D(69.0f, 149.0f);
-					return;
-				}
-			case 'W':
-				if (map_name[1] == 'i') {//WintersGateLE
-					Pylon1 = Point2D(55.0f, 121.0f);
-					Gate1 = Point2D(52.5f, 121.5f);
-					Core1 = Point2D(55.5f, 118.5f);
-					Star1 = Point2D(109.5f, 26.5f);
-					Pylon2 = Point2D(108.0f, 24.0f);
-					Pylon3 = Point2D(111.0f, 24.0f);
-					Batt1 = Point2D(55.0f, 123.0f);
-					Batt2 = Point2D(57.0f, 121.0f);
-					Batt3 = Point2D(107.0f, 22.0f);
-					Batt4 = Point2D(109.0f, 22.0f);
-					Batt5 = Point2D(108.0f, 20.0f);
-					Pylon4 = Point2D(53.0f, 124.0f);
-					return;
-				}
-				if (map_name[1] == 'o') {//WorldofSleepersLE
-					Pylon1 = Point2D(149.0f, 127.0f);
-					Gate1 = Point2D(146.5f, 127.5f);
-					Core1 = Point2D(149.5f, 124.5f);
-					Star1 = Point2D(151.0f, 127.0f);
-					Pylon2 = Point2D(60.0f, 20.0f);
-					Pylon3 = Point2D(63.0f, 16.0f);
-					Batt1 = Point2D(149.0f, 129.0f);
-					Batt2 = Point2D(151.0f, 127.0f);
-					Batt3 = Point2D(59.0f, 18.0f);
-					Batt4 = Point2D(61.0f, 18.0f);
-					Batt5 = Point2D(60.0f, 16.0f);
-					Pylon4 = Point2D(151.0f, 129.0f);
-
-
-					return;
-				}
-			}
-		}
-		else if (branch == 7)
-		{
-			switch (map_name[0]) {
-			case 'A'://AcropolisLE
-				Pylon1 = Point2D(37.0f, 103.0f);
-				Pylon2 = Point2D(32.0f, 104.0f);
-				Pylon3 = Point2D(37.0f, 105.0f);
-				Core1 = Point2D(34.5f, 102.5f);
-				Gate1 = Point2D(39.5f, 102.5f);
-				Star1 = Point2D(38.5f, 107.5f);
-				Batt1 = Point2D(35.0f, 105.0f);
-				Batt2 = Point2D(39.0f, 105.0f);
-				the_pylon_pos = &Pylon2;
-				return;
-			case 'E'://EphemeronLE
-				Pylon1 = Point2D(40.0f, 112.0f);
-				Pylon2 = Point2D(39.0f, 107.0f);
-				Pylon3 = Point2D(38.0f, 112.0f);
-				Core1 = Point2D(39.5f, 109.5f);
-				Gate1 = Point2D(39.5f, 114.5f);
-				Star1 = Point2D(34.5f, 114.5f);
-				Batt1 = Point2D(37.0f, 114.0f);
-				Batt2 = Point2D(37.0f, 110.0f);
-				the_pylon_pos = &Pylon2;
-				return;
-			case 'D'://DiscoBloodbathLE
-				Pylon1 = Point2D(55.0f, 139.0f);
-				Pylon2 = Point2D(60.0f, 141.0f);
-				Pylon3 = Point2D(53.0f, 141.0f);
-				Core1 = Point2D(57.5f, 140.5f);
-				Gate1 = Point2D(54.5f, 136.5f);
-				Star1 = Point2D(51.5f,136.5f);
-				Batt1 = Point2D(53.0f, 139.0f);
-				Batt2 = Point2D(55.0f, 141.0f);
-				the_pylon_pos = &Pylon2;
-
-				return;
-			case 'T':
-				if (map_name[1] == 'h') {//ThunderbirdLE
-					Pylon1 = Point2D(51.0f, 107.0f);
-					Pylon2 = Point2D(51.0f, 102.0f);
-					Pylon3 = Point2D(49.0f, 107.0f);
-					Core1 = Point2D(50.5f, 104.5f);
-					Gate1 = Point2D(50.5f, 109.5f);
-					Star1 = Point2D(45.5f, 108.5f);
-					Batt1 = Point2D(48.0f, 109.0f);
-					Batt2 = Point2D(48.0f, 105.0f);
-					the_pylon_pos = &Pylon2;
-
-					return;
-				}
-				if (map_name[1] == 'r') {//TritonLE
-					Pylon1 = Point2D(88.0f, 152.0f);
-					Pylon2 = Point2D(92.0f, 155.0f);
-					Pylon3 = Point2D(86.0f, 154.0f);
-					Core1 = Point2D(89.5f, 154.5f);
-					Gate1 = Point2D(85.5f, 150.5f);
-					Star1 = Point2D(81.5f, 154.5f);
-					Batt1 = Point2D(84.0f, 153.0f);
-					Batt2 = Point2D(87.0f, 156.0f);
-					the_pylon_pos = &Pylon2;
-					return;
-				}
-			case 'W':
-				if (map_name[1] == 'i') {//WintersGateLE
-					Pylon1 = Point2D(52.0f, 104.0f);
-					Pylon2 = Point2D(49.0f, 99.0f);
-					Pylon3 = Point2D(50.0f, 106.0f);
-					Core1 = Point2D(50.5f, 101.5f);
-					Gate1 = Point2D(53.5f, 106.5f);
-					Star1 = Point2D(47.5f, 101.5f);
-					Batt1 = Point2D(51.0f, 108.0f);
-					Batt2 = Point2D(49.0f, 104.0f);
-					the_pylon_pos = &Pylon2;
-					return;
-				}
-				if (map_name[1] == 'o') {//WorldofSleepersLE
-					Pylon1 = Point2D(138.0f, 107.0f);
-					Pylon2 = Point2D(142.0f, 103.0f);
-					Pylon3 = Point2D(140.0f, 109.0f);
-					Core1 = Point2D(140.5f, 105.5f);
-					Gate1 = Point2D(136.5f, 109.5f);
-					Star1 = Point2D(143.5f, 105.5f);
-					Batt1 = Point2D(139.0f, 111.0f);
-					Batt2 = Point2D(142.0f, 108.0f);
-					the_pylon_pos = &Pylon2;
-
-					return;
-				}
-		}
-		}
-		/*switch (map_name.length()) {
-            case 12:
-                switch (map_name[1]) {
-                case 'l'://blackpink
-                    advance_pylon_location = Point2D(59.0f, 16.0f);
-                    Center = Point2D(84.0f, 78.0f);
-                    break;
-                case 'a'://backwater
-                    advance_pylon_location = Point2D(101.0f, 19.0f);
-                    Center = Point2D(85.0f, 74.0f);
-                    break;
-                default:
-                    break;
-                }
-                break;
-
-            case 21://neon violet square
-                advance_pylon_location = Point2D(117.0f, 40.0f);
-                Center = Point2D(100.0f, 82.0f);
-                break;
-            case 17://lost and found
-                advance_pylon_location = Point2D(62.0f, 33.0f);
-                Center = Point2D(84.0f, 82.0f);
-                break;
-            case 13://interloper
-                advance_pylon_location = Point2D(92.0f, 23.0f);
-                Center = Point2D(76.0f, 84.0f);
-                break;
-            case 18://proxima station
-                advance_pylon_location = Point2D(31.0f, 55.0f);
-                Center = Point2D(100.0f, 84.0f);
-                break;
-            case 26:
-                switch (map_name[0]) {
-                case 'N'://newkirk
-                    advance_pylon_location = Point2D(138.0f, 25.0f);
-                    Center = Point2D(112.0f, 70.0f);
-                    break;
-                case 'B'://belshir
-                    advance_pylon_location = Point2D(122.0f, 54.0f);
-                    Center = Point2D(72.0f, 80.0f);
-                    break;
-                default:
-                    break;
-                }
-                break;
-
-            default:
-                break;
-        }
-
-        if (branch==0 || branch==1 || branch==5) {
-            switch (map_name.length()) {
-            case 12:
-                switch (map_name[1]) {
-                case 'l'://blackpink
-                    Pylon1 = Point2D(135.0f, 105.0f);
-                    return;
-                case 'a'://backwater
-                    Pylon1 = Point2D(38.0f, 96.0f);
-                    return;
-
-                default:
-                    return;
-                }
-                return;
-
-            case 21://neon violet square
-                Pylon1 = Point2D(46.0f, 109.0f);
-                return;
-            case 17://lost and found
-                Pylon1 = Point2D(136.0f, 101.0f);
-                return;
-            case 13://interloper
-                Pylon1 = Point2D(37.0f, 111.0f);
-                return;
-            case 18://proxima station
-                Pylon1 = Point2D(144.0f, 101.0f);
-                return;
-            case 26:
-                switch (map_name[0]) {
-                case 'N'://newkirk
-                    Pylon1 = Point2D(51.0f, 56.0f);			//뉴커크일때만 pylon3을 깨야함
-                    return;
-
-                case 'B'://belshir
-                    Pylon1 = Point2D(65.0f, 129.0f);
-                    return;
-
-                default:
-                    return;
-                }
-                return;
-
-            default:
-                return;
-            }
-        }
-        else if (branch==6) {
-            switch (map_name.length()) {
-            case 12:
-                switch (map_name[1]) {
-                case 'l'://blackpink
-                    Pylon1 = Point2D(147.0f, 119.0f);
-                    Gate1 = Point2D(144.5f, 119.5f);
-                    Pylon2 = Point2D(60.0f, 16.0f);
-                    Core1 = Point2D(147.5f, 116.5f);
-                    Star1 = Point2D(62.5f, 15.5f);
-                    Pylon3 = Point2D(63.0f, 18.0f);
-                    Batt1 = Point2D(147.0f, 121.0f);
-                    Batt2 = Point2D(149.0f, 119.0f);
-                    Batt3 = Point2D(58.0f, 15.0f);
-                    Batt4 = Point2D(61.0f, 18.0f);
-                    Batt5 = Point2D(65.0f, 17.0f);
-                    Pylon4 = Point2D(149.0f, 121.0f);
-                    return;
-                case 'a'://backwater
-                    Pylon1 = Point2D(21.0f, 111.0f);
-                    Gate1 = Point2D(20.5f, 108.5f);
-                    Pylon2 = Point2D(101.0f, 19.0f);
-                    Core1 = Point2D(23.5f, 111.5f);
-                    Star1 = Point2D(101.5f, 21.5f);
-                    Pylon3 = Point2D(99.0f, 20.0f);
-                    Batt1 = Point2D(19.0f, 111.0f);
-                    Batt2 = Point2D(21.0f, 113.0f);
-                    Batt3 = Point2D(99.0f, 22.0f);
-                    Batt4 = Point2D(99.0f, 18.0f);
-                    Batt5 = Point2D(100.0f, 16.0f);
-                    Pylon4 = Point2D(19.0f, 113.0f);
-                    return;
-
-                default:
-                    return;
-                }
-                return;
-
-            case 21://neon violet square
-                Pylon1 = Point2D(53.0f, 131.0f);
-                Gate1 = Point2D(53.5f, 128.5f);
-                Pylon2 = Point2D(117.0f, 40.0f);
-                Core1 = Point2D(50.5f, 131.5f);
-                Star1 = Point2D(115.5f, 37.5f);
-                Pylon3 = Point2D(115.0f, 40.0f);
-                Batt1 = Point2D(53.0f, 133.0f);
-                Batt2 = Point2D(55.0f, 131.0f);
-                Batt3 = Point2D(116.0f, 44.0f);
-                Batt4 = Point2D(116.0f, 42.0f);
-                Batt5 = Point2D(114.0f, 42.0f);
-                Pylon4 = Point2D(55.0f, 133.0f);
-                return;
-            case 17://lost and found
-                Pylon1 = Point2D(133.0f, 121.0f);
-                Gate1 = Point2D(135.5f, 121.5f);
-                Pylon2 = Point2D(62.0f, 33.0f);
-                Core1 = Point2D(132.5f, 118.5f);
-                Star1 = Point2D(64.5f, 34.5f);
-                Pylon3 = Point2D(67.0f, 34.0f);
-                Batt1 = Point2D(131.0f, 121.0f);
-                Batt2 = Point2D(133.0f, 123.0f);
-                Batt3 = Point2D(64.0f, 32.0f);
-                Batt4 = Point2D(66.0f, 32.0f);
-                Batt5 = Point2D(65.0f, 30.0f);
-                Pylon4 = Point2D(131.0f, 123.0f);
-                return;
-            case 13://interloper
-                Pylon1 = Point2D(37.0f, 125.0f);
-                Gate1 = Point2D(34.5f, 125.5f);
-                Pylon2 = Point2D(92.0f, 23.0f);
-                Core1 = Point2D(37.5f, 122.5f);
-                Star1 = Point2D(89.5f, 24.5f);
-                Pylon3 = Point2D(92.0f, 25.0f);
-                Batt1 = Point2D(37.0f, 127.0f);
-                Batt2 = Point2D(39.0f, 125.0f);
-                Batt3 = Point2D(95.0f, 24.0f);
-                Batt4 = Point2D(95.0f, 26.0f);
-                Batt5 = Point2D(92.0f, 27.0f);
-                Pylon4 = Point2D(39.0f, 127.0f);
-                return;
-            case 18://proxima station
-                Pylon1 = Point2D(149.0f, 119.0f);
-                Gate1 = Point2D(146.5f, 119.5f);
-                Pylon2 = Point2D(31.0f, 55.0f);
-                Core1 = Point2D(149.5f, 116.5f);
-                Star1 = Point2D(29.5f, 52.5f);
-                Pylon3 = Point2D(151.0f, 121.0f);
-                Batt1 = Point2D(149.0f, 121.0f);
-                Batt2 = Point2D(151.0f, 119.0f);
-                Batt3 = Point2D(32.0f, 53.0f);
-                Batt4 = Point2D(34.0f, 53.0f);
-                Batt5 = Point2D(33.0f, 55.0f);
-                Pylon4 = Point2D(32.0f, 51.0f);
-                return;
-            case 26:
-                switch (map_name[0]) {
-                case 'N'://newkirk
-                    Pylon1 = Point2D(55.0f, 43.0f);
-                    Gate1 = Point2D(55.5f, 45.5f);
-                    Pylon2 = Point2D(138.0f, 25.0f);
-                    Core1 = Point2D(52.5f, 42.5f);
-                    Star1 = Point2D(140.5f, 21.5f);
-                    Pylon3 = Point2D(140.0f, 25.0f);
-                    Batt1 = Point2D(55.0f, 41.0f);
-                    Batt2 = Point2D(57.0f, 43.0f);
-                    Batt3 = Point2D(140.0f, 27.0f);
-                    Batt4 = Point2D(136.0f, 25.0f);
-                    Batt5 = Point2D(138.0f, 27.0f);
-                    Pylon4 = Point2D(57.0f, 41.0f);
-                    return;
-
-                case 'B'://belshir
-                    Pylon1 = Point2D(43.0f, 133.0f);
-                    Gate1 = Point2D(45.5f, 133.5f);
-                    Pylon2 = Point2D(122.0f, 54.0f);
-                    Core1 = Point2D(42.5f, 130.5f);
-                    Star1 = Point2D(122.5f, 56.5f);
-                    Pylon3 = Point2D(120.0f, 54.0f);
-                    Batt1 = Point2D(43.0f, 135.0f);
-                    Batt2 = Point2D(41.0f, 133.0f);
-                    Batt3 = Point2D(120.0f, 56.0f);
-                    Batt4 = Point2D(123.0f, 52.0f);
-                    Batt5 = Point2D(121.0f, 52.0f);
-                    Pylon4 = Point2D(41.0f, 135.0f);
-                    return;
-
-                default:
-                    return;
-                }
-                return;
-
-            default:
-                return;
-            }
-        }
-        else if (branch==7) {
-            switch (map_name.length()) {
-            case 12:
-                switch (map_name[1]) {
-                case 'l'://blackpink
-                    Pylon1 = Point2D(135.0f, 105.0f);
-                    Gate1 = Point2D(136.5f, 102.5f);
-                    Core1 = Point2D(132.5f, 106.5f);
-                    Star1 = Point2D(134.5f, 109.5f);
-                    Pylon2 = Point2D(137.0f, 100.0f);
-                    Batt1 = Point2D(135.0f, 107.0f);
-                    Batt2 = Point2D(137.0f, 105.0f);
-                    Pylon3 = Point2D(137.0f, 107.0f);
-					the_pylon_pos = &Pylon2;
-                    return;
-                case 'a'://backwater
-                    Pylon1 = Point2D(38.0f, 96.0f);
-                    Gate1 = Point2D(38.5f, 98.5f);
-                    Core1 = Point2D(38.5f, 93.5f);
-                    Star1 = Point2D(33.5f, 98.5f);
-                    Pylon2 = Point2D(38.0f, 91.0f);
-                    Batt1 = Point2D(36.0f, 97.0f);
-                    Batt2 = Point2D(36.0f, 95.0f);
-                    Pylon3 = Point2D(34.0f, 96.0f);
-					the_pylon_pos = &Pylon2;
-                    return;
-
-                default:
-                    return;
-                }
-                return;
-
-            case 21://neon violet square
-                Pylon1 = Point2D(46.0f, 109.0f);
-                Gate1 = Point2D(49.5f, 111.5f);
-                Core1 = Point2D(44.5f, 106.5f);
-                Star1 = Point2D(42.5f, 111.5f);
-                Pylon2 = Point2D(47.0f, 111.0f);
-                Batt1 = Point2D(45.0f, 111.0f);
-                Batt2 = Point2D(47.0f, 113.0f);
-                Pylon3 = Point2D(42.0f, 106.0f);
-                Batt3 = Point2D(44.0f, 109.0f);
-				the_pylon_pos = &Pylon1;
-                return;
-            case 17://lost and found
-                Pylon1 = Point2D(136.0f, 101.0f);
-                Gate1 = Point2D(137.5f, 98.5f);
-                Core1 = Point2D(133.5f, 101.5f);
-                Star1 = Point2D(140.5f, 99.5f);
-                Pylon2 = Point2D(133.0f, 104.0f);
-                Batt1 = Point2D(136.0f, 103.0f);
-                Batt2 = Point2D(138.0f, 101.0f);
-                Pylon3 = Point2D(138.0f, 103.0f);
-				the_pylon_pos = &Pylon2;
-                return;
-            case 13://interloper
-                Pylon1 = Point2D(37.0f, 111.0f);
-                Gate1 = Point2D(37.5f, 113.5f);
-                Core1 = Point2D(37.5f, 108.5f);
-                Star1 = Point2D(32.5f, 112.5f);
-                Pylon2 = Point2D(35.0f, 107.0f);
-                Batt1 = Point2D(35.0f, 109.0f);
-                Batt2 = Point2D(35.0f, 113.0f);
-                Pylon3 = Point2D(35.0f, 111.0f);
-				the_pylon_pos = &Pylon2;
-                return;
-            case 18://proxima station
-                Pylon1 = Point2D(144.0f, 101.0f);
-                Gate1 = Point2D(141.5f, 100.5f);
-                Core1 = Point2D(144.5f, 98.5f);
-                Star1 = Point2D(143.5f, 105.5f);
-                Pylon2 = Point2D(148.0f, 93.0f);
-                Batt1 = Point2D(146.0f, 101.0f);
-                Batt2 = Point2D(143.0f, 103.0f);
-                Pylon3 = Point2D(145.0f, 103.0f);
-				the_pylon_pos = &Pylon2;
-                return;
-            case 26:
-                switch (map_name[0]) {
-                case 'N'://newkirk
-                    Pylon1 = Point2D(51.0f, 56.0f);
-                    Gate1 = Point2D(53.5f, 54.5f);
-                    Core1 = Point2D(48.5f, 57.5f);
-                    Star1 = Point2D(43.5f, 58.5f);
-                    Pylon2 = Point2D(47.0f, 60.0f);
-                    Batt1 = Point2D(51.0f, 54.0f);
-                    Batt2 = Point2D(48.0f, 55.0f);
-                    Pylon3 = Point2D(47.0f, 62.0f);
-                    Batt3 = Point2D(46.0f, 58.0f);
-                    Pylon4 = Point2D(49.0f, 53.0f);
-					the_pylon_pos = &Pylon3;				//뉴커크일때만 pylon3을 깨야함
-                    return;
-
-                case 'B'://belshir
-                    Pylon1 = Point2D(65.0f, 129.0f);
-                    Gate1 = Point2D(63.5f, 126.5f);
-                    Core1 = Point2D(67.5f, 130.5f);
-                    Star1 = Point2D(65.5f, 135.5f);
-                    Pylon2 = Point2D(70.0f, 132.0f);
-                    Batt1 = Point2D(63.0f, 129.0f);
-                    Batt2 = Point2D(65.0f, 131.0f);
-                    Pylon3 = Point2D(63.0f, 131.0f);
-					the_pylon_pos = &Pylon2;
-                    return;
-
-                default:
-                    return;
-                }
-                return;
-
-            default:
-                return;
-            }
-        }*/
-    }
-
-    void change_building_location() {
-        if ((startLocation_.x<Center.x)*(game_info_.enemy_start_locations.front().x<Center.x)>0) {
-            if (startLocation_.y<Center.y) {
-                //x같고 y아래
-                Pylon1.y = Center.y*2-Pylon1.y;
-                Gate1.y = Center.y*2-Gate1.y;
-                Pylon2.y = Center.y*2-Pylon2.y;
-                Core1.y = Center.y*2-Core1.y;
-                Star1.y = Center.y*2-Star1.y;
-                Pylon3.y = Center.y*2-Pylon3.y;
-                Batt1.y = Center.y*2-Batt1.y;
-                Batt2.y = Center.y*2-Batt2.y;
-                Batt3.y = Center.y*2-Batt3.y;
-                Batt4.y = Center.y*2-Batt4.y;
-                Batt5.y = Center.y*2-Batt5.y;
-                Pylon4.y = Center.y*2-Pylon4.y;
-                advance_pylon_location.y = Center.y*2-advance_pylon_location.y;
-                return;
-            }
-            //x같고 y위
-            return;
-        }
-        else {
-            if (startLocation_.y-game_info_.enemy_start_locations.front().y>50.0f || startLocation_.y-game_info_.enemy_start_locations.front().y<-50.0f) {
-                if (startLocation_.y>Center.y) {
-                        //x왼쪽y다름
-                    return;
-                }
-                //x오른쪽y다름
-                Pylon1.x = Center.x*2-Pylon1.x;
-                Gate1.x = Center.x*2-Gate1.x;
-                Pylon2.x = Center.x*2-Pylon2.x;
-                Core1.x = Center.x*2-Core1.x;
-                Star1.x = Center.x*2-Star1.x;
-                Pylon3.x = Center.x*2-Pylon3.x;
-                Batt1.x = Center.x*2-Batt1.x;
-                Batt2.x = Center.x*2-Batt2.x;
-                Batt3.x = Center.x*2-Batt3.x;
-                Batt4.x = Center.x*2-Batt4.x;
-                Batt5.x = Center.x*2-Batt5.x;
-                Pylon4.x = Center.x*2-Pylon4.x;
-                advance_pylon_location.x = Center.x*2-advance_pylon_location.x;
-
-                Pylon1.y = Center.y*2-Pylon1.y;
-                Gate1.y = Center.y*2-Gate1.y;
-                Pylon2.y = Center.y*2-Pylon2.y;
-                Core1.y = Center.y*2-Core1.y;
-                Star1.y = Center.y*2-Star1.y;
-                Pylon3.y = Center.y*2-Pylon3.y;
-                Batt1.y = Center.y*2-Batt1.y;
-                Batt2.y = Center.y*2-Batt2.y;
-                Batt3.y = Center.y*2-Batt3.y;
-                Batt4.y = Center.y*2-Batt4.y;
-                Batt5.y = Center.y*2-Batt5.y;
-                Pylon4.y = Center.y*2-Pylon4.y;
-                advance_pylon_location.y = Center.y*2-advance_pylon_location.y;
-                return;
-            }
-            else {
-                if (startLocation_.x>Center.x) {
-                Pylon1.x = Center.x*2-Pylon1.x;
-                Gate1.x = Center.x*2-Gate1.x;
-                Pylon2.x = Center.x*2-Pylon2.x;
-                Core1.x = Center.x*2-Core1.x;
-                Star1.x = Center.x*2-Star1.x;
-                Pylon3.x = Center.x*2-Pylon3.x;
-                Batt1.x = Center.x*2-Batt1.x;
-                Batt2.x = Center.x*2-Batt2.x;
-                Batt3.x = Center.x*2-Batt3.x;
-                Batt4.x = Center.x*2-Batt4.x;
-                Batt5.x = Center.x*2-Batt5.x;
-                Pylon4.x = Center.x*2-Pylon4.x;
-                advance_pylon_location.x = Center.x*2-advance_pylon_location.x;
-                return;
-                }
-            }
-        }
-    }
-
-
 
 	void scout_all();
 
