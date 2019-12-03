@@ -51,6 +51,9 @@ void MEMIBot::PredictKiting(const Unit* unit, const Unit* enemyarmy)
 	// 0에 가까울수록 이길것같음
 	float winrate = PredictWinrate(stalkers, immortals, marines, marauders, siegetanks, medivacs, vikings, cyclones, battlecruisers);
 
+	RealChat("current winrate is" + std::to_string(100 - 100 * winrate));
+	//RealChat(std::to_string(100 - 100 * winrate));
+
 	float dist = Distance2D(unit->pos, enemyarmy->pos);
 	float DIST = dist - unit->radius - enemyarmy->radius;
 

@@ -660,6 +660,23 @@ private:
 #endif
 	}
 
+	int t_sleep = 1;
+
+	void RealChat(std::string Message) // 릴리즈에서도 채팅 가능
+	{
+		if (t_sleep == 1) {
+			Actions()->SendChat(Message);
+			t_sleep = 0;
+			SleepFor(100);
+			t_sleep = 1;
+		}
+		else
+		{
+			std::cout << "채팅 기다리는 중" << std::endl;
+		}
+	}
+
+
 	void DrawLine(Point3D p0, Point3D p1) {
 #ifdef DEBUG
 		Debug()->DebugLineOut(p0, p1);
