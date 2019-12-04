@@ -653,6 +653,8 @@ void MEMIBot::ManageRush() {
 			}
 			else
 			{
+				RealChat("Bot's Rush Start!");
+				RealChat("Bot has" + std::to_string(num_stalker) + " stalkers");
 				std::cout << " ÀÌÁ¦ ´Ù ¹¶ÃÆ´Ù~~~ ÀÌ ¸»ÀÌ¾ß!~!! " << std::endl;
 				for (const auto& unit : AttackersRecruiting)
 				{

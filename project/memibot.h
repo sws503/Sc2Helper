@@ -68,7 +68,7 @@ public:
 
 		GetEnemyRace();
 
-		std::initializer_list<int> branch_lists;
+		/*std::initializer_list<int> branch_lists;
 		switch (enemyrace){
 		case Protoss:
 			branch_lists = { 6,7 };
@@ -85,9 +85,9 @@ public:
 			break;
 		}
 		std::vector<int> branches(branch_lists);
-		strategy = ReadStats(branches);
-		branch = strategy;
-		tryadeptbranch6 = (branch == 6 && enemyrace == Zerg);
+		strategy = ReadStats(branches);*/
+		branch = 5;
+		//tryadeptbranch6 = (branch == 6 && enemyrace == Zerg);
 
 		/*
 		// protoss : 1, 2 (기록 없으면 1)
@@ -140,6 +140,7 @@ public:
 
 		early_strategy = false;
 		warpgate_researched = false;
+		charge_researched = false;
 		BlinkResearched = false;
 		timing_attack = false;
 		advance_pylon = nullptr;
@@ -228,8 +229,8 @@ public:
 
 	virtual void OnStep() final override {
 		const ObservationInterface* observation = Observation();
-		playerbot();
-		return;
+		//playerbot();
+		//return;
 
 		if (warpgate_researched) {
             ConvertGateWayToWarpGate();
@@ -368,6 +369,9 @@ public:
                 warpgate_researched = true;
                 return;
             }
+			case UPGRADE_ID::CHARGE: {
+				charge_researched = true;
+			}
             default:
                 break;
         }
@@ -1622,7 +1626,7 @@ private:
 
 	bool TryBuildUpgrade(AbilityID ability_type_for_unit, UnitTypeID building_type, UpgradeID upgrade_type) {
         const ObservationInterface* observation = Observation();
-
+		
         if ((uint32_t)observation->GetMinerals() < observation->GetUpgradeData().at(upgrade_type).mineral_cost
 			|| (uint32_t)observation->GetVespene() < observation->GetUpgradeData().at(upgrade_type).vespene_cost) {
             return false;
@@ -1644,6 +1648,7 @@ private:
 		if (unit == nullptr) {
 			return false;
 		}
+		RealChat("Bot is trying to upgrade " + observation->GetUpgradeData().at(upgrade_type).name);
 		Actions()->UnitCommand(unit, ability_type_for_unit);
 		return true;
 	}
@@ -2161,12 +2166,9 @@ private:
 		if (i == 0) return false;
 		if (observation->GetFoodCap() == 200) return false;
 
-		if (TryBuildPylon(startLocation_, 15.0f, i)) return true;
+		//if (TryBuildPylon(startLocation_, 15.0f, i)) return true;
 		Units bases = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_NEXUS));
-		for (const auto& b : bases) {
-			if (TryBuildPylon(b->pos, 7.0f, i)) return true;
-		}
-		return false;
+		return TryBuildPylon(bases[GetRandomInteger(0, bases.size() - 1)]->pos, 7.0f, i);
 	}
 	bool TryBuildPylon(Point2D location, float radius = 3.0f, size_t MaxBuildAtOnce = 1) {
 		const ObservationInterface* observation = Observation();
@@ -2303,39 +2305,21 @@ private:
 		const ObservationInterface* observation = Observation();
 		Units forges = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_FORGE));
 		size_t base_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_NEXUS);
+		size_t cybernetics_count = CountUnitType(observation, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE);
+		Units cores = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_CYBERNETICSCORE));
+		Units twilightcouncil = observation->GetUnits(Unit::Alliance::Self, IsUnit(UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL));
 		auto upgrades = observation->GetUpgrades();
 
-		if (branch == 0) {
-            TryBuildUpgrade(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::GRAVITICDRIVE);
-            for (const auto& forge : forges) {
-                if (!forge->orders.empty()) {
-                    TryChronoboost(forge);
-                }
-		    }
-            if (forges.size() ==0) {
-                return;
-            }
-
-            for (const auto& upgrade : upgrades) {
-                if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL1) {
-                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2);
-                }
-                else if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL2) {
-                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDWEAPONS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL3);
-                }
-                else if (upgrade == UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL1) {
-                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDARMOR, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL2);
-                }
-                else if (upgrade == UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL2) {
-                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDARMOR, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL3);
-                }
-                else if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL3) {
-                    TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDARMOR, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL1);
-                }
-            }
-		}
-
+		
 		if (branch == 5) {
+			if (!warpgate_researched && cybernetics_count > 0 && cores.front()->orders.empty()) {
+				TryBuildUpgrade(ABILITY_ID::RESEARCH_WARPGATE, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, UPGRADE_ID::WARPGATERESEARCH);
+			}
+			if (BlinkResearched && !charge_researched && twilightcouncil.size() > 0 && twilightcouncil.front()->orders.empty()) {
+				TryBuildUpgrade(ABILITY_ID::RESEARCH_CHARGE, UNIT_TYPEID::PROTOSS_TWILIGHTCOUNCIL, UPGRADE_ID::CHARGE);
+			}
+
+
             TryBuildUpgrade(ABILITY_ID::RESEARCH_EXTENDEDTHERMALLANCE, UNIT_TYPEID::PROTOSS_ROBOTICSBAY, UPGRADE_ID::GRAVITICDRIVE);
             for (const auto& forge : forges) {
                 if (!forge->orders.empty()) {
@@ -2372,30 +2356,6 @@ private:
                 }
                 else if (upgrade == UPGRADE_ID::PROTOSSGROUNDWEAPONSLEVEL3) {
                     TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSGROUNDARMOR, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSGROUNDARMORSLEVEL1);
-                }
-            }
-		}
-
-		if (branch==7) {
-            TryBuildUpgradeChrono(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL1);
-            for (const auto& upgrade : upgrades) {
-                if (upgrade == UPGRADE_ID::PROTOSSSHIELDSLEVEL1) {
-                    TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL2);
-                }
-                else if (upgrade == UPGRADE_ID::PROTOSSSHIELDSLEVEL2) {
-                    TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSSHIELDS, UNIT_TYPEID::PROTOSS_FORGE, UPGRADE_ID::PROTOSSSHIELDSLEVEL3);
-                }
-                else if (upgrade == UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL2) {
-                    TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSAIRWEAPONS, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL3);
-                }
-                else if (upgrade == UPGRADE_ID::PROTOSSAIRWEAPONSLEVEL3) {
-                    TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSAIRARMOR, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, UPGRADE_ID::PROTOSSAIRARMORSLEVEL1);
-                }
-                else if (upgrade == UPGRADE_ID::PROTOSSAIRARMORSLEVEL1) {
-                    TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSAIRARMOR, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, UPGRADE_ID::PROTOSSAIRARMORSLEVEL2);
-                }
-                else if (upgrade == UPGRADE_ID::PROTOSSAIRARMORSLEVEL2) {
-                    TryBuildUpgrade(ABILITY_ID::RESEARCH_PROTOSSAIRARMOR, UNIT_TYPEID::PROTOSS_CYBERNETICSCORE, UPGRADE_ID::PROTOSSAIRARMORSLEVEL3);
                 }
             }
 		}
@@ -2761,6 +2721,7 @@ private:
 
 	bool early_strategy;
 	bool warpgate_researched;
+	bool charge_researched;
 	bool BlinkResearched;
 	bool ColossusRangeUp;
 	bool timing_attack;
